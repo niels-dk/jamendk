@@ -1,5 +1,4 @@
 <?php
-print "removed files and tries to commet files";
 $pageTitle = $dream['title'] ?? 'Dream Detail';
 ob_start();
 

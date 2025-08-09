@@ -635,3 +635,64 @@ header nav { display: none; }
 .board-tag-mood { color: #f39; }
 .board-tag-trip { color: #4fa; }
 
+.layout {
+    display: flex;
+    min-height: calc(100vh - 64px);
+}
+
+.sidebar {
+    width: 260px;
+    background: #0f1621;
+    border-right: 1px solid #1c2740;
+    position: sticky;
+    top: 64px;
+    height: calc(100vh - 64px);
+    padding: 16px;
+}
+
+.brand {
+    font-weight: 700;
+    margin-bottom: 12px;
+}
+
+.nav a {
+    display: block;
+    padding: 10px 12px;
+    border-radius: 10px;
+    color: #b7c2d0;
+    text-decoration: none;
+    margin-bottom: 6px;
+}
+
+.nav a.active,
+.nav a:hover {
+    background: #122033;
+    color: #fff;
+}
+
+.content {
+    flex: 1;
+    padding: 24px;
+}
+
+.content--full {
+    padding: 24px;
+    max-width: 960px;
+    margin: 0 auto;
+}
+
+@media (max-width: 960px) {
+    .sidebar {
+        position: fixed;
+        top: 64px;
+        left: 0;
+        width: 100%;
+        height: auto;
+        z-index: 20;
+    }
+    .content {
+        padding-top: 140px;
+    }
+}
+
+

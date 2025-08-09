@@ -1,39 +1,33 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <title><?= $title ?? 'Jamen' ?></title>
-
-  <meta name="color-scheme" content="dark light">
-  <meta name="theme-color" content="#1a1b1e">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-
-  <script>
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js');
-    }
-  </script>
-
-  <link rel="stylesheet" href="/public/css/style.css?v=9">
+  <?php include __DIR__ . '/partials/head.php'; ?>
 </head>
 <body>
 
 <header>
-  <div class="container">
-    <a href="/" style="font-weight:600;font-size:1.05rem">Jamen</a>
-    <nav>
-      <a href="/dashboard">Dashboard</a>
-      <a href="/dreams/new" class="btn" style="margin-left:.8rem">+ New Dream</a>
-    </nav>
-  </div>
+  <?php include __DIR__ . '/partials/topbar.php'; ?>
 </header>
 
-<div class="container">
-  <main>
-    <?= $content ?? '' ?>
-  </main>
-</div>
+<?php
+// Decide between Dream simple layout or Sidebar layout
+if (!empty($noSidebar) && $noSidebar === true): ?>
+  <!-- SIMPLE LAYOUT (Dream board) -->
+  <div class="container">
+    <main><?= $content ?? '' ?></main>
+  </div>
 
+<?php else: ?>
+  <!-- SIDEBAR LAYOUT -->
+  <div class="layout">
+    <?php include __DIR__ . '/partials/sidebar.php'; ?>
+    <div class="content">
+      <?= $content ?? '' ?>
+    </div>
+  </div>
+<?php endif; ?>
+
+<!-- GLOBAL SCRIPTS -->
 <script>
   document.addEventListener('click', e => {
     if (e.target.closest('.menu-toggle')) {
@@ -47,74 +41,13 @@
   });
 </script>
 
-<button id="fabNewDream" class="fab" aria-label="New Dream">＋</button>
-
-<div id="dreamModal" class="modal-hidden">
-  <div class="modal-content">
-    <button id="closeModal" class="modal-close" aria-label="Close">✕</button>
-    <form id="dreamForm">
-      <input name="title" type="text" placeholder="Dream title" required autofocus>
-
-      <label>Description</label>
-      <textarea name="description" rows="4" placeholder="Describe your dream…"></textarea>
-
-      <div class="anchors-mobile">
-        <div class="anchor-group" data-anchor="locations">
-          <label>Locations</label>
-          <div class="anchor-list"></div>
-          <button type="button" class="add-anchor" data-anchor="locations">＋</button>
-        </div>
-        <div class="anchor-group" data-anchor="brands">
-          <label>Brands</label>
-          <div class="anchor-list"></div>
-          <button type="button" class="add-anchor" data-anchor="brands">＋</button>
-        </div>
-        <div class="anchor-group" data-anchor="people">
-          <label>People</label>
-          <div class="anchor-list"></div>
-          <button type="button" class="add-anchor" data-anchor="people">＋</button>
-        </div>
-        <div class="anchor-group" data-anchor="seasons">
-          <label>Seasons</label>
-          <div class="anchor-list"></div>
-          <button type="button" class="add-anchor" data-anchor="seasons">＋</button>
-        </div>
-      </div>
-
-      <button type="submit" class="btn btn-primary">Save Dream</button>
-    </form>
-  </div>
-</div>
-
-<script src="/public/js/mobile-dream.js?v=11"></script>
-<script src="/public/js/offline-ui.js?v=3"></script>
-
-<script>
-  if (!navigator.onLine) {
-    // alert('You are offline');
-  }
-
-  function loadTrix() {
-    if (document.querySelector('link[data-trix]')) return;
-    const l = document.createElement('link');
-    l.rel = 'stylesheet';
-    l.href = 'https://unpkg.com/trix@2.1.15/dist/trix.css';
-    l.setAttribute('data-trix', '');
-    document.head.appendChild(l);
-
-    const s = document.createElement('script');
-    s.defer = true;
-    s.src = 'https://unpkg.com/trix@2.1.15/dist/trix.umd.min.js';
-    s.setAttribute('data-trix', '');
-    document.body.appendChild(s);
-  }
-
-  if (navigator.onLine) loadTrix();
-  window.addEventListener('online', () => {
-    console.info('Back online — injecting Trix editor assets');
-    loadTrix();
-  });
-</script>
+<?php if (!empty($noSidebar) && $noSidebar === true): ?>
+  <!-- DREAM BOARD SCRIPTS & UI -->
+  <?php include __DIR__ . '/partials/dream-modal.php'; ?>
+  <script src="/public/js/mobile-dream.js?v=11"></script>
+  <script src="/public/js/offline-ui.js?v=3"></script>
+  <script src="/public/js/trix-loader.js?v=1"></script>
+<?php endif; ?>
 
 <div id="connectivity-banner"></div>
 <div id="snackbar" class="snackbar"></div>

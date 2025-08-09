@@ -45,16 +45,17 @@ function route(string $uri): void
     '/dreams/([A-Za-z0-9]{6,16})/delete'      => ['dream','destroy'],
     '/dreams/([A-Za-z0-9]{6,16})/restore'     => ['dream','restore'],
 		
-	// Vision board routes
-	'/vision/new'           => ['vision', 'create'],
-	'/vision/store'         => ['vision', 'store'],
-	'/vision/([A-Za-z0-9]{6,16})'      => ['vision', 'show'],
-	'/vision/([A-Za-z0-9]{6,16})/edit' => ['vision', 'edit'],
-	'/vision/update'        => ['vision', 'update'],
-	'/vision/([A-Za-z0-9]{6,16})/archive'   => ['vision', 'archive'],
-	'/vision/([A-Za-z0-9]{6,16})/unarchive' => ['vision', 'unarchive'],
-	'/vision/([A-Za-z0-9]{6,16})/delete'    => ['vision', 'destroy'],
-	'/vision/([A-Za-z0-9]{6,16})/restore'   => ['vision', 'restore'],
+	// Vision routes
+	'/visions/new'                        => ['vision', 'create'],
+	'/visions/store'                      => ['vision', 'store'],
+	'/visions/([A-Za-z0-9]{6,16})'        => ['vision', 'show'],
+	'/visions/([A-Za-z0-9]{6,16})/edit'   => ['vision', 'edit'],
+	'/visions/update'                     => ['vision', 'update'],
+	'/visions/([A-Za-z0-9]{6,16})/archive'   => ['vision', 'archive'],
+	'/visions/([A-Za-z0-9]{6,16})/unarchive' => ['vision', 'unarchive'],
+	'/visions/([A-Za-z0-9]{6,16})/delete'    => ['vision', 'destroy'],
+	'/visions/([A-Za-z0-9]{6,16})/restore'   => ['vision', 'restore'],
+
 
 ];
 

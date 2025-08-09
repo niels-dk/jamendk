@@ -48,11 +48,5 @@ class home_controller
         include __DIR__ . '/../views/dashboard.php';
         $content = ob_get_clean();
         include __DIR__ . '/../views/layout.php';
-		}
-
-			// render
-			$view = 'dashboard';
-			include __DIR__.'/../views/layout.php';
-		}
-
+    }
 }

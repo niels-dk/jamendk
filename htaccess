@@ -1,0 +1,11 @@
+# -- jamen.dk root .htaccess --
+RewriteEngine On
+RewriteBase /
+
+# If someone hits /index.php directly, bounce them to /
+RewriteRule ^index\.php$ / [L,R=302]
+
+# Send EVERYTHING ELSE that isn't an existing file/dir to index.php
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ /index.php [QSA,L]

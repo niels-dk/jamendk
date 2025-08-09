@@ -1,4 +1,4 @@
-<?php //test Git
+<?php
 $pageTitle = $dream['title'] ?? 'Dream Detail';
 ob_start();
 

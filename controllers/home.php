@@ -50,32 +50,52 @@ class home_controller
         self::loadDashboard($type, $filter);
     }
 
-    private static function loadDashboard(string $type, string $filter): void
-    {
-        global $db, $currentUserId;
+    // controllers/home.php (inside loadDashboard)
+	private static function loadDashboard(string $type, string $filter): void
+	{
+		global $db, $currentUserId;
 
-        $boardTypes = [
-            'dream' => '🌕 Dreams',
-            'vision' => '📄 Visions',
-            'mood' => '🎨 Moods',
-            'trip' => '🗺️ Trips'
-        ];
+		$boardTypes = [
+		  'dream'  => '?? Dreams',
+		  'vision' => '?? Visions',
+		  'mood'   => '?? Moods',
+		  'trip'   => '??? Trips'
+		];
+		if (!isset($boardTypes[$type])) { http_response_code(404); echo 'Board type not found'; return; }
 
-        if (!isset($boardTypes[$type])) {
-            http_response_code(404);
-            echo 'Board type not found';
-            return;
-        }
+		$title     = ucfirst($type).'s � '.ucfirst($filter);
+		$boardType = $type;
 
-        $title = ucfirst($type) . 's – ' . ucfirst($filter);
-        $boardType = $type;
-        $dreams = dream_model::listByType($db, $currentUserId, $type, $filter);
+		if ($type === 'vision') {
+			// list from visions table
+			require_once __DIR__.'/../models/vision.php';
+			if ($filter === 'archived')      $raw = vision_model::listArchived($db, $currentUserId);
+			elseif ($filter === 'trash')     $raw = vision_model::listTrashed($db, $currentUserId);
+			else                              $raw = vision_model::listActive($db, $currentUserId);
 
-        // Pass vars to dashboard view and capture it into $content
-        ob_start();
-        include __DIR__ . '/../views/dashboard.php';
-        $content = ob_get_clean();
+			// attach anchors
+			$dreams = [];
+			foreach ($raw as $r) {
+				$r['anchors'] = vision_model::getAnchors($db, (int)$r['id']);
+				$dreams[] = $r;
+			}
+		} else {
+			// existing dream flow (what you already have today)
+			require_once __DIR__.'/../models/dream.php';
+			if ($filter === 'archived')      $raw = dream_model::listArchived($db, $currentUserId);
+			elseif ($filter === 'trash')     $raw = dream_model::listTrashed($db, $currentUserId);
+			else                              $raw = dream_model::listActive($db, $currentUserId);
 
-        include __DIR__ . '/../views/layout.php';
-    }
+			$dreams = [];
+			foreach ($raw as $r) {
+				$r['anchors'] = dream_model::getAnchors($db, (int)$r['id']);
+				$dreams[] = $r;
+			}
+		}
+
+		// render
+		$view = 'dashboard';
+		include __DIR__.'/../views/layout.php';
+	}
+
 }

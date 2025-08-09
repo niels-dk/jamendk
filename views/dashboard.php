@@ -107,7 +107,7 @@ $currentTypeLabel = $boardLabels[$boardType] ?? 'Boards';
   <div class="empty-state">
     <p>No <?= htmlspecialchars($filter) ?> boards found.</p>
     <?php if ($filter === 'active' && $boardType !== 'trip'): ?>
-      <a class="btn" href="/<?= $boardType ?>/new">➕ Create Your First <?= htmlspecialchars($boardTypes[$boardType] ?? ucfirst($boardType)) ?></a>
+      <a class="btn" href="/<?= $boardType ?>s/new">➕ Create Your First <?= htmlspecialchars($boardTypes[$boardType] ?? ucfirst($boardType)) ?></a>
     <?php elseif ($boardType === 'trip'): ?>
       <span class="hint" style="opacity:.75;">Trips are generated when a Vision is paired with a Mood board.</span>
     <?php endif; ?>

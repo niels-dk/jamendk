@@ -96,29 +96,6 @@ class vision_controller
         include __DIR__ . '/../views/layout.php';
     }
 
-    // Fetch trip slug (one live trip per vision)
-    $st = $db->prepare("SELECT slug FROM trips WHERE vision_id=? AND archived=0 ORDER BY created_at DESC LIMIT 1");
-    $st->execute([(int)$vision['id']]);
-    $tripSlug = $st->fetchColumn() ?: null;
-
-    // Build anchors array as before...
-    $kv = [];
-    foreach (vision_model::getAnchors($db, (int)$vision['id']) as $k => $vals) {
-        foreach ($vals as $v) {
-            $kv[] = ['key' => $k, 'value' => $v];
-        }
-    }
-
-    $title = 'Edit Vision';
-    ob_start();
-    include __DIR__ . '/../views/vision_form.php';
-    $content = ob_get_clean();
-
-    // Show sidebar with Vision nav
-    $boardType = 'vision';
-    include __DIR__ . '/../views/layout.php';
-}
-
     /** POST /visions/update */
     public static function update(): void
 	{

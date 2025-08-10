@@ -1,70 +1,118 @@
 <?php
-// expects: for edit -> $vision (array), $kv (array of ['key'=>..,'value'=>..])
-$isEdit = isset($vision);
+// expects: $vision (optional), $kv (anchors array)
+$isEdit    = isset($vision);
+$titleText = $isEdit ? 'Edit Vision' : 'Create a Vision';
+$action    = $isEdit ? '/visions/update' : '/visions/store';
 ?>
-<h1><?= $isEdit ? 'Edit Vision' : 'Create a Vision' ?></h1>
+<h1><?= $titleText ?></h1>
 
-<form action="<?= $isEdit ? '/visions/update' : '/visions/store' ?>" method="post" class="card">
+<form action="<?= $action ?>" method="post" class="card">
   <?php if ($isEdit): ?>
     <input type="hidden" name="vision_id" value="<?= (int)$vision['id'] ?>">
   <?php endif; ?>
 
-  <label>Title<br>
-    <input name="title" type="text" required style="width:100%"
+  <label>Title
+    <input name="title" type="text" required placeholder="Vision title"
            value="<?= $isEdit ? htmlspecialchars($vision['title']) : '' ?>">
   </label>
 
-  <br>
-
   <label>Description</label>
-  <textarea id="desc" name="description" style="display:none"><?=
-    $isEdit ? ($vision['description'] ?? '') : ''
-  ?></textarea>
+  <input id="vision-desc" type="hidden" name="description"
+         value="<?= $isEdit ? htmlspecialchars($vision['description'] ?? '') : '' ?>">
+  <trix-editor input="vision-desc" class="trix-vision"></trix-editor>
 
-  <trix-toolbar id="trix-toolbar-custom" class="custom-trix-toolbar"></trix-toolbar>
-  <trix-editor input="desc" toolbar="trix-toolbar-custom" class="trix-content" style="min-height:240px"></trix-editor>
+  <div class="two-cols">
+    <div>
+      <label>Start date</label>
+      <input type="date" name="start_date"
+             value="<?= $isEdit ? htmlspecialchars($vision['start_date'] ?? '') : '' ?>">
+    </div>
+    <div>
+      <label>End date</label>
+      <input type="date" name="end_date"
+             value="<?= $isEdit ? htmlspecialchars($vision['end_date'] ?? '') : '' ?>">
+    </div>
+  </div>
 
-  <hr style="margin:1rem 0; opacity:.2">
+  <label style="display:flex;gap:.5rem;align-items:center">
+    Anchors <span title="Quick, queryable tags like locations, brands, people, seasons/time. Helps search & dashboards."
+          style="opacity:.7;cursor:help;">?</span>
+  </label>
 
-  <h3>Anchors (Key / Value)</h3>
-  <div id="kv-list">
+  <div class="anchors">
     <?php
       $rows = $kv ?? [];
-      if (!$rows) $rows = [['key'=>'', 'value'=>'']];
-      foreach ($rows as $i => $row):
+      if (!$rows) $rows = [['key' => '', 'value' => '']];
+      $i = 0;
+      foreach ($rows as $row):
     ?>
-      <div class="repeat" style="display:flex; gap:.5rem; margin:.35rem 0;">
-        <input name="vkey[]" placeholder="Key"   value="<?= htmlspecialchars($row['key'] ?? '') ?>"  style="flex:0 0 220px">
-        <input name="vval[]" placeholder="Value" value="<?= htmlspecialchars($row['value'] ?? '') ?>" style="flex:1 1 auto">
-        <button type="button" class="btn" onclick="removeKV(this)" aria-label="Remove">✖</button>
-      </div>
-    <?php endforeach; ?>
+    <div class="anchors-row">
+      <select name="anchors[<?= $i ?>][key]" class="anchor-key">
+        <option value="">Choose key…</option>
+        <option <?= ($row['key'] ?? '') === 'locations' ? 'selected' : '' ?>>locations</option>
+        <option <?= ($row['key'] ?? '') === 'brands'    ? 'selected' : '' ?>>brands</option>
+        <option <?= ($row['key'] ?? '') === 'people'    ? 'selected' : '' ?>>people</option>
+        <option <?= ($row['key'] ?? '') === 'seasons'   ? 'selected' : '' ?>>seasons</option>
+        <option <?= ($row['key'] ?? '') === 'time'      ? 'selected' : '' ?>>time</option>
+        <?php
+        $key = $row['key'] ?? '';
+        if ($key && !in_array($key, ['locations','brands','people','seasons','time'])):
+          echo '<option value="'.htmlspecialchars($key).'" selected>'.htmlspecialchars($key).'</option>';
+        endif;
+        ?>
+        <option value="__custom">Custom…</option>
+      </select>
+      <input name="anchors[<?= $i ?>][value]" class="anchor-value"
+             value="<?= htmlspecialchars($row['value'] ?? '') ?>"
+             placeholder="e.g. Copenhagen / Adidas / Alice / Winter / Q1">
+      <button type="button" class="btn btn-icon remove-anchor" aria-label="Remove">✕</button>
+    </div>
+    <?php $i++; endforeach; ?>
+    <button type="button" class="btn add-anchor">＋ Add</button>
   </div>
-  <button type="button" class="btn" onclick="addKV()">＋ Add</button>
 
-  <br><br>
-  <div class="btn-group">
-    <button class="btn primary"><?= $isEdit ? 'Save Changes' : 'Create Vision' ?></button>
-    <?php if ($isEdit): ?>
-      <a class="btn" href="/visions/<?= htmlspecialchars($vision['slug']) ?>" style="margin-left:.5rem">Cancel</a>
-    <?php endif; ?>
-  </div>
+  <button class="btn primary"><?= $isEdit ? 'Save Changes' : 'Create Vision' ?></button>
+  <?php if ($isEdit): ?>
+    <a class="btn" href="/visions/<?= htmlspecialchars($vision['slug']) ?>" style="margin-left:.5rem">Cancel</a>
+  <?php endif; ?>
 </form>
 
 <script>
-function addKV(){
-  const row = document.createElement('div');
-  row.className = 'repeat';
-  row.style = 'display:flex; gap:.5rem; margin:.35rem 0;';
-  row.innerHTML = `
-    <input name="vkey[]" placeholder="Key" style="flex:0 0 220px">
-    <input name="vval[]" placeholder="Value" style="flex:1 1 auto">
-    <button type="button" class="btn" onclick="removeKV(this)" aria-label="Remove">✖</button>
-  `;
-  document.getElementById('kv-list').appendChild(row);
-}
-function removeKV(btn){
-  const row = btn.closest('.repeat');
-  if (row) row.remove();
-}
+(function(){
+  const wrap = document.querySelector('.anchors');
+  if (!wrap) return;
+  let index = wrap.querySelectorAll('.anchors-row').length;
+
+  wrap.addEventListener('click', e => {
+    if (e.target.closest('.add-anchor')) {
+      const row = wrap.querySelector('.anchors-row').cloneNode(true);
+      row.querySelectorAll('input,select').forEach(el => {
+        if (el.tagName === 'SELECT') el.selectedIndex = 0;
+        else el.value = '';
+        el.name = el.name.replace(/\\[\\d+\\]/, '[' + index + ']');
+      });
+      wrap.insertBefore(row, wrap.querySelector('.add-anchor'));
+      index++;
+    }
+    if (e.target.closest('.remove-anchor')) {
+      const rows = wrap.querySelectorAll('.anchors-row');
+      if (rows.length > 1) e.target.closest('.anchors-row').remove();
+    }
+  });
+
+  wrap.addEventListener('change', e => {
+    const sel = e.target.closest('select.anchor-key');
+    if (sel && sel.value === '__custom') {
+      const v = prompt('Custom key name?');
+      sel.value = '';
+      if (v) {
+        const opt = document.createElement('option');
+        opt.textContent = v;
+        opt.value = v;
+        sel.insertBefore(opt, sel.querySelector('option[value=\"__custom\"]'));
+        sel.value = v;
+      }
+    }
+  });
+})();
 </script>

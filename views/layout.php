@@ -51,6 +51,26 @@
     });
   });
 </script>
+<script>
+  // Sidebar collapse (remember preference)
+  (function(){
+    const sidebar = document.querySelector('.sidebar');
+    if (!sidebar) return;
+    const key = 'sidebarCollapsed';
+    if (localStorage.getItem(key) === '1') sidebar.classList.add('collapsed');
+    const btn = sidebar.querySelector('.sidebar-collapse');
+    if (btn) {
+      const setIcon = () => btn.textContent = sidebar.classList.contains('collapsed') ? '⟩' : '⟨';
+      setIcon();
+      btn.addEventListener('click', () => {
+        sidebar.classList.toggle('collapsed');
+        localStorage.setItem(key, sidebar.classList.contains('collapsed') ? '1' : '0');
+        setIcon();
+      });
+    }
+  })();
+</script>
+
 
 
 <div id="connectivity-banner"></div>

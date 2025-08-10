@@ -7,42 +7,45 @@ require_once __DIR__ . '/../models/vision.php';
 class vision_controller
 {
     /** GET /visions/new */
-    public static function create(): void
-    {
-        $title = 'Create a Vision';
-        // $anchors generic pairs for the form
-        $kv = []; // empty by default
-        ob_start();
-        include __DIR__ . '/../views/vision_form.php';
-        $content = ob_get_clean();
-        include __DIR__ . '/../views/layout.php';
-    }
+   public static function create(): void
+	{
+		$title = 'Create a Vision';
+		$kv = []; // no anchors yet
+		ob_start();
+		include __DIR__ . '/../views/vision_form.php';
+		$content = ob_get_clean();
+		// enable Vision sidebar on creation page
+		$boardType = 'vision';
+		include __DIR__ . '/../views/layout.php';
+	}
 
     /** POST /visions/store */
     public static function store(): void
-    {
-        global $db, $currentUserId;
+	{
+		global $db, $currentUserId;
 
-        $title = trim($_POST['title'] ?? '');
-        $desc  = $_POST['description'] ?? '';
+		$title = trim($_POST['title'] ?? '');
+		$desc  = $_POST['description'] ?? '';
+		$start = $_POST['start_date'] ?? null;
+		$end   = $_POST['end_date'] ?? null;
 
-        $id = vision_model::create($db, $currentUserId ?: 1, $title, $desc);
+		// Create the vision (start/end dates can be passed to the model if supported)
+		$id = vision_model::create($db, $currentUserId ?: 1, $title, $desc);
 
-        // anchors (key[] + value[] arrays)
-        $keys = $_POST['vkey']  ?? [];
-        $vals = $_POST['vval']  ?? [];
-        $kv   = [];
-        for ($i=0; $i<count($keys); $i++) {
-            $kv[] = ['key'=>$keys[$i] ?? '', 'value'=>$vals[$i] ?? ''];
-        }
-        vision_model::replaceAnchors($db, $id, $kv);
+		// Build anchors from anchors[][] array
+		$anchors = $_POST['anchors'] ?? [];
+		$kv = [];
+		foreach ($anchors as $row) {
+			$kv[] = ['key' => $row['key'] ?? '', 'value' => $row['value'] ?? ''];
+		}
+		vision_model::replaceAnchors($db, $id, $kv);
 
-        // redirect to show
-        $st = $db->prepare("SELECT slug FROM visions WHERE id=?");
-        $st->execute([$id]);
-        $slug = (string)$st->fetchColumn();
-        header("Location: /visions/$slug"); exit;
-    }
+		// redirect to show
+		$st = $db->prepare("SELECT slug FROM visions WHERE id=?");
+		$st->execute([$id]);
+		$slug = (string)$st->fetchColumn();
+		header("Location: /visions/$slug"); exit;
+	}
 
     /** GET /visions/{slug} */
     public static function show(string $slug): void
@@ -106,33 +109,33 @@ class vision_controller
 
     /** POST /visions/update */
     public static function update(): void
-    {
-        global $db;
+	{
+		global $db;
 
-        $id    = (int)($_POST['vision_id'] ?? 0);
-        if (!$id) { http_response_code(400); echo 'Missing ID'; return; }
+		$id    = (int)($_POST['vision_id'] ?? 0);
+		if (!$id) { http_response_code(400); echo 'Missing ID'; return; }
 
-        $title = trim($_POST['title'] ?? '');
-        $desc  = $_POST['description'] ?? '';
+		$title = trim($_POST['title'] ?? '');
+		$desc  = $_POST['description'] ?? '';
+		$start = $_POST['start_date'] ?? null;
+		$end   = $_POST['end_date'] ?? null;
 
-        vision_model::update($db, $id, $title, $desc);
+		vision_model::update($db, $id, $title, $desc /*, $start, $end */);
 
-        // anchors
-        $keys = $_POST['vkey'] ?? [];
-        $vals = $_POST['vval'] ?? [];
-        $kv   = [];
-        for ($i=0; $i<count($keys); $i++) {
-            $kv[] = ['key'=>$keys[$i] ?? '', 'value'=>$vals[$i] ?? ''];
-        }
-        vision_model::replaceAnchors($db, $id, $kv);
+		// anchors
+		$anchors = $_POST['anchors'] ?? [];
+		$kv = [];
+		foreach ($anchors as $row) {
+			$kv[] = ['key' => $row['key'] ?? '', 'value' => $row['value'] ?? ''];
+		}
+		vision_model::replaceAnchors($db, $id, $kv);
 
-        // fetch slug
-        $slug = '';
-        $st = $db->prepare("SELECT slug FROM visions WHERE id=?");
-        $st->execute([$id]); $slug = (string)$st->fetchColumn();
-
-        header("Location: /visions/$slug"); exit;
-    }
+		// redirect back to vision
+		$st = $db->prepare("SELECT slug FROM visions WHERE id=?");
+		$st->execute([$id]);
+		$slug = (string)$st->fetchColumn();
+		header("Location: /visions/$slug"); exit;
+	}
 
     /** State actions */
     public static function archive(string $slug): void

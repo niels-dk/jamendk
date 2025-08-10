@@ -765,5 +765,36 @@ header nav { display: none; }
   overflow-y: auto;
 }
 
+/* Sidebar collapse controls */
+.sidebar { transition: width .18s ease; }
+.sidebar-collapse {
+  position: absolute;
+  top: 8px;
+  right: -12px;
+  width: 24px;
+  height: 24px;
+  border-radius: 12px;
+  border: 1px solid #1c2740;
+  background: #0f1621;
+  color: var(--text-main);
+  cursor: pointer;
+}
+.sidebar.collapsed { width: 60px !important; }
+.sidebar.collapsed .brand,
+.sidebar.collapsed .nav a,
+.sidebar.collapsed .board-nav a { overflow: hidden; white-space: nowrap; text-indent:-9999px; }
+.sidebar.collapsed .nav .new-board .btn { text-indent:-9999px; }
+
+/* Two-column grid for dates */
+.two-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+/* Anchors row */
+.anchors-row { display: flex; gap: 8px; align-items: center; margin: 8px 0; }
+.anchors-row .anchor-key { width: 180px; }
+.btn.btn-icon { width: 36px; height: 36px; display: inline-flex; align-items: center; justify-content: center; }
+
+/* Trix editor height for visions */
+.trix-vision { min-height: 160px; }
+
 
 

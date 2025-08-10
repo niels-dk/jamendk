@@ -31,7 +31,7 @@ class dream_controller
 		$title = htmlspecialchars($dream['title']);
 		$view = 'dream_show';
 		include __DIR__ . '/../views/dream_show.php';
-		
+		$noSidebar = true;
 		include __DIR__ . '/../views/layout.php';
 	}
 
@@ -46,7 +46,7 @@ class dream_controller
 		include __DIR__ . '/../views/dream_form.php';
 		//$content = ob_get_clean();
 		$noSidebar = true;      // tell the layout to hide the sidebar for /dreams/new
-
+	    $noSidebar = true;
 		include __DIR__ . '/../views/layout.php';
 	}
 
@@ -102,7 +102,7 @@ class dream_controller
 		
 		// FETCH ANCHORS HERE:
         $anchors = dream_model::getAnchors($db, $dream['id']);
-		
+		$noSidebar = true;
         include __DIR__ . '/../views/dream_form.php';
     }
 

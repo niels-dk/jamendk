@@ -15,7 +15,7 @@ class home_controller
 		include __DIR__ . '/../views/layout.php';
     }
 
-    public static function dashboard()         { self::loadDashboard('dream', 'active');  }
+    public static function dashboard()         { self::loadDashboard('dream', 'active'); }
     public static function archived()          { self::loadDashboard('dream', 'archived'); }
     public static function trash()             { self::loadDashboard('dream', 'trash'); }
     public static function dashboard_type(string $type)              { self::loadDashboard($type, 'active'); }
@@ -50,7 +50,7 @@ class home_controller
         include __DIR__ . '/../views/dashboard.php';
         $content = ob_get_clean();
         // show sidebar on dashboard pages
-		$noSidebar = false;
+		$noSidebar = true;
 		include __DIR__ . '/../views/layout.php';
     }
 }

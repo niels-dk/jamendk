@@ -46,19 +46,19 @@ class vision_controller
 
     /** GET /visions/{slug} */
     public static function show(string $slug): void
-    {
-        global $db;
+	{
+		// … load $vision …
 
-        $vision = vision_model::get($db, $slug);
-        if (!$vision) { http_response_code(404); echo 'Vision not found'; return; }
+		// this will make the sidebar show the Vision menu
+		$boardType = 'vision';
 
-        $anchors = vision_model::getAnchors($db, (int)$vision['id']);
-        $title   = htmlspecialchars($vision['title']);
+		// capture the view’s HTML into $content if needed
+		ob_start();
+		include __DIR__ . '/../views/vision_show.php';
+		$content = ob_get_clean();
 
-        // view buffers content; controller includes layout
-        include __DIR__ . '/../views/vision_show.php';
-        include __DIR__ . '/../views/layout.php';
-    }
+		include __DIR__ . '/../views/layout.php';
+	}
 
     /** GET /visions/{slug}/edit */
     public static function edit(string $slug): void

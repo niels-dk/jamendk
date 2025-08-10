@@ -31,47 +31,202 @@
   </div>
 <?php endif; ?>
 
+<!-- Fold-out menus (Boards / + New board) -->
 <script>
-  // Toggle a menu when its button is clicked
   document.addEventListener('click', e => {
     const toggle = e.target.closest('.menu-toggle');
     if (toggle) {
-      const menu = toggle.nextElementSibling;
+      const container = toggle.parentElement;
+      const menu = container ? container.querySelector('.card-menu') : null;
       if (menu) {
+        // Close other open menus first
+        document.querySelectorAll('.card-menu.open').forEach(m => { if (m !== menu) m.classList.remove('open'); });
         menu.classList.toggle('open');
       }
       e.stopPropagation();
       return;
     }
-    // Close any open menus if you click outside them
+    // Click outside → close all
     document.querySelectorAll('.card-menu.open').forEach(menu => {
-      if (!menu.contains(e.target) && !menu.previousElementSibling.contains(e.target)) {
+      if (!menu.contains(e.target) && !menu.previousElementSibling?.contains(e.target)) {
         menu.classList.remove('open');
       }
     });
   });
 </script>
+
+<!-- Sidebar collapse: mobile default, swipe gestures, keyboard, persistence -->
 <script>
-  // Sidebar collapse (remember preference)
   (function(){
     const sidebar = document.querySelector('.sidebar');
     if (!sidebar) return;
     const key = 'sidebarCollapsed';
-    if (localStorage.getItem(key) === '1') sidebar.classList.add('collapsed');
+
+    // Collapse by default on narrow screens (<=768px) unless user has a saved pref
+    const saved = localStorage.getItem(key);
+    if (saved === '1' || (saved === null && window.innerWidth <= 768)) {
+      sidebar.classList.add('collapsed');
+    }
+
+    // Chevron button
     const btn = sidebar.querySelector('.sidebar-collapse');
+    const setIcon = () => { if (btn) btn.textContent = sidebar.classList.contains('collapsed') ? '⟩' : '⟨'; };
+    setIcon();
     if (btn) {
-      const setIcon = () => btn.textContent = sidebar.classList.contains('collapsed') ? '⟩' : '⟨';
-      setIcon();
       btn.addEventListener('click', () => {
         sidebar.classList.toggle('collapsed');
         localStorage.setItem(key, sidebar.classList.contains('collapsed') ? '1' : '0');
         setIcon();
       });
     }
+
+    // Keyboard: [ to collapse, ] to expand
+    document.addEventListener('keydown', (e) => {
+      if (e.key === '[') {
+        sidebar.classList.add('collapsed'); localStorage.setItem(key,'1'); setIcon();
+      } else if (e.key === ']') {
+        sidebar.classList.remove('collapsed'); localStorage.setItem(key,'0'); setIcon();
+      }
+    });
+
+    // Swipe gestures on touch devices
+    let touchStartX = null;
+    document.addEventListener('touchstart', (e) => { touchStartX = e.touches[0].clientX; }, {passive:true});
+    document.addEventListener('touchmove', (e) => {
+      if (touchStartX === null) return;
+      const dx = e.touches[0].clientX - touchStartX;
+      if (sidebar.classList.contains('collapsed')) {
+        // swipe right to open (start at screen edge)
+        if (touchStartX < 30 && dx > 50) {
+          sidebar.classList.remove('collapsed');
+          localStorage.setItem(key,'0'); setIcon();
+          touchStartX = null;
+        }
+      } else {
+        // swipe left anywhere over the sidebar to collapse
+        if (touchStartX < sidebar.offsetWidth && dx < -50) {
+          sidebar.classList.add('collapsed');
+          localStorage.setItem(key,'1'); setIcon();
+          touchStartX = null;
+        }
+      }
+    }, {passive:true});
+    document.addEventListener('touchend', () => { touchStartX = null; });
+
+    // Lazy-load Trix on any page that uses it
+    if (document.querySelector('trix-editor') && !document.querySelector('link[data-trix]')) {
+      const l = document.createElement('link');
+      l.rel = 'stylesheet';
+      l.href = 'https://unpkg.com/trix@2.1.15/dist/trix.css';
+      l.setAttribute('data-trix','');
+      document.head.appendChild(l);
+
+      const s = document.createElement('script');
+      s.defer = true;
+      s.src = 'https://unpkg.com/trix@2.1.15/dist/trix.umd.min.js';
+      s.setAttribute('data-trix','');
+      document.body.appendChild(s);
+    }
   })();
 </script>
 
+<!-- Anchors UI (add/remove + inline custom key, robust against blur) -->
+<script>
+(function(){
+  const wrap = document.querySelector('.anchors');
+  if (!wrap) return;
+  let index = wrap.querySelectorAll('.anchors-row').length;
 
+  // Add / remove rows
+  wrap.addEventListener('click', e => {
+    if (e.target.closest('.add-anchor')) {
+      const tpl = wrap.querySelector('.anchors-row');
+      const row = tpl.cloneNode(true);
+      row.querySelectorAll('input,select').forEach(el => {
+        if (el.tagName === 'SELECT') el.selectedIndex = 0;
+        else el.value = '';
+        el.name = el.name.replace(/\[\d+\]/, '[' + index + ']');
+      });
+      wrap.insertBefore(row, wrap.querySelector('.add-anchor'));
+      index++;
+    }
+    if (e.target.closest('.remove-anchor')) {
+      const rows = wrap.querySelectorAll('.anchors-row');
+      if (rows.length > 1) e.target.closest('.anchors-row').remove();
+    }
+  });
+
+  // Custom key morphing (robust against blur + external clicks)
+  wrap.addEventListener('change', e => {
+    const select = e.target.closest('select.anchor-key');
+    if (!select) return;
+    if (select.value !== '__custom') return;
+
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'anchor-key';
+    input.placeholder = 'Custom key';
+    input.style.width = select.offsetWidth + 'px';
+    input.dataset.name = select.name; // preserve original name
+
+    // swap select → input
+    select.replaceWith(input);
+    input.focus();
+
+    const buildSelect = (keyValue) => {
+      const s = document.createElement('select');
+      s.className = 'anchor-key';
+      s.name = input.dataset.name || '';
+      s.innerHTML = `
+        <option value="">Choose…</option>
+        <option>locations</option>
+        <option>brands</option>
+        <option>people</option>
+        <option>seasons</option>
+        <option>time</option>
+        <option value="__custom">Custom…</option>`;
+      if (keyValue) {
+        const opt = document.createElement('option');
+        opt.value = keyValue;
+        opt.textContent = keyValue;
+        const customOpt = s.querySelector('option[value="__custom"]');
+        s.insertBefore(opt, customOpt);
+        s.value = keyValue;
+      }
+      return s;
+    };
+
+    const finish = (commit = true) => {
+      // guard: input may already be detached due to blur + DOM changes
+      const parent = input.parentNode;
+      const next   = input.nextSibling;
+      const keyVal = commit ? input.value.trim() : '';
+      const newSelect = buildSelect(keyVal);
+
+      if (input.isConnected) {
+        input.replaceWith(newSelect);
+      } else if (parent) {
+        parent.insertBefore(newSelect, next || null);
+      }
+      cleanup();
+    };
+
+    const cleanup = () => {
+      input.removeEventListener('blur', onBlur);
+      input.removeEventListener('keydown', onKey);
+    };
+
+    const onBlur = () => finish(true);
+    const onKey  = (ev) => {
+      if (ev.key === 'Enter') { ev.preventDefault(); finish(true); }
+      if (ev.key === 'Escape') { ev.preventDefault(); finish(false); }
+    };
+
+    input.addEventListener('blur', onBlur);
+    input.addEventListener('keydown', onKey);
+  });
+})();
+</script>
 
 <div id="connectivity-banner"></div>
 <div id="snackbar" class="snackbar"></div>

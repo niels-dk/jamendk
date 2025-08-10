@@ -796,5 +796,38 @@ header nav { display: none; }
 /* Trix editor height for visions */
 .trix-vision { min-height: 160px; }
 
+/* Sidebar collapse & swipe */
+.sidebar { transition: width .18s ease; }
+.sidebar-collapse {
+  position: absolute;
+  top: 8px;
+  right: -12px;
+  width: 24px; height: 24px;
+  border-radius: 12px;
+  border: 1px solid #1c2740;
+  background: #0f1621;
+  color: var(--text-main);
+  cursor: pointer;
+}
+.sidebar.collapsed {
+  width: 4px !important; /* 2px visible + hit-area */
+}
+.sidebar.collapsed .brand,
+.sidebar.collapsed .nav a,
+.sidebar.collapsed .board-nav a {
+  overflow: hidden;
+  white-space: nowrap;
+  text-indent: -9999px;
+}
+/* Collapse nav buttons too */
+.sidebar.collapsed .nav .new-board .btn {
+  text-indent: -9999px;
+}
+/* Anchors & form tweaks */
+.anchors-row { display: flex; gap: 8px; align-items: center; margin: 8px 0; }
+.anchor-key { width: 140px; }
+.two-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.trix-vision { min-height: 160px; }
+
 
 

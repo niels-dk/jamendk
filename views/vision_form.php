@@ -21,19 +21,6 @@ $action    = $isEdit ? '/visions/update' : '/visions/store';
          value="<?= $isEdit ? htmlspecialchars($vision['description'] ?? '') : '' ?>">
   <trix-editor input="vision-desc" class="trix-vision"></trix-editor>
 
-  <div class="two-cols">
-    <div>
-      <label>Start date</label>
-      <input type="date" name="start_date"
-             value="<?= $isEdit ? htmlspecialchars($vision['start_date'] ?? '') : '' ?>">
-    </div>
-    <div>
-      <label>End date</label>
-      <input type="date" name="end_date"
-             value="<?= $isEdit ? htmlspecialchars($vision['end_date'] ?? '') : '' ?>">
-    </div>
-  </div>
-
   <label style="display:flex;gap:.5rem;align-items:center">
     Anchors <span title="Quick, queryable tags like locations, brands, people, seasons/time. Helps search & dashboards."
           style="opacity:.7;cursor:help;">?</span>
@@ -41,6 +28,7 @@ $action    = $isEdit ? '/visions/update' : '/visions/store';
 
   <div class="anchors">
     <?php
+      // anchor rows: array of ['key'=>..., 'value'=>...]
       $rows = $kv ?? [];
       if (!$rows) $rows = [['key' => '', 'value' => '']];
       $i = 0;
@@ -48,7 +36,7 @@ $action    = $isEdit ? '/visions/update' : '/visions/store';
     ?>
     <div class="anchors-row">
       <select name="anchors[<?= $i ?>][key]" class="anchor-key">
-        <option value="">Choose key…</option>
+        <option value="">Choose…</option>
         <option <?= ($row['key'] ?? '') === 'locations' ? 'selected' : '' ?>>locations</option>
         <option <?= ($row['key'] ?? '') === 'brands'    ? 'selected' : '' ?>>brands</option>
         <option <?= ($row['key'] ?? '') === 'people'    ? 'selected' : '' ?>>people</option>
@@ -83,15 +71,17 @@ $action    = $isEdit ? '/visions/update' : '/visions/store';
   if (!wrap) return;
   let index = wrap.querySelectorAll('.anchors-row').length;
 
+  // Add/remove rows
   wrap.addEventListener('click', e => {
     if (e.target.closest('.add-anchor')) {
-      const row = wrap.querySelector('.anchors-row').cloneNode(true);
-      row.querySelectorAll('input,select').forEach(el => {
+      const template = wrap.querySelector('.anchors-row');
+      const clone = template.cloneNode(true);
+      clone.querySelectorAll('input,select').forEach(el => {
         if (el.tagName === 'SELECT') el.selectedIndex = 0;
         else el.value = '';
         el.name = el.name.replace(/\\[\\d+\\]/, '[' + index + ']');
       });
-      wrap.insertBefore(row, wrap.querySelector('.add-anchor'));
+      wrap.insertBefore(clone, wrap.querySelector('.add-anchor'));
       index++;
     }
     if (e.target.closest('.remove-anchor')) {
@@ -100,18 +90,56 @@ $action    = $isEdit ? '/visions/update' : '/visions/store';
     }
   });
 
+  // Custom key morphing
   wrap.addEventListener('change', e => {
-    const sel = e.target.closest('select.anchor-key');
-    if (sel && sel.value === '__custom') {
-      const v = prompt('Custom key name?');
-      sel.value = '';
-      if (v) {
-        const opt = document.createElement('option');
-        opt.textContent = v;
-        opt.value = v;
-        sel.insertBefore(opt, sel.querySelector('option[value=\"__custom\"]'));
-        sel.value = v;
-      }
+    const select = e.target.closest('select.anchor-key');
+    if (select && select.value === '__custom') {
+      const row = select.closest('.anchors-row');
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'anchor-key';
+      input.placeholder = 'Custom key';
+      input.style.width = select.offsetWidth + 'px';
+      // replace select with input
+      select.replaceWith(input);
+      input.focus();
+
+      // commit function: replace input with a new select
+      const finish = () => {
+        const key = input.value.trim();
+        const newSelect = document.createElement('select');
+        newSelect.className = 'anchor-key';
+        newSelect.name = input.name || '';
+        // populate default options
+        newSelect.innerHTML = `
+          <option value="">Choose…</option>
+          <option>locations</option>
+          <option>brands</option>
+          <option>people</option>
+          <option>seasons</option>
+          <option>time</option>
+          <option value="__custom">Custom…</option>`;
+        if (key) {
+          const opt = document.createElement('option');
+          opt.value = key;
+          opt.textContent = key;
+          // insert before "Custom…"
+          const customOpt = newSelect.querySelector('option[value="__custom"]');
+          newSelect.insertBefore(opt, customOpt);
+          newSelect.value = key;
+        } else {
+          newSelect.value = '';
+        }
+        input.replaceWith(newSelect);
+      };
+
+      input.addEventListener('blur', finish);
+      input.addEventListener('keydown', ev => {
+        if (ev.key === 'Enter') {
+          ev.preventDefault();
+          finish();
+        }
+      });
     }
   });
 })();

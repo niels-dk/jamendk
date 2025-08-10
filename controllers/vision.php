@@ -8,13 +8,12 @@ class vision_controller
 {
     /** GET /visions/new */
    public static function create(): void
-	{
+   {
 		$title = 'Create a Vision';
-		$kv = []; // no anchors yet
+		$kv = [];
 		ob_start();
 		include __DIR__ . '/../views/vision_form.php';
 		$content = ob_get_clean();
-		// enable Vision sidebar on creation page
 		$boardType = 'vision';
 		include __DIR__ . '/../views/layout.php';
 	}
@@ -26,10 +25,8 @@ class vision_controller
 
 		$title = trim($_POST['title'] ?? '');
 		$desc  = $_POST['description'] ?? '';
-		$start = $_POST['start_date'] ?? null;
-		$end   = $_POST['end_date'] ?? null;
 
-		// Create the vision (start/end dates can be passed to the model if supported)
+		// Create the vision (we're no longer collecting start/end dates here)
 		$id = vision_model::create($db, $currentUserId ?: 1, $title, $desc);
 
 		// Build anchors from anchors[][] array
@@ -44,7 +41,8 @@ class vision_controller
 		$st = $db->prepare("SELECT slug FROM visions WHERE id=?");
 		$st->execute([$id]);
 		$slug = (string)$st->fetchColumn();
-		header("Location: /visions/$slug"); exit;
+		header("Location: /visions/$slug");
+		exit;
 	}
 
     /** GET /visions/{slug} */
@@ -112,17 +110,15 @@ class vision_controller
 	{
 		global $db;
 
-		$id    = (int)($_POST['vision_id'] ?? 0);
+		$id = (int)($_POST['vision_id'] ?? 0);
 		if (!$id) { http_response_code(400); echo 'Missing ID'; return; }
 
 		$title = trim($_POST['title'] ?? '');
 		$desc  = $_POST['description'] ?? '';
-		$start = $_POST['start_date'] ?? null;
-		$end   = $_POST['end_date'] ?? null;
 
-		vision_model::update($db, $id, $title, $desc /*, $start, $end */);
+		vision_model::update($db, $id, $title, $desc);
 
-		// anchors
+		// update anchors
 		$anchors = $_POST['anchors'] ?? [];
 		$kv = [];
 		foreach ($anchors as $row) {
@@ -134,7 +130,8 @@ class vision_controller
 		$st = $db->prepare("SELECT slug FROM visions WHERE id=?");
 		$st->execute([$id]);
 		$slug = (string)$st->fetchColumn();
-		header("Location: /visions/$slug"); exit;
+		header("Location: /visions/$slug");
+		exit;
 	}
 
     /** State actions */

@@ -20,6 +20,17 @@ $action    = $isEdit ? '/visions/update' : '/visions/store';
   <input id="vision-desc" type="hidden" name="description"
          value="<?= $isEdit ? htmlspecialchars($vision['description'] ?? '') : '' ?>">
   <trix-editor input="vision-desc" class="trix-vision"></trix-editor>
+	
+	<?php if (!empty($boardType) && $boardType === 'vision'): ?>
+	  <?php include __DIR__.'/partials/overlay_basics.php'; ?>
+	  <?php include __DIR__.'/partials/overlay_relations.php'; ?>
+	  <?php include __DIR__.'/partials/overlay_goals.php'; ?>
+	  <?php include __DIR__.'/partials/overlay_budget.php'; ?>
+	  <?php include __DIR__.'/partials/overlay_roles.php'; ?>
+	  <?php include __DIR__.'/partials/overlay_contacts.php'; ?>
+	  <?php include __DIR__.'/partials/overlay_documents.php'; ?>
+	  <?php include __DIR__.'/partials/overlay_workflow.php'; ?>
+	<?php endif; ?>
 
   <label style="display:flex;gap:.5rem;align-items:center">
     Anchors <span title="Quick, queryable tags like locations, brands, people, seasons/time. Helps search & dashboards."

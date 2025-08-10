@@ -15,7 +15,7 @@ ob_start();
 	<?php if (!empty($presentationFlags['relations'])): ?>
 	  <!-- existing Relations markup -->
 	<?php endif; ?>
-
+	
   <?php if (!empty($anchors)): ?>
     <div class="anchor-grid">
       <?php foreach ($anchors as $key => $values): ?>

@@ -32,19 +32,26 @@
 <?php endif; ?>
 
 <script>
+  // Toggle a menu when its button is clicked
   document.addEventListener('click', e => {
-    // Toggle fold-out menus
-    if (e.target.closest('.menu-toggle')) {
-      const menuContainer = e.target.closest('.card-menu');
-      menuContainer.classList.toggle('open');
+    const toggle = e.target.closest('.menu-toggle');
+    if (toggle) {
+      const menu = toggle.nextElementSibling;
+      if (menu) {
+        menu.classList.toggle('open');
+      }
+      e.stopPropagation();
       return;
     }
-    // Close all open menus on outside click
-    document.querySelectorAll('.card-menu.open').forEach(c => {
-      if (!c.contains(e.target)) c.classList.remove('open');
+    // Close any open menus if you click outside them
+    document.querySelectorAll('.card-menu.open').forEach(menu => {
+      if (!menu.contains(e.target) && !menu.previousElementSibling.contains(e.target)) {
+        menu.classList.remove('open');
+      }
     });
   });
 </script>
+
 
 <div id="connectivity-banner"></div>
 <div id="snackbar" class="snackbar"></div>

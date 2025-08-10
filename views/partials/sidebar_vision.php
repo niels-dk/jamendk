@@ -1,4 +1,3 @@
-<!-- views/partials/sidebar_vision.php -->
 <nav class="board-nav">
   <a href="#" data-overlay="basics">Basics</a>
   <a href="#" data-overlay="relations">Relations</a>

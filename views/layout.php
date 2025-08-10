@@ -27,6 +27,7 @@
     <?php include __DIR__ . '/partials/sidebar.php'; ?>
 	<?php if (!empty($boardType) && $boardType === 'vision'): ?>
 	  <?php include __DIR__ . '/partials/overlay_basics.php'; ?>
+	  <?php include __DIR__ . '/partials/overlay_relations.php'; ?>
 	<?php endif; ?>
     <div class="content">
       <?= $content ?? '' ?>

@@ -9,21 +9,20 @@
   <?php include __DIR__ . '/partials/topbar.php'; ?>
 </header>
 
-<?php
-if (!empty($noSidebar) && $noSidebar === true) : ?>
-  <!-- SIMPLE LAYOUT (Dream board) -->
+<?php if (!empty($noSidebar) && $noSidebar === true): ?>
+  <!-- Dream or Dashboard layout (no sidebar) -->
   <div class="container">
     <main><?= $content ?? '' ?></main>
   </div>
 
-  <!-- Dream board scripts & modal -->
+  <!-- Dream board modal & scripts -->
   <?php include __DIR__ . '/partials/dream-modal.php'; ?>
   <script src="/public/js/mobile-dream.js?v=11"></script>
   <script src="/public/js/offline-ui.js?v=3"></script>
   <script src="/public/js/trix-loader.js?v=1"></script>
 
 <?php else: ?>
-  <!-- SIDEBAR LAYOUT -->
+  <!-- Sidebar layout -->
   <div class="layout">
     <?php include __DIR__ . '/partials/sidebar.php'; ?>
     <div class="content">
@@ -32,14 +31,15 @@ if (!empty($noSidebar) && $noSidebar === true) : ?>
   </div>
 <?php endif; ?>
 
-<!-- Global scripts -->
 <script>
   document.addEventListener('click', e => {
+    // Toggle fold-out menus
     if (e.target.closest('.menu-toggle')) {
       const menuContainer = e.target.closest('.card-menu');
       menuContainer.classList.toggle('open');
       return;
     }
+    // Close all open menus on outside click
     document.querySelectorAll('.card-menu.open').forEach(c => {
       if (!c.contains(e.target)) c.classList.remove('open');
     });

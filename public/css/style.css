@@ -695,4 +695,75 @@ header nav { display: none; }
     }
 }
 
+/* Sidebar base */
+.layout {
+  display: flex;
+  min-height: calc(100vh - 64px); /* adjust if your top bar is taller */
+}
+.sidebar {
+  width: 260px;
+  background: #0f1621;
+  border-right: 1px solid #1c2740;
+  position: sticky;
+  top: 64px;
+  height: calc(100vh - 64px);
+  padding: 16px;
+}
+.sidebar .brand {
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+.nav .new-board {
+  margin-bottom: 8px;
+}
+.card-menu {
+  display: none;
+  flex-direction: column;
+  background: #0f1621;
+  border: 1px solid #1c2740;
+  border-radius: 8px;
+  padding: 8px;
+}
+.card-menu.open {
+  display: flex;
+}
+.board-nav {
+  margin-top: 20px;
+}
+.board-nav a {
+  display: block;
+  padding: 6px 0;
+  color: #b7c2d0;
+  text-decoration: none;
+}
+.board-nav a:hover {
+  color: #fff;
+}
+.content {
+  flex: 1;
+  padding: 24px;
+}
+
+/* Mood overlay example */
+#mood-settings-overlay.overlay-hidden {
+  display: none;
+}
+#mood-settings-overlay {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 100%;
+  max-width: 420px;
+  height: 100%;
+  background: #0b1220;
+  color: #e6edf3;
+  border-left: 1px solid #1c2740;
+  z-index: 100;
+}
+#mood-settings-overlay .overlay-content {
+  padding: 24px;
+  overflow-y: auto;
+}
+
+
 

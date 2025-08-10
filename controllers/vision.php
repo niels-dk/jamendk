@@ -47,38 +47,62 @@ class vision_controller
     /** GET /visions/{slug} */
     public static function show(string $slug): void
 	{
-		// … load $vision …
+		global $db;
+		$vision = vision_model::get($db, $slug);
+		if (!$vision) {
+			http_response_code(404);
+			echo 'Vision not found';
+			return;
+		}
 
-		// this will make the sidebar show the Vision menu
-		$boardType = 'vision';
+		// Fetch trip slug (one live trip per vision)
+		$st = $db->prepare("SELECT slug FROM trips WHERE vision_id=? AND archived=0 ORDER BY created_at DESC LIMIT 1");
+		$st->execute([(int)$vision['id']]);
+		$tripSlug = $st->fetchColumn() ?: null;
 
-		// capture the view’s HTML into $content if needed
+		// Capture view
 		ob_start();
 		include __DIR__ . '/../views/vision_show.php';
 		$content = ob_get_clean();
 
+		// Tell layout to show sidebar and context nav
+		$boardType = 'vision';
 		include __DIR__ . '/../views/layout.php';
 	}
 
     /** GET /visions/{slug}/edit */
     public static function edit(string $slug): void
-    {
-        global $db;
-
-        $vision = vision_model::get($db, $slug);
-        if (!$vision) { http_response_code(404); echo 'Vision not found'; return; }
-
-        $kv = [];
-        foreach (vision_model::getAnchors($db, (int)$vision['id']) as $k => $vals) {
-            foreach ($vals as $v) $kv[] = ['key'=>$k, 'value'=>$v];
-        }
-
-        $title = 'Edit Vision';
-        ob_start();
-        include __DIR__ . '/../views/vision_form.php';
-        $content = ob_get_clean();
-        include __DIR__ . '/../views/layout.php';
+{
+    global $db;
+    $vision = vision_model::get($db, $slug);
+    if (!$vision) {
+        http_response_code(404);
+        echo 'Vision not found';
+        return;
     }
+
+    // Fetch trip slug (one live trip per vision)
+    $st = $db->prepare("SELECT slug FROM trips WHERE vision_id=? AND archived=0 ORDER BY created_at DESC LIMIT 1");
+    $st->execute([(int)$vision['id']]);
+    $tripSlug = $st->fetchColumn() ?: null;
+
+    // Build anchors array as before...
+    $kv = [];
+    foreach (vision_model::getAnchors($db, (int)$vision['id']) as $k => $vals) {
+        foreach ($vals as $v) {
+            $kv[] = ['key' => $k, 'value' => $v];
+        }
+    }
+
+    $title = 'Edit Vision';
+    ob_start();
+    include __DIR__ . '/../views/vision_form.php';
+    $content = ob_get_clean();
+
+    // Show sidebar with Vision nav
+    $boardType = 'vision';
+    include __DIR__ . '/../views/layout.php';
+}
 
     /** POST /visions/update */
     public static function update(): void

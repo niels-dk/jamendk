@@ -10,7 +10,9 @@ class home_controller
         ob_start();
         include __DIR__ . '/../views/home.php';
         $content = ob_get_clean();
-        include __DIR__ . '/../views/layout.php';
+         // show sidebar on non-Dream pages
+		$noSidebar = false;
+		include __DIR__ . '/../views/layout.php';
     }
 
     public static function dashboard()         { self::loadDashboard('dream', 'active'); }
@@ -47,6 +49,8 @@ class home_controller
         ob_start();
         include __DIR__ . '/../views/dashboard.php';
         $content = ob_get_clean();
-        include __DIR__ . '/../views/layout.php';
+        // show sidebar on dashboard pages
+		$noSidebar = false;
+		include __DIR__ . '/../views/layout.php';
     }
 }

@@ -11,7 +11,7 @@ class home_controller
         include __DIR__ . '/../views/home.php';
         $content = ob_get_clean();
          // show sidebar on non-Dream pages
-		$noSidebar = false;
+		$noSidebar = true;
 		include __DIR__ . '/../views/layout.php';
     }
 

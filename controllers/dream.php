@@ -44,7 +44,8 @@ class dream_controller
 
 		ob_start();
 		include __DIR__ . '/../views/dream_form.php';
-//		$content = ob_get_clean();
+		//$content = ob_get_clean();
+		$noSidebar = true;      // tell the layout to hide the sidebar for /dreams/new
 
 		include __DIR__ . '/../views/layout.php';
 	}

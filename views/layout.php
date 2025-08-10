@@ -25,6 +25,9 @@
   <!-- Sidebar layout -->
   <div class="layout">
     <?php include __DIR__ . '/partials/sidebar.php'; ?>
+	<?php if (!empty($boardType) && $boardType === 'vision'): ?>
+	  <?php include __DIR__ . '/partials/overlay_basics.php'; ?>
+	<?php endif; ?>
     <div class="content">
       <?= $content ?? '' ?>
     </div>
@@ -227,6 +230,51 @@
   });
 })();
 </script>
+<script>
+(function(){
+  // Handle overlay toggling
+  document.querySelectorAll('[data-overlay]').forEach(link => {
+    link.addEventListener('click', e => {
+      e.preventDefault();
+      const name = link.getAttribute('data-overlay');
+      const overlay = document.getElementById('overlay-' + name);
+      if (overlay) overlay.classList.remove('overlay-hidden');
+    });
+  });
+  document.querySelectorAll('.close-overlay').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.preventDefault();
+      btn.closest('[id^="overlay-"]').classList.add('overlay-hidden');
+    });
+  });
+
+  // Handle Basics form via AJAX
+  const form = document.getElementById('basicsForm');
+  if (form) {
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const formData = new FormData(form);
+      try {
+        const res = await fetch('/visions/update-basics', {
+          method: 'POST',
+          headers: { 'X-Requested-With': 'XMLHttpRequest' },
+          body: formData
+        });
+        const json = await res.json();
+        if (json.success) {
+          form.closest('[id^="overlay-"]').classList.add('overlay-hidden');
+          alert('Basics saved!');
+        } else {
+          alert('Error: ' + (json.error || 'Unknown'));
+        }
+      } catch(err) {
+        alert('Failed to save basics');
+      }
+    });
+  }
+})();
+</script>
+
 
 <div id="connectivity-banner"></div>
 <div id="snackbar" class="snackbar"></div>

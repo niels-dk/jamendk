@@ -829,5 +829,50 @@ header nav { display: none; }
 .two-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .trix-vision { min-height: 160px; }
 
+/* Overlay drawer */
+#overlay-basics.overlay-hidden {
+    display: none;
+}
+#overlay-basics {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 100%;
+    max-width: 420px;
+    height: 100%;
+    background: #0b1220;
+    border-left: 1px solid #1c2740;
+    z-index: 100;
+    color: #e6edf3;
+    box-shadow: -4px 0 12px rgba(0,0,0,0.4);
+}
+#overlay-basics .overlay-content {
+    padding: 24px;
+    height: 100%;
+    overflow-y: auto;
+}
+#overlay-basics .overlay-actions {
+    margin-top: 16px;
+    display: flex;
+    gap: 8px;
+}
+#overlay-basics h3 {
+    margin-bottom: 16px;
+}
+.show-flag {
+    display: block;
+    margin: 8px 0;
+    font-weight: normal;
+}
+.close-overlay {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    border: none;
+    background: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: inherit;
+}
 
 

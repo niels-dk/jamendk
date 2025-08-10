@@ -11,6 +11,10 @@ ob_start();
     </div>
     <br>
   <?php endif; ?>
+	
+	<?php if (!empty($presentationFlags['relations'])): ?>
+	  <!-- existing Relations markup -->
+	<?php endif; ?>
 
   <?php if (!empty($anchors)): ?>
     <div class="anchor-grid">

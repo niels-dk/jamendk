@@ -1,49 +1,45 @@
 <?php
-// views/partials/overlay_basics.php
-$hasId = !empty($vision['id']);
-$defaults = [
-  'relations'=>1,'goals'=>1,'budget'=>1,'roles'=>0,'contacts'=>1,'documents'=>1,'workflow'=>1
-];
-$flags = array_replace($defaults, $presentationFlags ?? []);
-?>
-<div id="overlay-basics" class="overlay-hidden">
-  <div class="overlay-content">
-    <button class="close-overlay" aria-label="Close">✕</button>
-    <h3>Vision Basics</h3>
+    // views/partials/overlay_basics.php
+    $hasId = !empty($vision['id']);
+    $defaults = [
+      'relations'=>1,'goals'=>1,'budget'=>1,'roles'=>0,'contacts'=>1,'documents'=>1,'workflow'=>1
+    ];
+    $flags = array_replace($defaults, $presentationFlags ?? []);
+    ?>
+    <div id="overlay-basics" class="overlay-hidden">
+      <div class="overlay-content">
+        <button class="close-overlay" aria-label="Close">✕</button>
+        <h3>Vision Basics</h3>
 
-    <?php $hasId = !empty($vision['id']);
-		if (!$hasId) {
-			echo '<p style="opacity:.8;margin:0 0 12px">Save the Vision first, then you can edit Basics.</p>';
-		} ?>
+        <?php $hasId = !empty($vision['id']);
+                if (!$hasId) {
+                        echo '<p style="opacity:.8;margin:0 0 12px">Save the Vision first, then you can edit Basics.</p>';
+                } ?>
 
-    <form id="basicsForm">
-      <?php if ($hasId): ?>
-        <input type="hidden" name="vision_id" value="<?= (int)$vision['id'] ?>">
-      <?php endif; ?>
+        <form id="basicsForm">
+          <?php if ($hasId): ?>
+            <input type="hidden" name="vision_id" value="<?= (int)$vision['id'] ?>">
+          <?php endif; ?>
 
-      <label>Start date</label>
-      <input type="date" name="start_date"
-             value="<?= htmlspecialchars($vision['start_date'] ?? '') ?>" <?= $hasId?'':'disabled' ?>>
+          <label>Start date</label>
+          <input type="date" name="start_date"
+                 value="<?= htmlspecialchars($vision['start_date'] ?? '') ?>" <?= $hasId?'':'disabled' ?>>
 
-      <label>End date</label>
-      <input type="date" name="end_date"
-             value="<?= htmlspecialchars($vision['end_date'] ?? '') ?>" <?= $hasId?'':'disabled' ?>>
+          <label>End date</label>
+          <input type="date" name="end_date"
+                 value="<?= htmlspecialchars($vision['end_date'] ?? '') ?>" <?= $hasId?'':'disabled' ?>>
 
-      <h4>Show on public view</h4>
-		<?php foreach ($defaults as $section => $_): ?>
-		  <div class="switch">
-			<label for="flag_<?= $section ?>" style="min-width:160px"><?= ucfirst($section) ?></label>
-			<input id="flag_<?= $section ?>" type="checkbox" name="show_<?= $section ?>"
-				   value="1" <?= !empty($flags[$section]) ? 'checked' : '' ?> <?= $hasId?'':'disabled' ?>>
-			<span class="knob" aria-hidden="true"></span>
-		  </div>
-		<?php endforeach; ?>
+          <h4>Show on public view</h4>
+                <?php foreach ($defaults as $section => $_): ?>
+                  <div class="switch">
+                        <label for="flag_<?= $section ?>" style="min-width:160px"><?= ucfirst($section) ?></label>
+                        <input id="flag_<?= $section ?>" type="checkbox" name="show_<?= $section ?>"
+                                   value="1" <?= !empty($flags[$section]) ? 'checked' : '' ?> <?= $hasId?'':'disabled' ?>>
+                        <span class="knob" aria-hidden="true"></span>
+                  </div>
+                <?php endforeach; ?>
 
-
-      <div class="overlay-actions">
-        <button type="submit" class="btn primary" <?= $hasId?'':'disabled' ?>>Save</button>
-        <button type="button" class="btn close-overlay">Cancel</button>
+          <!-- Buttons removed: saving happens automatically on change -->
+        </form>
       </div>
-    </form>
-  </div>
-</div>
+    </div>

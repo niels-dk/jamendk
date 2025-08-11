@@ -160,4 +160,4 @@
       });
     })();
     </script>
-    <script src="/public/js/vision-edit.js?v=1"></script>
+    <script src="/public/js/vision-edit.js?v=2"></script>

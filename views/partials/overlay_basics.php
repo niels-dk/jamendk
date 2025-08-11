@@ -31,13 +31,15 @@ $flags = array_replace($defaults, $presentationFlags ?? []);
              value="<?= htmlspecialchars($vision['end_date'] ?? '') ?>" <?= $hasId?'':'disabled' ?>>
 
       <h4>Show on public view</h4>
-      <?php foreach ($defaults as $section => $_): ?>
-        <label class="show-flag">
-          <input type="checkbox" name="show_<?= $section ?>" value="1"
-                 <?= !empty($flags[$section]) ? 'checked' : '' ?> <?= $hasId?'':'disabled' ?>>
-          <?= ucfirst($section) ?>
-        </label>
-      <?php endforeach; ?>
+		<?php foreach ($defaults as $section => $_): ?>
+		  <div class="switch">
+			<label for="flag_<?= $section ?>" style="min-width:160px"><?= ucfirst($section) ?></label>
+			<input id="flag_<?= $section ?>" type="checkbox" name="show_<?= $section ?>"
+				   value="1" <?= !empty($flags[$section]) ? 'checked' : '' ?> <?= $hasId?'':'disabled' ?>>
+			<span class="knob" aria-hidden="true"></span>
+		  </div>
+		<?php endforeach; ?>
+
 
       <div class="overlay-actions">
         <button type="submit" class="btn primary" <?= $hasId?'':'disabled' ?>>Save</button>

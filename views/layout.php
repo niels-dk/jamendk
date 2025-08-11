@@ -25,11 +25,19 @@
   <!-- Sidebar layout -->
   <div class="layout">
     <?php include __DIR__ . '/partials/sidebar.php'; ?>
-	<?php if (!empty($boardType) && $boardType === 'vision'): ?>
+
+	  <?php if (!empty($boardType) && $boardType === 'vision'): ?>
 	  <?php include __DIR__ . '/partials/overlay_basics.php'; ?>
 	  <?php include __DIR__ . '/partials/overlay_relations.php'; ?>
+	  <?php include __DIR__ . '/partials/overlay_goals.php'; ?>
+	  <?php include __DIR__ . '/partials/overlay_budget.php'; ?>
+	  <?php include __DIR__ . '/partials/overlay_roles.php'; ?>
+	  <?php include __DIR__ . '/partials/overlay_contacts.php'; ?>
+	  <?php include __DIR__ . '/partials/overlay_documents.php'; ?>
+	  <?php include __DIR__ . '/partials/overlay_workflow.php'; ?>
 	<?php endif; ?>
-    <div class="content">
+
+	  <div class="content">
       <?= $content ?? '' ?>
     </div>
   </div>
@@ -138,17 +146,17 @@
 <script>
 (function(){
   const wrap = document.querySelector('.anchors');
-  if (!wrap) return;
+  if (!wrap || wrap.dataset.enhanced === '1') return;
+  wrap.dataset.enhanced = '1';
+
   let index = wrap.querySelectorAll('.anchors-row').length;
 
-  // Add / remove rows
   wrap.addEventListener('click', e => {
     if (e.target.closest('.add-anchor')) {
       const tpl = wrap.querySelector('.anchors-row');
       const row = tpl.cloneNode(true);
       row.querySelectorAll('input,select').forEach(el => {
-        if (el.tagName === 'SELECT') el.selectedIndex = 0;
-        else el.value = '';
+        if (el.tagName === 'SELECT') el.selectedIndex = 0; else el.value = '';
         el.name = el.name.replace(/\[\d+\]/, '[' + index + ']');
       });
       wrap.insertBefore(row, wrap.querySelector('.add-anchor'));
@@ -160,20 +168,17 @@
     }
   });
 
-  // Custom key morphing (robust against blur + external clicks)
+  // Inline custom key morphing (unchanged)
   wrap.addEventListener('change', e => {
     const select = e.target.closest('select.anchor-key');
-    if (!select) return;
-    if (select.value !== '__custom') return;
+    if (!select || select.value !== '__custom') return;
 
     const input = document.createElement('input');
     input.type = 'text';
     input.className = 'anchor-key';
     input.placeholder = 'Custom key';
     input.style.width = select.offsetWidth + 'px';
-    input.dataset.name = select.name; // preserve original name
-
-    // swap select → input
+    input.dataset.name = select.name;
     select.replaceWith(input);
     input.focus();
 
@@ -191,46 +196,32 @@
         <option value="__custom">Custom…</option>`;
       if (keyValue) {
         const opt = document.createElement('option');
-        opt.value = keyValue;
-        opt.textContent = keyValue;
+        opt.value = keyValue; opt.textContent = keyValue;
         const customOpt = s.querySelector('option[value="__custom"]');
-        s.insertBefore(opt, customOpt);
-        s.value = keyValue;
+        s.insertBefore(opt, customOpt); s.value = keyValue;
       }
       return s;
     };
 
     const finish = (commit = true) => {
-      // guard: input may already be detached due to blur + DOM changes
-      const parent = input.parentNode;
-      const next   = input.nextSibling;
+      const parent = input.parentNode, next = input.nextSibling;
       const keyVal = commit ? input.value.trim() : '';
       const newSelect = buildSelect(keyVal);
-
-      if (input.isConnected) {
-        input.replaceWith(newSelect);
-      } else if (parent) {
-        parent.insertBefore(newSelect, next || null);
-      }
-      cleanup();
-    };
-
-    const cleanup = () => {
+      if (input.isConnected) input.replaceWith(newSelect);
+      else if (parent) parent.insertBefore(newSelect, next || null);
       input.removeEventListener('blur', onBlur);
       input.removeEventListener('keydown', onKey);
     };
 
     const onBlur = () => finish(true);
-    const onKey  = (ev) => {
-      if (ev.key === 'Enter') { ev.preventDefault(); finish(true); }
-      if (ev.key === 'Escape') { ev.preventDefault(); finish(false); }
-    };
-
+    const onKey  = (ev) => { if (ev.key === 'Enter'){ev.preventDefault();finish(true)}
+                              if (ev.key==='Escape'){ev.preventDefault();finish(false)} };
     input.addEventListener('blur', onBlur);
     input.addEventListener('keydown', onKey);
   });
 })();
 </script>
+	
 <script>
 (function(){
   // Handle overlay toggling
@@ -275,6 +266,31 @@
   }
 })();
 </script>
+	
+<script>
+(function(){
+  const inject = () => {
+    if (document.querySelector('trix-editor') && !document.querySelector('link[data-trix]')) {
+      const l = document.createElement('link');
+      l.rel = 'stylesheet';
+      l.href = 'https://unpkg.com/trix@2.1.15/dist/trix.css';
+      l.setAttribute('data-trix','');
+      document.head.appendChild(l);
+      const s = document.createElement('script');
+      s.defer = true;
+      s.src = 'https://unpkg.com/trix@2.1.15/dist/trix.umd.min.js';
+      s.setAttribute('data-trix','');
+      document.body.appendChild(s);
+    }
+  };
+  // run now, on DOMContentLoaded, and if DOM changes later
+  inject();
+  document.addEventListener('DOMContentLoaded', inject, { once:true });
+  const mo = new MutationObserver(() => inject());
+  mo.observe(document.documentElement, { childList:true, subtree:true });
+})();
+</script>
+
 
 
 <div id="connectivity-banner"></div>

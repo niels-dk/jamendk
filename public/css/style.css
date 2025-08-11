@@ -875,4 +875,34 @@ header nav { display: none; }
     color: inherit;
 }
 
+/* --- Switch --- */
+.switch {
+  display:flex; align-items:center; gap:.6rem;
+  margin:8px 0;
+}
+.switch input[type="checkbox"] { display:none; }
+.switch .knob {
+  width:34px; height:20px; border-radius:999px;
+  background:#2a3448; position:relative; transition:background .15s ease;
+  border:1px solid #24314a;
+}
+.switch .knob::after {
+  content:""; position:absolute; top:50%; left:2px; width:14px; height:14px;
+  border-radius:50%; transform:translateY(-50%); background:#cdd6e3; transition:left .15s ease;
+}
+.switch input:checked + .knob { background:#3478f6; }
+.switch input:checked + .knob::after { left:18px; }
+
+/* Align label + control nicely in overlay */
+#overlay-basics .switch label { margin:0; }
+#overlay-basics h4 { margin:16px 0 8px; }
+
+/* Hide Trix buttons we don't want */
+.trix-button-group--file-tools,
+.trix-button--icon-attach,
+.trix-button--icon-code,
+.trix-button--icon-strike,
+.trix-button--icon-decrease-nesting-level,
+.trix-button--icon-increase-nesting-level { display:none !important; }
+
 

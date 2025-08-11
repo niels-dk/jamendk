@@ -45,18 +45,16 @@
         /** GET /visions/{slug} */
         public static function show(string $slug): void
         {
-            global $db;
-            $vision = vision_model::get($db, $slug);
-            if (!$vision) {
-                http_response_code(404);
-                echo 'Vision not found';
-                return;
+            // fetch anchors for display (flatten key/value pairs)
+            $anchorsKv = [];
+            $anchorsMap = vision_model::getAnchors($db, (int)$vision['id']);
+            foreach ($anchorsMap as $k => $vals) {
+                foreach ($vals as $v) {
+                    $anchorsKv[] = ['key' => $k, 'value' => $v];
+                }
             }
-
-            // fetch flags
-            $st = $db->prepare("SELECT * FROM vision_presentation WHERE vision_id=?");
-            $st->execute([(int)$vision['id']]);
-            $presentationFlags = $st->fetch(PDO::FETCH_ASSOC) ?: [];
+            // expose anchors to the view via $kv
+            $kv = $anchorsKv;
 
             ob_start();
             include __DIR__ . '/../views/vision_show.php';
@@ -67,27 +65,33 @@
         }
 
         /** GET /visions/{slug}/edit */
-        public static function edit(string $slug): void
-        {
-            global $db;
-            $vision = vision_model::get($db, $slug);
-            if (!$vision) {
-                http_response_code(404);
-                echo 'Vision not found';
-                return;
-            }
+        // controllers/vision.php
+		public static function edit(string $slug): void
+		{
+			global $db;   // <-- ADD THIS
 
-            $st = $db->prepare("SELECT * FROM vision_presentation WHERE vision_id=?");
-            $st->execute([(int)$vision['id']]);
-            $presentationFlags = $st->fetch(PDO::FETCH_ASSOC) ?: [];
+			$vision = vision_model::get($db, $slug);
+			if (!$vision) { http_response_code(404); echo 'Vision not found'; return; }
 
-            ob_start();
-            include __DIR__ . '/../views/vision_form.php';
-            $content = ob_get_clean();
+			$st = $db->prepare("SELECT * FROM vision_presentation WHERE vision_id=?");
+			$st->execute([(int)$vision['id']]);
+			$presentationFlags = $st->fetch(PDO::FETCH_ASSOC) ?: [];
 
-            $boardType = 'vision';
-            include __DIR__ . '/../views/layout.php';
-        }
+			// anchors -> $kv
+			$kv = [];
+			$map = vision_model::getAnchors($db, (int)$vision['id']);
+			foreach ($map as $k => $vals) {
+				foreach ($vals as $v) { $kv[] = ['key'=>$k,'value'=>$v]; }
+			}
+
+			ob_start();
+			include __DIR__ . '/../views/vision_form.php';
+			$content = ob_get_clean();
+
+			$boardType = 'vision';
+			include __DIR__ . '/../views/layout.php';
+		}
+
 
         /** POST /visions/update (legacy update) */
         public static function update(): void

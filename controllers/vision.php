@@ -7,27 +7,27 @@ require_once __DIR__ . '/../models/vision.php';
 class vision_controller
 {
     /** GET /visions/new */
-   public static function create(): void
-   {
-		$title = 'Create a Vision';
-		$kv = [];
-		ob_start();
-		include __DIR__ . '/../views/vision_form.php';
-		$content = ob_get_clean();
-		$boardType = 'vision';
-		include __DIR__ . '/../views/layout.php';
+   	public static function create(): void
+	{
+		global $db, $currentUserId;
+		$userId = $currentUserId ?: 1;
+		// create draft with empty title/description
+		$draft  = vision_model::createDraft($db, $userId);
+		// redirect to edit screen
+		header("Location: /visions/{$draft['slug']}/edit");
+		exit;
 	}
 
     /** POST /visions/store */
     public static function store(): void
 	{
 		global $db, $currentUserId;
-
+		$userId = $currentUserId ?: 1;
 		$title = trim($_POST['title'] ?? '');
 		$desc  = $_POST['description'] ?? '';
 
 		// Create the vision (we're no longer collecting start/end dates here)
-		$id = vision_model::create($db, $currentUserId ?: 1, $title, $desc);
+		$id     = vision_model::create($db, $userId, $title ?: null, $desc ?: null);
 
 		// Build anchors from anchors[][] array
 		$anchors = $_POST['anchors'] ?? [];

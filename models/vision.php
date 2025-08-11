@@ -4,13 +4,16 @@
 class vision_model
 {
     /** Create and return the new ID */
-    public static function create(PDO $db, int $userId, string $title, string $description): int
+    public static function create(PDO $db, int $userId, ?string $title, ?string $description): int
     {
         $slug = self::generateSlug($db);
-        $sql = "INSERT INTO visions (user_id, slug, title, description, created_at)
-                VALUES (:uid, :slug, :t, :d, NOW())";
+        $sql  = "INSERT INTO visions (user_id, slug, title, description, status, created_at)
+                 VALUES (:uid, :slug, :t, :d, 'active', NOW())";
         $db->prepare($sql)->execute([
-            ':uid'=>$userId, ':slug'=>$slug, ':t'=>$title, ':d'=>$description
+            ':uid'  => $userId,
+            ':slug' => $slug,
+            ':t'    => $title,
+            ':d'    => $description,
         ]);
         return (int)$db->lastInsertId();
     }
@@ -19,11 +22,13 @@ class vision_model
     private static function generateSlug(PDO $db): string
     {
         do {
-            $slug = substr(str_shuffle('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'), 0, 8);
-            $st = $db->prepare("SELECT 1 FROM visions WHERE slug=?"); $st->execute([$slug]);
+            $slug = substr(str_shuffle('0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'), 0, 12);
+            $st   = $db->prepare("SELECT 1 FROM visions WHERE slug = ?");
+            $st->execute([$slug]);
         } while ($st->fetchColumn());
         return $slug;
     }
+
 
     /** Fetch a single vision by slug (only non-deleted) */
     public static function get(PDO $db, string $slug): ?array
@@ -114,4 +119,19 @@ class vision_model
             if ($k !== '' && $v !== '') $ins->execute([$boardId, $k, $v]);
         }
     }
+	
+	public static function createDraft(PDO $db, int $userId): array
+    {
+        $slug = self::generateSlug($db);
+        // insert draft with no title/description
+        $sql = "INSERT INTO visions (user_id, slug, title, description, status, created_at)
+                VALUES (:uid, :slug, NULL, NULL, 'draft', NOW())";
+        $db->prepare($sql)->execute([
+            ':uid'  => $userId,
+            ':slug' => $slug,
+        ]);
+        $id = (int)$db->lastInsertId();
+        return ['id' => $id, 'slug' => $slug];
+    }
+
 }

@@ -12,7 +12,7 @@ $action    = $isEdit ? '/visions/update' : '/visions/store';
   <?php endif; ?>
 
   <label>Title
-    <input name="title" type="text" required placeholder="Vision title"
+    <input name="title" type="text" placeholder="Vision title"
            value="<?= $isEdit ? htmlspecialchars($vision['title']) : '' ?>">
   </label>
 

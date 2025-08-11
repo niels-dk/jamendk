@@ -1,8 +1,7 @@
 <?php
 // expects: $vision, $anchors
-//ob_start();
+ob_start();
 ?>
-rrrr
 <h1><?= htmlspecialchars($vision['title']) ?></h1>
 
 <div class="card">

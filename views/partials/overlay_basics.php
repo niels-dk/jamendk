@@ -11,11 +11,10 @@ $flags = array_replace($defaults, $presentationFlags ?? []);
     <button class="close-overlay" aria-label="Close">✕</button>
     <h3>Vision Basics</h3>
 
-    <?php if (!$hasId): ?>
-      <p style="opacity:.8;margin:0 0 12px">
-        Save the Vision first, then you can edit Basics.
-      </p>
-    <?php endif; ?>
+    <?php $hasId = !empty($vision['id']);
+		if (!$hasId) {
+			echo '<p style="opacity:.8;margin:0 0 12px">Save the Vision first, then you can edit Basics.</p>';
+		} ?>
 
     <form id="basicsForm">
       <?php if ($hasId): ?>

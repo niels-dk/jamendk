@@ -145,6 +145,11 @@
 <!-- Anchors UI (add/remove + inline custom key, robust against blur) -->
 <script>
 (function(){
+	const wrap = document.querySelector('.anchors');
+  if (!wrap || wrap.dataset.enhanced === '1') return;  // prevents double binding
+  wrap.dataset.enhanced = '1';
+  let index = wrap.querySelectorAll('.anchors-row').length;
+	
   const wrap = document.querySelector('.anchors');
   if (!wrap || wrap.dataset.enhanced === '1') return;
   wrap.dataset.enhanced = '1';
@@ -269,7 +274,7 @@
 	
 <script>
 (function(){
-  const inject = () => {
+  const injectTrix = () => {
     if (document.querySelector('trix-editor') && !document.querySelector('link[data-trix]')) {
       const l = document.createElement('link');
       l.rel = 'stylesheet';
@@ -278,20 +283,16 @@
       document.head.appendChild(l);
       const s = document.createElement('script');
       s.defer = true;
-      s.src = 'https://unpkg.com/trix@2.1.15/dist/trix.umd.min.js';
+      s.src   = 'https://unpkg.com/trix@2.1.15/dist/trix.umd.min.js';
       s.setAttribute('data-trix','');
       document.body.appendChild(s);
     }
   };
-  // run now, on DOMContentLoaded, and if DOM changes later
-  inject();
-  document.addEventListener('DOMContentLoaded', inject, { once:true });
-  const mo = new MutationObserver(() => inject());
-  mo.observe(document.documentElement, { childList:true, subtree:true });
+  injectTrix();
+  document.addEventListener('DOMContentLoaded', injectTrix, { once:true });
+  new MutationObserver(injectTrix).observe(document.documentElement, { childList:true, subtree:true });
 })();
 </script>
-
-
 
 <div id="connectivity-banner"></div>
 <div id="snackbar" class="snackbar"></div>

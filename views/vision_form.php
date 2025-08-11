@@ -33,11 +33,11 @@
           <?php include __DIR__.'/partials/overlay_workflow.php'; ?>
         <?php endif; ?>
 
-      <label style="display:flex;gap:.5rem;align-items:center">
-        Anchors <span title="Quick, queryable tags like locations, brands, people, seasons/time. Helps search & 
-dashboards."
-              style="opacity:.7;cursor:help;">?</span>
-      </label>
+		<!-- Anchors heading -->
+		<label style="display:flex;gap:.5rem;align-items:center">
+		  Anchors <span title="Quick, queryable tags like locations, brands, people, seasons/time. Helps search & dashboards."
+				style="opacity:.7;cursor:help;">?</span>
+		</label>
 
       <div class="anchors">
         <?php

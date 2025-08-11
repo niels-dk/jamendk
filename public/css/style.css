@@ -791,7 +791,7 @@ header nav { display: none; }
 /* Anchors row */
 .anchors-row { display: flex; gap: 8px; align-items: center; margin: 8px 0; }
 .anchors-row .anchor-key { width: 180px; }
-.btn.btn-icon { width: 36px; height: 36px; display: inline-flex; align-items: center; justify-content: center; }
+.btn.btn-icon { width: 36px; height: 36px; margin-top: -23px; display: inline-flex; align-items: center; justify-content: center; }
 
 /* Trix editor height for visions */
 .trix-vision { min-height: 160px; }

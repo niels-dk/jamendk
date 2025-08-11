@@ -4,6 +4,36 @@ if (!window.VISION_EDIT_INITED) {
   window.VISION_EDIT_INITED = true;
 
   document.addEventListener('DOMContentLoaded', () => {
+	  
+	// Immediately load Trix if it isn't already present
+	(function ensureTrix() {
+	  if (document.querySelector('trix-editor') && !document.querySelector('link[data-trix]')) {
+		const link = document.createElement('link');
+		link.rel = 'stylesheet';
+		link.href = 'https://unpkg.com/trix@2.1.15/dist/trix.css';
+		link.setAttribute('data-trix','');
+		document.head.appendChild(link);
+		const script = document.createElement('script');
+		script.defer = true;
+		script.src   = 'https://unpkg.com/trix@2.1.15/dist/trix.umd.min.js';
+		script.setAttribute('data-trix','');
+		document.body.appendChild(script);
+	  }
+	})();
+
+	// Make entire .switch row clickable (label, knob, empty space)
+	document.querySelectorAll('.switch').forEach(sw => {
+	  sw.addEventListener('click', e => {
+		const input = sw.querySelector('input[type="checkbox"]');
+		if (!input) return;
+		// ignore direct clicks on the checkbox itself
+		if (e.target === input) return;
+		input.checked = !input.checked;
+		// fire change event so save-on-change logic executes
+		input.dispatchEvent(new Event('change', { bubbles: true }));
+	  });
+	});
+	
     const form = document.getElementById('visionForm');
     if (!form) return;
 

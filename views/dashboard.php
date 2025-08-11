@@ -117,7 +117,7 @@ $currentTypeLabel = $boardLabels[$boardType] ?? 'Boards';
     <?php foreach ($dreams as $d): ?>
       <div class="dashboard-card">
         <h3>
-          <a href="/<?= $boardType ?>s/<?= htmlspecialchars($d['slug']) ?>">
+          <a href="/<?= $boardType ?>s/<?= htmlspecialchars($d['slug']); if($boardType==="vision"){ print "/edit"; }?>">
             <span class="board-tag board-tag-<?= $boardType ?>">
               <?= htmlspecialchars(mb_substr($boardLabels[$boardType] ?? '❓', 0, 2)) ?>
             </span>

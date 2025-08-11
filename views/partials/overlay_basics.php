@@ -4,7 +4,7 @@
     $defaults = [
       'relations'=>1,'goals'=>1,'budget'=>1,'roles'=>0,'contacts'=>1,'documents'=>1,'workflow'=>1
     ];
-    $flags = array_replace($defaults, $presentationFlags ?? []);
+	$flags = array_replace($defaults, $presentationFlags ?? []);
     ?>
     <div id="overlay-basics" class="overlay-hidden">
       <div class="overlay-content">

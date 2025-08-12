@@ -59,6 +59,10 @@
         // New AJAX endpoints for visions
         '/api/visions/([A-Za-z0-9]{6,16})/save'    => ['vision', 'ajax_save'],
         '/api/visions/update-basics'               => ['vision', 'updateBasics'],
+		// Overlay: return HTML partial for section
+        '/visions/([A-Za-z0-9]{6,16})/overlay/([a-z]+)' => ['vision','overlay'],
+        // AJAX save for overlay sections (e.g. basics, relations, goals…)
+        '/api/visions/([A-Za-z0-9]{6,16})/([a-z]+)'     => ['vision','saveSection'],
 
     ];
 

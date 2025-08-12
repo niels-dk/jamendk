@@ -154,24 +154,20 @@
             $stmt->execute($vals);
         }
 		
-	/**
-	 * Return a flattened list of up to $limit anchor rows for a board.
-	 * Each entry is an associative array with 'key' and 'value'.  Useful
-	 * for summary displays (e.g. dashboard cards).
-	 */
-	public static function getAnchorsSummary(PDO $db, int $boardId, int $limit = 4): array
-	{
-		$map  = self::getAnchors($db, $boardId);
-		$rows = [];
-		foreach ($map as $k => $vals) {
-			foreach ($vals as $v) {
-				$rows[] = ['key' => $k, 'value' => $v];
-				if (count($rows) >= $limit) {
-					return $rows;
+	    /**
+		 * Return first $limit anchors as flat key/value pairs for dashboards.
+		 */
+		public static function getAnchorsSummary(PDO $db, int $boardId, int $limit = 4): array
+		{
+			$map  = self::getAnchors($db, $boardId);
+			$rows = [];
+			foreach ($map as $k => $vals) {
+				foreach ($vals as $v) {
+					$rows[] = ['key'=>$k,'value'=>$v];
+					if (count($rows) >= $limit) return $rows;
 				}
 			}
+			return $rows;
 		}
-		return $rows;
-	}
 
-   }
+}

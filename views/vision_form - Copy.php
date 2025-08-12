@@ -1,5 +1,7 @@
 <?php
 // views/vision_form.php
+// expects: $vision (optional), $kv (anchors array), $presentationFlags (optional)
+
 $isEdit    = isset($vision);
 $titleText = $isEdit ? 'Edit Vision' : 'Create a Vision';
 ?>
@@ -8,7 +10,7 @@ $titleText = $isEdit ? 'Edit Vision' : 'Create a Vision';
 <form id="visionForm" class="card">
   <?php if ($isEdit): ?>
     <input type="hidden" name="vision_id" value="<?= (int)($vision['id'] ?? 0) ?>">
-    <input type="hidden" name="slug"     value="<?= htmlspecialchars($vision['slug'] ?? '', ENT_QUOTES) ?>">
+    <input type="hidden" name="slug" value="<?= htmlspecialchars($vision['slug'] ?? '', ENT_QUOTES) ?>">
   <?php endif; ?>
 
   <label>Title
@@ -21,7 +23,17 @@ $titleText = $isEdit ? 'Edit Vision' : 'Create a Vision';
          value="<?= $isEdit ? htmlspecialchars($vision['description'] ?? '', ENT_QUOTES) : '' ?>">
   <trix-editor input="vision-desc" class="trix-vision"></trix-editor>
 
-  <!-- Sidebar nav items render in layout.php; anchor section stays here -->
+  <?php if (!empty($boardType) && $boardType === 'vision'): ?>
+    <?php include __DIR__ . '/partials/overlay_basics.php'; ?>
+    <?php include __DIR__ . '/partials/overlay_relations.php'; ?>
+    <?php include __DIR__ . '/partials/overlay_goals.php'; ?>
+    <?php include __DIR__ . '/partials/overlay_budget.php'; ?>
+    <?php include __DIR__ . '/partials/overlay_roles.php'; ?>
+    <?php include __DIR__ . '/partials/overlay_contacts.php'; ?>
+    <?php include __DIR__ . '/partials/overlay_documents.php'; ?>
+    <?php include __DIR__ . '/partials/overlay_workflow.php'; ?>
+  <?php endif; ?>
+
   <label style="display:flex;gap:.5rem;align-items:center">
     Anchors
     <span title="Quick, queryable tags like locations, brands, people, seasons/time. Helps search & dashboards."
@@ -30,6 +42,7 @@ $titleText = $isEdit ? 'Edit Vision' : 'Create a Vision';
 
   <div class="anchors">
     <?php
+      // $kv is array of ['key'=>..., 'value'=>...]
       $rows = $kv ?? [];
       if (!$rows) $rows = [['key' => '', 'value' => '']];
       $i = 0;
@@ -46,16 +59,21 @@ $titleText = $isEdit ? 'Edit Vision' : 'Create a Vision';
           <option <?= $rowKey === 'seasons'   ? 'selected' : '' ?>>seasons</option>
           <option <?= $rowKey === 'time'      ? 'selected' : '' ?>>time</option>
           <?php if ($rowKey && !in_array($rowKey, ['locations','brands','people','seasons','time'], true)): ?>
-            <option value="<?= htmlspecialchars($rowKey, ENT_QUOTES) ?>" selected><?= htmlspecialchars($rowKey, ENT_QUOTES) ?></option>
+            <option value="<?= htmlspecialchars($rowKey, ENT_QUOTES) ?>" selected>
+              <?= htmlspecialchars($rowKey, ENT_QUOTES) ?>
+            </option>
           <?php endif; ?>
           <option value="__custom">Custom…</option>
         </select>
+
         <input class="anchor-value" name="anchors[<?= $i ?>][value]"
                value="<?= htmlspecialchars($rowVal, ENT_QUOTES) ?>"
                placeholder="e.g. Copenhagen / Adidas / Alice / Winter / Q1">
+
         <button type="button" class="btn btn-icon remove-anchor" aria-label="Remove" style="padding:0 .5rem;">✕</button>
       </div>
     <?php $i++; endforeach; ?>
+
     <button type="button" class="btn add-anchor">＋ Add</button>
   </div>
 
@@ -70,62 +88,62 @@ $titleText = $isEdit ? 'Edit Vision' : 'Create a Vision';
   </div>
 </form>
 
-<!-- Single overlay shell (hidden by default) -->
-<div id="overlay-shell" class="overlay-hidden">
-  <div class="overlay-backdrop"></div>
-  <div class="overlay-panel">
-    <button class="close-overlay" aria-label="Close">✕</button>
-    <div id="overlay-content"></div>
-  </div>
-</div>
-
-<!-- anchor row management -->
 <script>
 (function(){
   const wrap = document.querySelector('.anchors');
   if (!wrap) return;
-  function reindex() {
-    wrap.querySelectorAll('.anchors-row').forEach((row, idx) => {
-      const k = row.querySelector('.anchor-key');
-      const v = row.querySelector('.anchor-value');
-      if (k) k.setAttribute('name', `anchors[${idx}][key]`);
-      if (v) v.setAttribute('name', `anchors[${idx}][value]`);
+
+  function reindexAnchors() {
+    const rows = wrap.querySelectorAll('.anchors-row');
+    rows.forEach((row, idx) => {
+      const keyField = row.querySelector('.anchor-key');
+      const valField = row.querySelector('.anchor-value');
+      if (keyField) keyField.setAttribute('name', `anchors[${idx}][key]`);
+      if (valField) valField.setAttribute('name', `anchors[${idx}][value]`);
     });
   }
-  wrap.addEventListener('click', e => {
+
+  // Add/remove
+  wrap.addEventListener('click', (e) => {
     if (e.target.closest('.add-anchor')) {
-      const tmpl = wrap.querySelector('.anchors-row');
-      const clone = tmpl.cloneNode(true);
+      const template = wrap.querySelector('.anchors-row');
+      if (!template) return;
+      const clone = template.cloneNode(true);
       clone.querySelectorAll('input,select').forEach(el => {
         if (el.tagName === 'SELECT') el.selectedIndex = 0;
         else el.value = '';
       });
       wrap.insertBefore(clone, wrap.querySelector('.add-anchor'));
-      reindex();
+      reindexAnchors();
     }
     if (e.target.closest('.remove-anchor')) {
+      const row = e.target.closest('.anchors-row');
       const rows = wrap.querySelectorAll('.anchors-row');
-      if (rows.length > 1) {
-        e.target.closest('.anchors-row').remove();
-        reindex();
+      if (rows.length > 1 && row) {
+        row.remove();
+        reindexAnchors();
       }
     }
   });
-  wrap.addEventListener('change', e => {
-    const sel = e.target.closest('select.anchor-key');
-    if (sel && sel.value === '__custom') {
+
+  // Custom key inline editor
+  wrap.addEventListener('change', (e) => {
+    const select = e.target.closest('select.anchor-key');
+    if (!select) return;
+    if (select.value === '__custom') {
       const input = document.createElement('input');
       input.type = 'text';
       input.className = 'anchor-key';
       input.placeholder = 'Custom key';
-      input.style.width = sel.offsetWidth + 'px';
-      sel.replaceWith(input);
+      input.style.width = select.offsetWidth + 'px';
+      select.replaceWith(input);
       input.focus();
+
       const finish = () => {
-        const key = input.value.trim();
-        const newSel = document.createElement('select');
-        newSel.className = 'anchor-key';
-        newSel.innerHTML = `
+        const key = (input.value || '').trim();
+        const newSelect = document.createElement('select');
+        newSelect.className = 'anchor-key';
+        newSelect.innerHTML = `
           <option value="">Choose…</option>
           <option>locations</option>
           <option>brands</option>
@@ -137,23 +155,25 @@ $titleText = $isEdit ? 'Edit Vision' : 'Create a Vision';
           const opt = document.createElement('option');
           opt.value = key;
           opt.textContent = key;
-          const customOpt = newSel.querySelector('option[value="__custom"]');
-          newSel.insertBefore(opt, customOpt);
-          newSel.value = key;
-        } else newSel.value = '';
-        input.replaceWith(newSel);
-        reindex();
+          const customOpt = newSelect.querySelector('option[value="__custom"]');
+          newSelect.insertBefore(opt, customOpt);
+          newSelect.value = key;
+        } else {
+          newSelect.value = '';
+        }
+        input.replaceWith(newSelect);
+        reindexAnchors();
       };
+
       input.addEventListener('blur', finish);
-      input.addEventListener('keydown', ev => {
+      input.addEventListener('keydown', (ev) => {
         if (ev.key === 'Enter') { ev.preventDefault(); finish(); }
       });
     }
   });
-  reindex();
+
+  reindexAnchors();
 })();
 </script>
 
-<!-- main and overlay scripts -->
 <script src="/public/js/vision-edit.js?v=1"></script>
-<script src="/public/js/vision-overlays.js?v=1"></script>

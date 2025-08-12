@@ -11,7 +11,7 @@ $titleText = $isEdit ? 'Edit Vision' : 'Create a Vision';
   <?php if ($isEdit): ?>
     <input type="hidden" name="vision_id" value="<?= (int)($vision['id'] ?? 0) ?>">
     <input type="hidden" name="slug"     value="<?= htmlspecialchars($vision['slug'] ?? '', ENT_QUOTES) ?>">
-  <?php endif; ?>
+  <?php endif; ?> 
 
   <label>Title
     <input name="title" type="text" placeholder="Vision title"

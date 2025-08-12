@@ -24,19 +24,7 @@
 <?php else: ?>
   <!-- Sidebar layout -->
   <div class="layout">
-    <?php include __DIR__ . '/partials/sidebar.php'; ?>
-
-	  <?php if (!empty($boardType) && $boardType === 'vision'): ?>
-	  <?php include __DIR__ . '/partials/overlay_basics.php'; ?>
-	  <?php include __DIR__ . '/partials/overlay_relations.php'; ?>
-	  <?php include __DIR__ . '/partials/overlay_goals.php'; ?>
-	  <?php include __DIR__ . '/partials/overlay_budget.php'; ?>
-	  <?php include __DIR__ . '/partials/overlay_roles.php'; ?>
-	  <?php include __DIR__ . '/partials/overlay_contacts.php'; ?>
-	  <?php include __DIR__ . '/partials/overlay_documents.php'; ?>
-	  <?php include __DIR__ . '/partials/overlay_workflow.php'; ?>
-	<?php endif; ?>
-
+	  <?php include __DIR__ . '/partials/sidebar.php'; ?>
 	  <div class="content">
       <?= $content ?? '' ?>
     </div>

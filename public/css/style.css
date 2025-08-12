@@ -454,7 +454,7 @@ input, textarea, select, button {
   border-radius: 4px;
 }
 input, textarea, select {
-  width: 100%;
+  width: 95%;
   margin-bottom: 1rem;
   padding: 0.75rem;
   border: 1px solid var(--border);

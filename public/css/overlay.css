@@ -27,7 +27,7 @@
   color: #ddd;
   overflow-y: auto;
   box-shadow: -12px 0 24px rgba(0,0,0,.4);
-  padding: 20px;
+  padding: 20px 0 0 0;
   position: relative;
 }
 

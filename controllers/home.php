@@ -64,10 +64,6 @@ class home_controller
         // Pull boards for the requested type + filter.
         // Keep the result in $dreams because the existing dashboard view expects that variable.
         $dreams = self::fetchBoards($db, $currentUserId, $type, $filter);
-		foreach ($visions as &$v) {
-			$v['anchors_summary'] = vision_model::getAnchorsSummary($db, (int)$v['id'], 4);
-		}
-		unset($v);
 
         // View vars
         $title     = ucfirst($type) . 's – ' . ucfirst($filter);

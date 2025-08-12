@@ -131,6 +131,14 @@ $currentTypeLabel = $boardLabels[$boardType] ?? 'Boards';
           </div>
         <?php endif; ?>
 
+		<?php if (!empty($vision['anchors_summary'])): ?>
+		  <ul class="anchor-summary">
+			<?php foreach ($vision['anchors_summary'] as $pair): ?>
+			  <li><strong><?= htmlspecialchars($pair['key']) ?>:</strong> <?= htmlspecialchars($pair['value']) ?></li>
+			<?php endforeach; ?>
+		  </ul>
+		<?php endif; ?>
+
 		<ul class="anchor-summary">
 		  <?php foreach ($vision['anchors'] as $pair): ?>
 			<li><strong><?= htmlspecialchars($pair['key']) ?>:</strong> <?= htmlspecialchars($pair['value']) ?></li>

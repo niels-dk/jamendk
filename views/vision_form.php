@@ -3,6 +3,8 @@
 $isEdit    = isset($vision);
 $titleText = $isEdit ? 'Edit Vision' : 'Create a Vision';
 ?>
+<link rel="stylesheet" href="/public/css/overlay.css?v=1">
+
 <h1><?= htmlspecialchars($titleText, ENT_QUOTES) ?></h1>
 
 <form id="visionForm" class="card">

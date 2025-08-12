@@ -69,12 +69,7 @@ class vision_controller
         $st = $db->prepare("SELECT * FROM vision_presentation WHERE vision_id=?");
         $st->execute([(int)$vision['id']]);
         $presentationFlags = $st->fetch(PDO::FETCH_ASSOC) ?: [];
-        // flatten anchors
-        $kv = [];
-        $map = vision_model::getAnchors($db, (int)$vision['id']);
-        foreach ($map as $k => $vals) {
-            foreach ($vals as $v) $kv[] = ['key'=>$k,'value'=>$v];
-        }
+        
         ob_start();
         include __DIR__.'/../views/vision_form.php';
         $content = ob_get_clean();

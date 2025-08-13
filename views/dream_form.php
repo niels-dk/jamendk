@@ -12,12 +12,12 @@ $isEdit = isset($dream);
     <input type="hidden" name="slug"     value="<?= $dream['slug'] ?>">
   <?php endif; ?>
 
-  <label>Title<br>
+  <label>Dream Name<br>
     <input name="title" type="text" style="width:100%"
            value="<?= $isEdit ? htmlspecialchars($dream['title']) : '' ?>" required>
   </label><br><br>
 
-  <label>Description<br>
+  <label>Inspiration<br>
     <textarea name="description" rows="6" style="width:100%"><?= $isEdit ? htmlspecialchars($dream['description']) : '' ?></textarea>
   </label><br><br>
 

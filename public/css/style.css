@@ -642,15 +642,42 @@ header nav { display: none; }
     min-height: calc(100vh - 64px);
 }
 
+/* Sidebar overlay modifications */
 .sidebar {
-    width: 260px;
-    background: #0f1621;
-    border-right: 1px solid #1c2740;
-    position: sticky;
-    top: 64px;
-    height: calc(100vh - 64px);
-    padding: 16px;
+  /* take the bar out of the normal flow and overlay it over content */
+  position: fixed !important;
+  left: 0;
+  top: 64px;              /* matches the height of the top navigation bar */
+  height: calc(100vh - 64px);
+  transform: translateX(0);
+  transition: transform 0.18s ease;
+  z-index: 200;           /* ensure it sits above content */
 }
+.sidebar.collapsed {
+  /* slide the bar left so only ~4px remains visible as a peek/hit area */
+  transform: translateX(calc(-100% + 4px));
+}
+
+/* style the toggle button as a bold arrow in a circle */
+.sidebar-collapse {
+  position: fixed !important;
+  left: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 36px;
+  height: 36px;
+  border-radius: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  z-index: 300;
+  font-size: 20px;
+}
+
 
 .brand {
     font-weight: 700;

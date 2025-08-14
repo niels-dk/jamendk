@@ -69,17 +69,15 @@
       sidebar.classList.add('collapsed');
     }
 
-    // Chevron button
-    const btn = sidebar.querySelector('.sidebar-collapse');
-    const setIcon = () => { if (btn) btn.textContent = sidebar.classList.contains('collapsed') ? '⟩' : '⟨'; };
-    setIcon();
-    if (btn) {
-      btn.addEventListener('click', () => {
-        sidebar.classList.toggle('collapsed');
-        localStorage.setItem(key, sidebar.classList.contains('collapsed') ? '1' : '0');
-        setIcon();
-      });
-    }
+	// Sidebar toggle button
+	const btn = sidebar.querySelector('.sidebar-collapse');
+	// Use bold directional arrows for the sidebar toggle to enhance clarity.
+	const setIcon = () => {
+	  if (!btn) return;
+	  // Show a right‑pointing arrow when collapsed and a left‑pointing arrow when expanded
+	  btn.textContent = sidebar.classList.contains('collapsed') ? '▶' : '◀';
+	};
+
 
     // Keyboard: [ to collapse, ] to expand
     document.addEventListener('keydown', (e) => {
@@ -134,15 +132,9 @@
 <!-- Anchors UI (add/remove + inline custom key, robust against blur) -->
 <script>
 (function(){
-	const wrap = document.querySelector('.anchors');
-  if (!wrap || wrap.dataset.enhanced === '1') return;  // prevents double binding
-  wrap.dataset.enhanced = '1';
-  let index = wrap.querySelectorAll('.anchors-row').length;
-	
   const wrap = document.querySelector('.anchors');
   if (!wrap || wrap.dataset.enhanced === '1') return;
   wrap.dataset.enhanced = '1';
-
   let index = wrap.querySelectorAll('.anchors-row').length;
 
   wrap.addEventListener('click', e => {

@@ -1,42 +1,47 @@
 <!doctype html>
+
 <html lang="en">
 <head>
   <?php include __DIR__ . '/partials/head.php'; ?>
 </head>
 <body>
-	
-<?php include __DIR__ . '/partials/topbar.php'; ?>
+
+<!--header>
+  <?php include __DIR__ . '/partials/topbar.php'; ?>
+</header-->
 
 <?php if (!empty($noSidebar) && $noSidebar === true): ?>
+
   <!-- Dream or Dashboard layout (no sidebar) -->
+
   <div class="container">
     <main><?= $content ?? '' ?></main>
   </div>
 
   <!-- Dream board modal & scripts -->
-  <?php include __DIR__ . '/partials/dream-modal.php'; ?>
-  <script src="/public/js/mobile-dream.js?v=11"></script>
-  <script src="/public/js/offline-ui.js?v=3"></script>
-  <script src="/public/js/trix-loader.js?v=1"></script>
-  <script defer src="/public/js/ui.js"></script>
+
+```
+ <?php include __DIR__ . '/partials/dream-modal.php'; ?>
+<script src="/public/js/mobile-dream.js?v=11"></script>
+<script src="/public/js/offline-ui.js?v=3"></script>
+<script src="/public/js/trix-loader.js?v=1"></script>
+<script defer src="/public/js/ui.js"></script>
+```
 
 <?php else: ?>
+
   <!-- Sidebar layout -->
+
   <div class="layout">
-    <?php include __DIR__ . '/partials/sidebar.php'; ?>
-
-    <!-- NEW: external toggle button so it never hides with the sidebar -->
-    <button class="sidebar-toggle" type="button" aria-label="Toggle sidebar" title="Toggle sidebar">
-      <span class="arrow">◀</span>
-    </button>
-
-    <div class="content">
+	  <?php include __DIR__ . '/partials/sidebar.php'; ?>
+	  <div class="content">
       <?= $content ?? '' ?>
     </div>
   </div>
 <?php endif; ?>
 
 <!-- Fold-out menus (Boards / + New board) -->
+
 <script>
   document.addEventListener('click', e => {
     const toggle = e.target.closest('.menu-toggle');
@@ -44,12 +49,14 @@
       const container = toggle.parentElement;
       const menu = container ? container.querySelector('.card-menu') : null;
       if (menu) {
+        // Close other open menus first
         document.querySelectorAll('.card-menu.open').forEach(m => { if (m !== menu) m.classList.remove('open'); });
         menu.classList.toggle('open');
       }
       e.stopPropagation();
       return;
     }
+    // Click outside → close all
     document.querySelectorAll('.card-menu.open').forEach(menu => {
       if (!menu.contains(e.target) && !menu.previousElementSibling?.contains(e.target)) {
         menu.classList.remove('open');
@@ -59,83 +66,81 @@
 </script>
 
 <!-- Sidebar collapse: mobile default, swipe gestures, keyboard, persistence -->
+
 <script>
-(function(){
-  const sidebar = document.querySelector('.sidebar');
-  const externalBtn = document.querySelector('.sidebar-toggle');
-  if (!sidebar || !externalBtn) return;
+  (function(){
+    const sidebar = document.querySelector('.sidebar');
+    if (!sidebar) return;
+    const key = 'sidebarCollapsed';
 
-  // Hide any old inline toggle inside the sidebar (if present)
-  const oldBtn = sidebar.querySelector('.sidebar-collapse');
-  if (oldBtn) oldBtn.style.display = 'none';
-
-  const key = 'sidebarCollapsed';
-
-  // Collapse by default on narrow screens (<=768px) unless user has a saved pref
-  const saved = localStorage.getItem(key);
-  if (saved === '1' || (saved === null && window.innerWidth <= 768)) {
-    sidebar.classList.add('collapsed');
-  }
-
-  // Arrow icon + button position
-  const setIcon = () => {
-    externalBtn.querySelector('.arrow').textContent =
-      sidebar.classList.contains('collapsed') ? '▶' : '◀';
-    setPosition();
-  };
-
-  const setPosition = () => {
-    // Place the button near the visible edge of the sidebar
-    const left = sidebar.classList.contains('collapsed')
-      ? 8 // near screen edge when closed
-      : Math.min(sidebar.offsetWidth + 8, 360); // just outside sidebar when open
-    externalBtn.style.left = left + 'px';
-  };
-
-  // Toggle handler
-  const toggle = () => {
-    sidebar.classList.toggle('collapsed');
-    localStorage.setItem(key, sidebar.classList.contains('collapsed') ? '1' : '0');
-    setIcon();
-  };
-
-  // Wire up
-  externalBtn.addEventListener('click', toggle);
-  window.addEventListener('resize', setPosition);
-  setIcon(); // initial
-
-  // Keyboard: [ to collapse, ] to expand
-  document.addEventListener('keydown', (e) => {
-    if (e.key === '[') { if (!sidebar.classList.contains('collapsed')) toggle(); }
-    else if (e.key === ']') { if (sidebar.classList.contains('collapsed')) toggle(); }
-  });
-
-  // Swipe gestures on touch devices
-  let touchStartX = null;
-  document.addEventListener('touchstart', (e) => { touchStartX = e.touches[0].clientX; }, {passive:true});
-  document.addEventListener('touchmove', (e) => {
-    if (touchStartX === null) return;
-    const dx = e.touches[0].clientX - touchStartX;
-    if (sidebar.classList.contains('collapsed')) {
-
-      if (touchStartX < 30 && dx > 50) { toggle(); touchStartX = null; }
-    } else {
-      if (touchStartX < sidebar.offsetWidth && dx < -50) { toggle(); touchStartX = null; }
+    // Collapse by default on narrow screens (<=768px) unless user has a saved pref
+    const saved = localStorage.getItem(key);
+    if (saved === '1' || (saved === null && window.innerWidth <= 768)) {
+      sidebar.classList.add('collapsed');
     }
-  }, {passive:true});
-  document.addEventListener('touchend', () => { touchStartX = null; });
 
-  // Lazy-load Trix (unchanged)
-  if (document.querySelector('trix-editor') && !document.querySelector('link[data-trix]')) {
-    const l = document.createElement('link'); l.rel='stylesheet';
-    l.href='https://unpkg.com/trix@2.1.15/dist/trix.css'; l.setAttribute('data-trix',''); document.head.appendChild(l);
-    const s = document.createElement('script'); s.defer = true;
-    s.src='https://unpkg.com/trix@2.1.15/dist/trix.umd.min.js'; s.setAttribute('data-trix',''); document.body.appendChild(s);
-  }
-})();
+	// Sidebar toggle button
+	const btn = sidebar.querySelector('.sidebar-collapse');
+	// Use bold directional arrows for the sidebar toggle to enhance clarity.
+	const setIcon = () => {
+	  if (!btn) return;
+	  // Show a right‑pointing arrow when collapsed and a left‑pointing arrow when expanded
+	  btn.textContent = sidebar.classList.contains('collapsed') ? '▶' : '◀';
+	};
+
+
+    // Keyboard: [ to collapse, ] to expand
+    document.addEventListener('keydown', (e) => {
+      if (e.key === '[') {
+        sidebar.classList.add('collapsed'); localStorage.setItem(key,'1'); setIcon();
+      } else if (e.key === ']') {
+        sidebar.classList.remove('collapsed'); localStorage.setItem(key,'0'); setIcon();
+      }
+    });
+
+    // Swipe gestures on touch devices
+    let touchStartX = null;
+    document.addEventListener('touchstart', (e) => { touchStartX = e.touches[0].clientX; }, {passive:true});
+    document.addEventListener('touchmove', (e) => {
+      if (touchStartX === null) return;
+      const dx = e.touches[0].clientX - touchStartX;
+      if (sidebar.classList.contains('collapsed')) {
+        // swipe right to open (start at screen edge)
+        if (touchStartX < 30 && dx > 50) {
+          sidebar.classList.remove('collapsed');
+          localStorage.setItem(key,'0'); setIcon();
+          touchStartX = null;
+        }
+      } else {
+        // swipe left anywhere over the sidebar to collapse
+        if (touchStartX < sidebar.offsetWidth && dx < -50) {
+          sidebar.classList.add('collapsed');
+          localStorage.setItem(key,'1'); setIcon();
+          touchStartX = null;
+        }
+      }
+    }, {passive:true});
+    document.addEventListener('touchend', () => { touchStartX = null; });
+
+    // Lazy-load Trix on any page that uses it
+    if (document.querySelector('trix-editor') && !document.querySelector('link[data-trix]')) {
+      const l = document.createElement('link');
+      l.rel = 'stylesheet';
+      l.href = 'https://unpkg.com/trix@2.1.15/dist/trix.css';
+      l.setAttribute('data-trix','');
+      document.head.appendChild(l);
+
+      const s = document.createElement('script');
+      s.defer = true;
+      s.src = 'https://unpkg.com/trix@2.1.15/dist/trix.umd.min.js';
+      s.setAttribute('data-trix','');
+      document.body.appendChild(s);
+    }
+  })();
 </script>
 
-<!-- Anchors UI (unchanged) -->
+<!-- Anchors UI (add/remove + inline custom key, robust against blur) -->
+
 <script>
 (function(){
   const wrap = document.querySelector('.anchors');
@@ -216,7 +221,7 @@
 
 <script>
 (function(){
-  // Overlays (unchanged)
+  // Handle overlay toggling
   document.querySelectorAll('[data-overlay]').forEach(link => {
     link.addEventListener('click', e => {
       e.preventDefault();
@@ -232,7 +237,7 @@
     });
   });
 
-  // Basics AJAX (unchanged)
+  // Handle Basics form via AJAX
   const form = document.getElementById('basicsForm');
   if (form) {
     form.addEventListener('submit', async (e) => {
@@ -285,5 +290,4 @@
 <div id="snackbar" class="snackbar"></div>
 
 </body>
-</html>
 </html>

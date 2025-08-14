@@ -972,3 +972,33 @@ header nav { display: none; }
 .switch input:checked + .knob::after {
   left:18px;
 }
+
+/* Overlay sidebar (slides over content, not pushing it) */
+.sidebar{
+  position:fixed !important;
+  top:0; left:0;
+  height:100vh;
+  transform:translateX(0);
+  transition:transform .2s ease;
+  z-index:200;
+}
+.sidebar.collapsed{
+  transform:translateX(calc(-100% + 4px)); /* keep a 4px “peek” */
+}
+
+/* External toggle button: bold arrow in a circle */
+.sidebar-toggle{
+  position:fixed;
+  top:30%;
+  transform:translateY(-50%);
+  left:8px;                      /* JS will shift this when sidebar is open */
+  width:40px;height:40px;
+  border-radius:999px;
+  display:flex;align-items:center;justify-content:center;
+  background:var(--primary,#2f6bff);
+  color:#fff;border:none;cursor:pointer;
+  box-shadow:0 6px 18px rgba(0,0,0,.35);
+  z-index:300;
+  font-size:20px; line-height:1;
+}
+.sidebar-toggle:focus{outline:0; box-shadow:0 0 0 3px rgba(47,107,255,.35)}

@@ -1,0 +1,76 @@
+:root{
+  --bg:#0d131e;--surface:#111722;--surface-2:#0f1420;
+  --text:#e6edf3;--muted:#9aa5b1;--border:#21262d;
+  --primary:#0a5aee;--primary-contrast:#ffffff;
+  --ring:0 0 0 3px rgba(47,107,255,.35);
+  --radius:16px;--card-shadow:0 8px 24px rgba(0,0,0,.35);
+}
+
+/* Base (kept) */
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--text);
+  font:16px/1.5 system-ui,Inter,Segoe UI,Roboto,Arial}
+a{color:inherit;text-decoration:none}
+.container{max-width:1100px;margin:0 auto;padding:24px}
+.card{background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius);box-shadow:var(--card-shadow)}
+.h1{font-size:44px;font-weight:800;letter-spacing:.2px;text-align:center}
+.sub{color:var(--muted);font-size:18px;margin-top:8px;text-align:center}
+.btn{display:inline-flex;gap:10px;align-items:center;padding:12px 16px;
+  border-radius:12px;border:1px solid transparent;cursor:pointer;font-weight:600}
+.btn-primary{background:var(--primary);color:var(--primary-contrast)}
+.btn-primary:hover{filter:brightness(1.05)}
+.btn:focus{outline:var(--ring)}
+.btn-ghost{background:transparent;border-color:var(--border);color:var(--text)}
+/* (…keep the rest of your existing styles here, unchanged) */
+
+
+/* ─────────────────────────────────────────────────────────── */
+/* NEW: Home header + hero utilities (replaces inline styles)  */
+/* ─────────────────────────────────────────────────────────── */
+
+.home-wrap{position:relative}
+
+/* Header row */
+.home-header{
+  display:flex;align-items:center;justify-content:space-between;
+  gap:12px;margin-top:24px;flex-wrap:wrap;
+}
+.home-brand{display:flex;align-items:center;gap:10px}
+.brand-title{font-weight:700}
+
+/* Logo grid */
+.logo-mark{
+   width:26px;height:26px;border:2px solid #fff;border-radius:6px;
+  display:grid;grid-template-columns:repeat(3,1fr);gap:4px;padding:4px
+}
+.logo-mark span{background:#fff;border-radius:50%}
+
+/* Right actions */
+.home-actions{display:flex;gap:10px;flex-wrap:wrap}
+
+/* Hero spacing (was margin-top:80px inline) */
+.hero{padding:40px}
+.hero-offset{margin-top:56px}
+
+/* CTA layout */
+.cta{margin-top:24px;display:flex;gap:14px;flex-wrap:wrap;justify-content:center}
+
+/* Tagline (was color/text-align inline) */
+.home-tagline{margin-top:28px;color:#cfd6df;text-align:center}
+
+/* ─────────────── */
+/* Mobile tweaks   */
+/* ─────────────── */
+@media (max-width:640px){
+	.brand-title{display: none;}
+	.logo-mark{ width:46px;height:46px;}
+  .container{padding:0}
+  .home-header{margin-top:12px}
+  .h1{font-size:32px}
+  .hero{padding:24px}
+  .hero-offset{margin-top:32px}
+  .home-actions .btn{width:auto}  /* keep side-by-side if space allows */
+  .cta .btn{width:100%;justify-content:center}
+}

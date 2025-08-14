@@ -1,96 +1,109 @@
 <?php
-    /**
-     * Tiny router that maps path‑regex => [controller, method]
-     * ─────────────────────────────────────────────────────────
-     *  • Add new routes by appending regex patterns to $routes.
-     *  • Regex delimiters are added automatically by preg_match in the loop.
-     */
+/**
+ * Tiny router that maps path-regex => [controller, method]
+ * ─────────────────────────────────────────────────────────
+ *  • Add new routes by appending regex patterns to $routes.
+ *  • Regex delimiters are added automatically by preg_match in the loop.
+ */
 
-    function route(string $uri): void
-    {
-        $routes = [
-        ''                => ['home',  'index'],
-        '/'               => ['home',  'index'],
-        '/index\.php'     => ['home',  'index'],
+function route(string $uri): void
+{
+    $routes = [
+        // ── Home / Auth ────────────────────────────────────────────────────────
+        ''                    => ['home', 'index'],
+        '/'                   => ['home', 'index'],
+        '/index\.php'         => ['home', 'index'],
 
-        '/login'          => ['user',  'login'],
-        '/register'       => ['user',  'register'],
-        '/logout'         => ['user',  'logout'],
-        '/dashboard'      => ['home',  'dashboard'],
+        '/login'              => ['user', 'login'],
+        '/register'           => ['user', 'register'],
+        '/logout'             => ['user', 'logout'],
 
-        // Clean URLs for dashboard by board type and filter
-        '/dashboard/([a-z]+)/([a-z]+)' => ['home', 'dashboard_type_filter'],  // e.g. /dashboard/dream/archived
-        '/dashboard/([a-z]+)'          => ['home', 'dashboard_type'],         // e.g. /dashboard/vision
+        // ── General Dashboard ─────────────────────────────────────────────────
+        '/dashboard'          => ['home', 'dashboard'],
 
-        '/dreams/new'     => ['dream', 'create'],
-        '/dreams/store'   => ['dream', 'store'],
-        '/dreams/([A-Za-z0-9]{6,10})' => ['dream', 'show'],
-        '/dreams/([A-Za-z0-9]{6,16})/edit' => ['dream', 'edit'],
-        '/dreams/update'                   => ['dream', 'update'],   // legacy non-AJAX fallback
-        '/dashboard/archived'   => ['home','archived'],
-        '/dashboard/trash'      => ['home','trash'],
+        // New structure: pluralized board dashboards under /dashboard/<type>
+        // e.g. /dashboard/dreams, /dashboard/visions, /dashboard/moods, /dashboard/trips
+        '/dashboard/(dreams|visions|moods|trips)/(archived|trash)'
+                               => ['home', 'dashboard_type_filter'],
+        '/dashboard/(dreams|visions|moods|trips)'
+                               => ['home', 'dashboard_type'],
 
-        // Clean URLs for board-type dashboards
-        '/dashboard'                                => ['home', 'dashboard'], // default = dream + active
-        '/dashboard/([a-z]+)'                       => ['home', 'dashboard_type'],
-        '/dashboard/([a-z]+)/archived'              => ['home', 'dashboard_type_archived'],
-        '/dashboard/([a-z]+)/trash'                 => ['home', 'dashboard_type_trash'],
+        // Keep global buckets (if used by UI)
+        '/dashboard/archived' => ['home', 'archived'],
+        '/dashboard/trash'    => ['home', 'trash'],
 
-        '/dreams/new'           => ['dream','create'],
-        '/dreams/store'         => ['dream','store'],
-        '/dreams/([A-Za-z0-9]{6,16})'             => ['dream','show'],
-        '/dreams/([A-Za-z0-9]{6,16})/edit'        => ['dream','edit'],
-        '/dreams/([A-Za-z0-9]{6,16})/archive'     => ['dream','archive'],
-        '/dreams/([A-Za-z0-9]{6,16})/unarchive'   => ['dream','unarchive'],
-        '/dreams/([A-Za-z0-9]{6,16})/delete'      => ['dream','destroy'],
-        '/dreams/([A-Za-z0-9]{6,16})/restore'     => ['dream','restore'],
+        // Backward-compat: accept old singular paths (e.g. /dashboard/vision)
+        // Controller can treat singular/plural the same.
+        '/dashboard/(dream|vision|mood|trip)/(archived|trash)'
+                               => ['home', 'dashboard_type_filter'],
+        '/dashboard/(dream|vision|mood|trip)'
+                               => ['home', 'dashboard_type'],
 
-        // Vision routes
-        '/visions/new'                        => ['vision', 'create'],
-        '/visions/store'                      => ['vision', 'store'],
-        '/visions/([A-Za-z0-9]{6,16})'        => ['vision', 'show'],
-        '/visions/([A-Za-z0-9]{6,16})/edit'   => ['vision', 'edit'],
-        '/visions/update'                     => ['vision', 'update'],
-        '/visions/([A-Za-z0-9]{6,16})/archive'   => ['vision', 'archive'],
-        '/visions/([A-Za-z0-9]{6,16})/unarchive' => ['vision', 'unarchive'],
-        '/visions/([A-Za-z0-9]{6,16})/delete'    => ['vision', 'destroy'],
-        '/visions/([A-Za-z0-9]{6,16})/restore'   => ['vision', 'restore'],
+        // Also keep a generic fallback capture for any other board types
+        '/dashboard/([a-z]+)/([a-z]+)'
+                               => ['home', 'dashboard_type_filter'], // e.g. /dashboard/unknown/archived
+        '/dashboard/([a-z]+)'  => ['home', 'dashboard_type'],
 
-        // New AJAX endpoints for visions
+        // ── Dreams CRUD ───────────────────────────────────────────────────────
+        // (paths unchanged; only the dashboard listing moved under /dashboard/dreams)
+        '/dreams/new'                              => ['dream', 'create'],
+        '/dreams/store'                            => ['dream', 'store'],
+        '/dreams/update'                           => ['dream', 'update'],   // legacy non-AJAX fallback
+        '/dreams/([A-Za-z0-9]{6,16})'              => ['dream', 'show'],
+        '/dreams/([A-Za-z0-9]{6,16})/edit'         => ['dream', 'edit'],
+        '/dreams/([A-Za-z0-9]{6,16})/archive'      => ['dream', 'archive'],
+        '/dreams/([A-Za-z0-9]{6,16})/unarchive'    => ['dream', 'unarchive'],
+        '/dreams/([A-Za-z0-9]{6,16})/delete'       => ['dream', 'destroy'],
+        '/dreams/([A-Za-z0-9]{6,16})/restore'      => ['dream', 'restore'],
+
+        // ── Visions CRUD ──────────────────────────────────────────────────────
+        '/visions/new'                             => ['vision', 'create'],
+        '/visions/store'                           => ['vision', 'store'],
+        '/visions/update'                          => ['vision', 'update'],
+        '/visions/([A-Za-z0-9]{6,16})'             => ['vision', 'show'],
+        '/visions/([A-Za-z0-9]{6,16})/edit'        => ['vision', 'edit'],
+        '/visions/([A-Za-z0-9]{6,16})/archive'     => ['vision', 'archive'],
+        '/visions/([A-Za-z0-9]{6,16})/unarchive'   => ['vision', 'unarchive'],
+        '/visions/([A-Za-z0-9]{6,16})/delete'      => ['vision', 'destroy'],
+        '/visions/([A-Za-z0-9]{6,16})/restore'     => ['vision', 'restore'],
+
+        // ── Vision AJAX (kept as-is) ──────────────────────────────────────────
         '/api/visions/([A-Za-z0-9]{6,16})/save'    => ['vision', 'ajax_save'],
         '/api/visions/update-basics'               => ['vision', 'updateBasics'],
-		
-		// Overlay: return HTML partial for section
-        '/visions/([A-Za-z0-9]{6,16})/overlay/([a-z]+)' => ['vision','overlay'],
-        // AJAX save for overlay sections (e.g. basics, relations, goals…)
-        '/api/visions/([A-Za-z0-9]{6,16})/([a-z]+)'     => ['vision','saveSection'],
 
+        // Overlay: return HTML partial for section
+        '/visions/([A-Za-z0-9]{6,16})/overlay/([a-z]+)'
+                                                   => ['vision', 'overlay'],
+
+        // AJAX save for overlay sections (e.g. basics, relations, goals…)
+        '/api/visions/([A-Za-z0-9]{6,16})/([a-z]+)'
+                                                   => ['vision', 'saveSection'],
     ];
 
-        foreach ($routes as $pattern => $target) {
-            if (preg_match('@^' . $pattern . '$@', $uri, $matches)) {
+    foreach ($routes as $pattern => $target) {
+        if (preg_match('@^' . $pattern . '$@', $uri, $matches)) {
 
-                // Locate controller file
-                $ctrlFile = __DIR__ . '/../controllers/' . $target[0] . '.php';
-                if (!file_exists($ctrlFile)) {
-                    break; // fall through to 404
-                }
+            // Locate controller file
+            $ctrlFile = __DIR__ . '/../controllers/' . $target[0] . '.php';
+            if (!file_exists($ctrlFile)) {
+                break; // fall through to 404
+            }
 
-                require_once $ctrlFile;
-                $class = $target[0] . '_controller';
+            require_once $ctrlFile;
+            $class = $target[0] . '_controller';
 
-                // Call the mapped method with any captured params
-                if (is_callable([$class, $target[1]])) {
-                    call_user_func_array(
-                        [$class, $target[1]],
-                        array_slice($matches, 1) // pass regex captures
-                    );
-                    return;
-                }
+            // Call the mapped method with any captured params
+            if (is_callable([$class, $target[1]])) {
+                call_user_func_array(
+                    [$class, $target[1]],
+                    array_slice($matches, 1) // pass regex captures
+                );
+                return;
             }
         }
-
-        // No match → 404
-        http_response_code(404);
-        echo '404 - Not Found';
     }
+
+    // No match → 404
+    http_response_code(404);
+    echo '404 - Not Found';
+}

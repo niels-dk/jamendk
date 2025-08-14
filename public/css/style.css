@@ -52,6 +52,7 @@ body {
 }
 
 /* header/navigation */
+/*
 header {
   background:var(--bg-card); border-bottom:1px solid var(--border);
   box-shadow:var(--shadow);
@@ -59,7 +60,7 @@ header {
 header .container{display:flex;align-items:center;justify-content:space-between;padding:.8rem var(--space);}
 header a{color:var(--text-main);margin-left:1rem;text-decoration:none;font-size:.9rem;}
 header a:hover{color:var(--accent);}
-
+*/
 /* utility */
 .container{width:min(92%,1000px);margin:auto;padding:var(--space) 0;}
 .card{

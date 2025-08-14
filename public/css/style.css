@@ -474,7 +474,7 @@ input, textarea, select {
   border-radius: 6px;
 }
 
-/* ─── Header & FAB ───────────────────────────────────────── */
+/* ─── Header & FAB ───────────────────────────────────────── 
 header {
   display: flex;
   align-items: center;

@@ -6,7 +6,7 @@
 <body>
 
 <!--header>
-  <?php //include __DIR__ . '/partials/topbar.php'; ?>
+  <?php include __DIR__ . '/partials/topbar.php'; ?>
 </header-->
 
 <?php if (!empty($noSidebar) && $noSidebar === true): ?>

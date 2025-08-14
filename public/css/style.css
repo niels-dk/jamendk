@@ -82,7 +82,7 @@ header a:hover{color:var(--accent);}
 .split-menu{min-width:200px;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);}
 
 .btn-group { position: relative; display: inline-block; }
-.btn.split { width: 2.4rem; padding: .55rem 0; }
+.btn.split { width: 2.4rem; margin:-4px; }
 .split-menu {
   display: none; position: absolute; right:0; background:var(--bg-alt);
   border:1px solid var(--border); border-radius:4px; z-index:10;

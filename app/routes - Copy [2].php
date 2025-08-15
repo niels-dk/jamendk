@@ -18,16 +18,6 @@ function route(string $uri): void
         '/register'           => ['user', 'register'],
         '/logout'             => ['user', 'logout'],
 
-		'/api/moods/search'                                  => ['vision','searchMoods'],
-		'/api/visions/([A-Za-z0-9]{6,16})/relations'         => ['vision','saveRelations'],
-		'/api/visions/([A-Za-z0-9]{6,16})/relations/mood'    => ['vision','removeMood'],
-		'/api/visions/([A-Za-z0-9]{6,16})/budget'            => ['vision','saveBudget'],
-		'/api/currencies'                                    => ['vision','currencies'],
-		'/api/visions/([A-Za-z0-9]{6,16})/contacts'          => ['vision','listContacts'],
-		'/api/visions/([A-Za-z0-9]{6,16})/contacts/create'   => ['vision','createContact'],
-		'/api/visions/([A-Za-z0-9]{6,16})/contacts/([0-9]+)' => ['vision','updateContact'],
-		'/api/visions/([A-Za-z0-9]{6,16})/contacts/([0-9]+)/delete' => ['vision','deleteContact'],
-
         // ── General Dashboard ─────────────────────────────────────────────────
         '/dashboard'          => ['home', 'dashboard'],
 

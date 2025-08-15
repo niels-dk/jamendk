@@ -139,28 +139,73 @@ class vision_controller
 
     /** POST /api/visions/update-basics (legacy basics save) */
     public static function updateBasics(): void
-    {
-        global $db;
-        $id = (int)($_POST['vision_id'] ?? 0);
-        if (!$id) { http_response_code(400); echo json_encode(['error'=>'Missing Vision ID']); return; }
-        $start = $_POST['start_date'] ?? null;
-        $end   = $_POST['end_date'] ?? null;
-        $stmt  = $db->prepare("UPDATE visions SET start_date=?, end_date=? WHERE id=?");
-        $stmt->execute([$start, $end, $id]);
-        // flags
-        $defaults = ['relations'=>1,'goals'=>1,'budget'=>1,'roles'=>0,'contacts'=>1,'documents'=>1,'workflow'=>1];
-        $flags=[];
-        foreach ($defaults as $k=>$v) {
-            $flags[$k] = isset($_POST["show_$k"]) ? 1 : 0;
-        }
-        $fields=array_keys($defaults);
-        $columns=implode(',', $fields);
-        $place=implode(',', array_fill(0, count($fields), '?'));
-        $updates=implode(',', array_map(fn($f) => "$f = VALUES($f)", $fields));
-        $stmt = $db->prepare("INSERT INTO vision_presentation (vision_id,$columns) VALUES (?, $place) ON DUPLICATE KEY UPDATE $updates");
-        $stmt->execute(array_merge([$id], array_values($flags)));
-        echo json_encode(['success'=>true]);
-    }
+	{
+		// Supports both AJAX (JSON) and normal form post (redirect kept as-is if you already do that).
+		header('Content-Type: application/json');
+
+		try {
+			global $db;
+
+			// Accept either vision_id (int) or slug (string)
+			$visionId = isset($_POST['vision_id']) ? (int)$_POST['vision_id'] : 0;
+			$slug     = isset($_POST['slug']) ? trim($_POST['slug']) : '';
+
+			if (!$visionId && $slug !== '') {
+				$s = $db->prepare("SELECT id FROM visions WHERE slug=? LIMIT 1");
+				$s->execute([$slug]);
+				$visionId = (int)($s->fetchColumn() ?: 0);
+			}
+			if (!$visionId) {
+				http_response_code(400);
+				echo json_encode(['success' => false, 'error' => 'Missing Vision ID/slug']);
+				return;
+			}
+
+			// Dates (nullable)
+			$start = trim((string)($_POST['start_date'] ?? ''));
+			$end   = trim((string)($_POST['end_date']   ?? ''));
+
+			$start = ($start === '') ? null : $start; // expect YYYY-MM-DD
+			$end   = ($end   === '') ? null : $end;
+
+			if ($start !== null && $end !== null && strcmp($end, $start) < 0) {
+				http_response_code(422);
+				echo json_encode(['success' => false, 'error' => 'End date cannot be before start date']);
+				return;
+			}
+
+			// Visibility flags (checkboxes)
+			$showOnBoardDefault = isset($_POST['show_on_board_default']) ? 1 : 0;
+			$showOnDashboard    = isset($_POST['show_on_dashboard'])      ? 1 : 0;
+			$showOnTrip         = isset($_POST['show_on_trip'])           ? 1 : 0;
+
+			// Update statement (keeps other columns untouched)
+			$q = $db->prepare("
+				UPDATE visions
+				   SET start_date = :start_date,
+					   end_date   = :end_date,
+					   show_on_board_default = :board_default,
+					   show_on_dashboard      = :dash,
+					   show_on_trip           = :trip
+				 WHERE id = :id
+				 LIMIT 1
+			");
+			$q->execute([
+				':start_date'    => $start,
+				':end_date'      => $end,
+				':board_default' => $showOnBoardDefault,
+				':dash'          => $showOnDashboard,
+				':trip'          => $showOnTrip,
+				':id'            => $visionId,
+			]);
+
+			echo json_encode(['success' => true]);
+		} catch (Throwable $e) {
+			http_response_code(500);
+			echo json_encode(['success' => false, 'error' => 'Update failed', 'detail' => $e->getMessage()]);
+		}
+	}
+
 
     /** POST /api/visions/{slug}/save – save title, desc, anchors */
     public static function ajax_save(string $slug): void
@@ -263,4 +308,342 @@ class vision_controller
                 echo json_encode(['ok'=>true]);
         }
     }
+	
+	/** Helper: resolve a vision by slug (fallback) */
+	private static function findVisionBySlug(PDO $db, string $slug): ?array
+	{
+		$st = $db->prepare("SELECT * FROM visions WHERE slug=? LIMIT 1");
+		$st->execute([$slug]);
+		$row = $st->fetch(PDO::FETCH_ASSOC);
+		return $row ?: null;
+	}
+
+	/** GET /api/moods/search?q=... */
+	public static function searchMoods(): void
+	{
+		header('Content-Type: application/json');
+		try {
+			global $db;
+			$q = trim((string)($_GET['q'] ?? ''));
+			if ($q === '') { echo json_encode([]); return; }
+
+			// Adjust table/columns if yours differ
+			$st = $db->prepare("SELECT slug AS id, title FROM moods
+								 WHERE title LIKE ? OR slug LIKE ?
+								 ORDER BY title LIMIT 10");
+			$like = '%' . $q . '%';
+			$st->execute([$like, $like]);
+			echo json_encode($st->fetchAll(PDO::FETCH_ASSOC));
+		} catch (Throwable $e) {
+			http_response_code(500);
+			echo json_encode(['error' => 'Search failed']);
+		}
+	}
+
+	/** POST /api/visions/{slug}/relations */
+	public static function saveRelations(string $slug): void
+	{
+		header('Content-Type: application/json');
+		try {
+			global $db;
+
+			// Prefer your model if present
+			if (class_exists('vision_model') && method_exists('vision_model', 'get')) {
+				$vision = vision_model::get($db, $slug);
+			} else {
+				$vision = self::findVisionBySlug($db, $slug);
+			}
+			if (!$vision) { http_response_code(404); echo json_encode(['error'=>'Vision not found']); return; }
+
+			$data   = $_POST ?: json_decode(file_get_contents('php://input'), true) ?: [];
+			$moodId = isset($data['mood_id']) ? trim((string)$data['mood_id']) : null;
+			$dash   = !empty($data['show_mood_on_dashboard']) ? 1 : 0;
+			$trip   = !empty($data['show_mood_on_trip'])      ? 1 : 0;
+
+			$st = $db->prepare("UPDATE visions
+								   SET mood_id = :mood_id,
+									   show_mood_on_dashboard = :dash,
+									   show_mood_on_trip = :trip
+								 WHERE id = :id LIMIT 1");
+			$st->execute([
+				':mood_id' => ($moodId !== null && $moodId !== '') ? $moodId : null,
+				':dash'    => $dash,
+				':trip'    => $trip,
+				':id'      => (int)$vision['id'],
+			]);
+
+			echo json_encode(['success' => true]);
+		} catch (Throwable $e) {
+			http_response_code(500);
+			echo json_encode(['error' => 'Save failed']);
+		}
+	}
+
+	/** DELETE /api/visions/{slug}/relations/mood */
+	public static function removeMood(string $slug): void
+	{
+		header('Content-Type: application/json');
+		try {
+			global $db;
+			$vision = class_exists('vision_model') && method_exists('vision_model','get')
+				? vision_model::get($db, $slug)
+				: self::findVisionBySlug($db, $slug);
+
+			if (!$vision) { http_response_code(404); echo json_encode(['error'=>'Vision not found']); return; }
+
+			$st = $db->prepare("UPDATE visions
+								   SET mood_id=NULL, show_mood_on_dashboard=0, show_mood_on_trip=0
+								 WHERE id=? LIMIT 1");
+			$st->execute([(int)$vision['id']]);
+
+			echo json_encode(['success' => true]);
+		} catch (Throwable $e) {
+			http_response_code(500);
+			echo json_encode(['error' => 'Remove failed']);
+		}
+	}
+
+	/** POST /api/visions/{slug}/budget */
+	public static function saveBudget(string $slug): void
+	{
+		header('Content-Type: application/json');
+		try {
+			global $db;
+			$vision = class_exists('vision_model') && method_exists('vision_model','get')
+				? vision_model::get($db, $slug)
+				: self::findVisionBySlug($db, $slug);
+
+			if (!$vision) { http_response_code(404); echo json_encode(['error'=>'Vision not found']); return; }
+
+			$data = $_POST ?: json_decode(file_get_contents('php://input'), true) ?: [];
+			$cur  = strtoupper(trim((string)($data['currency'] ?? '')));
+			$amt  = (string)($data['amount'] ?? '0');
+			$amt  = str_replace(',', '.', $amt);
+			$amt  = is_numeric($amt) ? (float)$amt : 0.0;
+
+			$dash = !empty($data['show_on_dashboard']) ? 1 : 0;
+			$trip = !empty($data['show_on_trip'])      ? 1 : 0;
+
+			if ($cur === '') { http_response_code(422); echo json_encode(['error'=>'Currency required']); return; }
+
+			// Upsert (requires UNIQUE index on vision_id)
+			$sql = "INSERT INTO vision_budgets (vision_id, currency, amount, show_on_dashboard, show_on_trip)
+					VALUES (:vid, :cur, :amt, :dash, :trip)
+					ON DUPLICATE KEY UPDATE
+					  currency=VALUES(currency),
+					  amount=VALUES(amount),
+					  show_on_dashboard=VALUES(show_on_dashboard),
+					  show_on_trip=VALUES(show_on_trip)";
+			$st = $db->prepare($sql);
+			$st->execute([
+				':vid'  => (int)$vision['id'],
+				':cur'  => $cur,
+				':amt'  => $amt,
+				':dash' => $dash,
+				':trip' => $trip,
+			]);
+
+			echo json_encode(['success' => true]);
+		} catch (Throwable $e) {
+			http_response_code(500);
+			echo json_encode(['error' => 'Budget save failed']);
+		}
+	}
+
+	/** GET /api/currencies[?q=...] */
+	public static function currencies(): void
+	{
+		header('Content-Type: application/json');
+		// Lightweight static list; you can later read from a table or service.
+		$all = [
+			['code'=>'DKK','name'=>'Danish Krone'],
+			['code'=>'EUR','name'=>'Euro'],
+			['code'=>'USD','name'=>'US Dollar'],
+			['code'=>'GBP','name'=>'British Pound'],
+			['code'=>'SEK','name'=>'Swedish Krona'],
+			['code'=>'NOK','name'=>'Norwegian Krone'],
+			['code'=>'CHF','name'=>'Swiss Franc'],
+			['code'=>'JPY','name'=>'Japanese Yen'],
+			['code'=>'CAD','name'=>'Canadian Dollar'],
+			['code'=>'AUD','name'=>'Australian Dollar'],
+		];
+		$q = strtoupper(trim((string)($_GET['q'] ?? '')));
+		if ($q === '') { echo json_encode($all); return; }
+		$out = array_values(array_filter($all, function($c) use ($q) {
+			return str_contains($c['code'], $q) || str_contains(strtoupper($c['name']), $q);
+		}));
+		echo json_encode($out);
+	}
+
+	/** GET /api/visions/{slug}/contacts */
+	public static function listContacts(string $slug): void
+	{
+		header('Content-Type: application/json');
+		try {
+			global $db;
+			$vision = class_exists('vision_model') && method_exists('vision_model','get')
+				? vision_model::get($db, $slug)
+				: self::findVisionBySlug($db, $slug);
+
+			if (!$vision) { http_response_code(404); echo json_encode(['error'=>'Vision not found']); return; }
+
+			$st = $db->prepare("
+				SELECT vc.id AS vc_id, c.id AS contact_id,
+					   c.name, c.company, c.address, c.mobile, c.email, c.country,
+					   vc.is_current, vc.is_main, vc.show_on_dashboard, vc.show_on_trip
+				  FROM vision_contacts vc
+				  JOIN contacts c ON vc.contact_id=c.id
+				 WHERE vc.vision_id=?
+				 ORDER BY vc.is_main DESC, c.name ASC
+			");
+			$st->execute([(int)$vision['id']]);
+			echo json_encode($st->fetchAll(PDO::FETCH_ASSOC));
+		} catch (Throwable $e) {
+			http_response_code(500);
+			echo json_encode(['error' => 'List failed']);
+		}
+	}
+
+	/** POST /api/visions/{slug}/contacts/create */
+	public static function createContact(string $slug): void
+	{
+		header('Content-Type: application/json');
+		try {
+			global $db;
+			$vision = class_exists('vision_model') && method_exists('vision_model','get')
+				? vision_model::get($db, $slug)
+				: self::findVisionBySlug($db, $slug);
+
+			if (!$vision) { http_response_code(404); echo json_encode(['error'=>'Vision not found']); return; }
+
+			$data = $_POST ?: json_decode(file_get_contents('php://input'), true) ?: [];
+			$name = trim((string)($data['name'] ?? ''));
+			if ($name === '') { http_response_code(422); echo json_encode(['error'=>'Name is required']); return; }
+
+			// Insert contact
+			$cst = $db->prepare("INSERT INTO contacts (name, company, address, mobile, email, country)
+								 VALUES (?,?,?,?,?,?)");
+			$cst->execute([
+				$name,
+				$data['company'] ?? null,
+				$data['address'] ?? null,
+				$data['mobile']  ?? null,
+				$data['email']   ?? null,
+				$data['country'] ?? null,
+			]);
+			$contactId = (int)$db->lastInsertId();
+
+			// Single 'main' per vision
+			$isMain    = !empty($data['is_main'])    ? 1 : 0;
+			$isCurrent = !empty($data['is_current']) ? 1 : 0;
+			$dash      = !empty($data['show_on_dashboard']) ? 1 : 0;
+			$trip      = !empty($data['show_on_trip'])      ? 1 : 0;
+
+			if ($isMain) {
+				$db->prepare("UPDATE vision_contacts SET is_main=0 WHERE vision_id=?")->execute([(int)$vision['id']]);
+			}
+
+			$pst = $db->prepare("INSERT INTO vision_contacts
+				(vision_id, contact_id, is_current, is_main, show_on_dashboard, show_on_trip)
+				VALUES (?,?,?,?,?,?)");
+			$pst->execute([(int)$vision['id'], $contactId, $isCurrent, $isMain, $dash, $trip]);
+
+			echo json_encode(['success'=>true, 'contact_id'=>$contactId]);
+		} catch (Throwable $e) {
+			http_response_code(500);
+			echo json_encode(['error' => 'Create failed']);
+		}
+	}
+
+	/** PUT /api/visions/{slug}/contacts/{vcId} */
+	public static function updateContact(string $slug, string $vcId): void
+	{
+		header('Content-Type: application/json');
+		try {
+			global $db;
+			$vision = class_exists('vision_model') && method_exists('vision_model','get')
+				? vision_model::get($db, $slug)
+				: self::findVisionBySlug($db, $slug);
+
+			if (!$vision) { http_response_code(404); echo json_encode(['error'=>'Vision not found']); return; }
+
+			$vcIdNum = (int)$vcId;
+			$st = $db->prepare("SELECT contact_id FROM vision_contacts WHERE id=? AND vision_id=?");
+			$st->execute([$vcIdNum, (int)$vision['id']]);
+			$cid = (int)($st->fetchColumn() ?: 0);
+			if (!$cid) { http_response_code(404); echo json_encode(['error'=>'Contact not found']); return; }
+
+			$data = $_POST ?: json_decode(file_get_contents('php://input'), true) ?: [];
+
+			// Update contact
+			$cst = $db->prepare("UPDATE contacts
+									SET name=?, company=?, address=?, mobile=?, email=?, country=?
+								  WHERE id=?");
+			$cst->execute([
+				trim((string)($data['name'] ?? '')),
+				$data['company'] ?? null,
+				$data['address'] ?? null,
+				$data['mobile']  ?? null,
+				$data['email']   ?? null,
+				$data['country'] ?? null,
+				$cid
+			]);
+
+			// Flags
+			$isMain    = !empty($data['is_main'])    ? 1 : 0;
+			$isCurrent = !empty($data['is_current']) ? 1 : 0;
+			$dash      = !empty($data['show_on_dashboard']) ? 1 : 0;
+			$trip      = !empty($data['show_on_trip'])      ? 1 : 0;
+
+			if ($isMain) {
+				$db->prepare("UPDATE vision_contacts SET is_main=0 WHERE vision_id=?")->execute([(int)$vision['id']]);
+			}
+
+			$pst = $db->prepare("UPDATE vision_contacts
+									SET is_current=?, is_main=?, show_on_dashboard=?, show_on_trip=?
+								  WHERE id=?");
+			$pst->execute([$isCurrent, $isMain, $dash, $trip, $vcIdNum]);
+
+			echo json_encode(['success'=>true]);
+		} catch (Throwable $e) {
+			http_response_code(500);
+			echo json_encode(['error' => 'Update failed']);
+		}
+	}
+
+	/** DELETE /api/visions/{slug}/contacts/{vcId}/delete */
+	public static function deleteContact(string $slug, string $vcId): void
+	{
+		header('Content-Type: application/json');
+		try {
+			global $db;
+			$vision = class_exists('vision_model') && method_exists('vision_model','get')
+				? vision_model::get($db, $slug)
+				: self::findVisionBySlug($db, $slug);
+
+			if (!$vision) { http_response_code(404); echo json_encode(['error'=>'Vision not found']); return; }
+
+			$vcIdNum = (int)$vcId;
+			$st = $db->prepare("SELECT contact_id FROM vision_contacts WHERE id=? AND vision_id=?");
+			$st->execute([$vcIdNum, (int)$vision['id']]);
+			$cid = (int)($st->fetchColumn() ?: 0);
+			if (!$cid) { http_response_code(404); echo json_encode(['error'=>'Contact not found']); return; }
+
+			// Delete pivot
+			$db->prepare("DELETE FROM vision_contacts WHERE id=?")->execute([$vcIdNum]);
+
+			// Optionally clean up contact if it’s not used elsewhere
+			$cnt = $db->prepare("SELECT COUNT(*) FROM vision_contacts WHERE contact_id=?");
+			$cnt->execute([$cid]);
+			if ((int)$cnt->fetchColumn() === 0) {
+				$db->prepare("DELETE FROM contacts WHERE id=?")->execute([$cid]);
+			}
+
+			echo json_encode(['success'=>true]);
+		} catch (Throwable $e) {
+			http_response_code(500);
+			echo json_encode(['error' => 'Delete failed']);
+		}
+	}
+
 }

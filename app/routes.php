@@ -27,6 +27,7 @@ function route(string $uri): void
 		'/api/visions/([A-Za-z0-9]{6,16})/contacts/create'   => ['vision','createContact'],
 		'/api/visions/([A-Za-z0-9]{6,16})/contacts/([0-9]+)' => ['vision','updateContact'],
 		'/api/visions/([A-Za-z0-9]{6,16})/contacts/([0-9]+)/delete' => ['vision','deleteContact'],
+		'/api/visions/([A-Za-z0-9]{6,16})/contacts/([0-9]+)/get'    => ['vision','getContact'],
 
         // ── General Dashboard ─────────────────────────────────────────────────
         '/dashboard'          => ['home', 'dashboard'],

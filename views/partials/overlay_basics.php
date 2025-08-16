@@ -13,9 +13,10 @@ $visionSlug = htmlspecialchars($vision['slug'] ?? '', ENT_QUOTES);
 $startDate = (string)($vision['start_date'] ?? '');
 $endDate   = (string)($vision['end_date']   ?? '');
 ?>
+
 <div class="overlay-header">
   <h2>Vision Basics</h2>
-  <button class="close-overlay" aria-label="Close" title="Close">×</button>
+  <!--button class="close-overlay" aria-label="Close" title="Close">×</button-->
 </div>
 
 <form id="basicsForm" class="overlay-form" action="/visions/update-basics" method="post" data-slug="<?= $visionSlug ?>">

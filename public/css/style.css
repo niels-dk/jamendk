@@ -1017,3 +1017,11 @@ header nav { display: none; }
 }
 .ui-switch:checked{ background:var(--primary, #2f6bff); }
 .ui-switch:checked::after{ left:21px; }
+
+.contact-list{border:1px red solid}
+.contact-list { margin-bottom:12px; display:flex; flex-direction:column; gap:8px; }
+.contact-item { display:flex; justify-content:space-between; align-items:center; padding:8px 10px; background:rgba(255,255,255,.05); border-radius:8px; }
+.field-row { display:flex; gap:8px; align-items:center; }
+.field-row select.field-key { width:110px; }
+.field-row input.field-value { flex:1; }
+.btn-remove-field { padding:4px; }

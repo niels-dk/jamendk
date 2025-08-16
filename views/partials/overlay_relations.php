@@ -19,7 +19,6 @@ $showMoodTrip   = (int)($vision['show_mood_on_trip']      ?? 0);
 
 <div class="overlay-header">
   <h2>Relations</h2>
-  <button class="close-overlay" aria-label="Close" title="Close">✕</button>
 </div>
 
 <form id="relationsForm" class="overlay-form" method="post" action="/api/visions/<?= htmlspecialchars($vision['slug'] ?? '') ?>/relations">

@@ -1,150 +1,236 @@
 <?php
-/**
- * Vision Contacts overlay
- *
- * Manage a list of contact persons associated with this vision.  Each
- * contact can carry flags (current, main, show on dashboard/trip).  The
- * overlay shows existing contacts with edit/delete actions and a form to
- * add or update a contact.  Custom fields can be added later.
- *
- * Expected variables:
- *   $vision   array  Vision record (for id/slug)
- *   $contacts array  List of contact rows with pivot flags and ids
- */
-
+$slug = htmlspecialchars($vision['slug'] ?? '', ENT_QUOTES);
 ?>
 
-<div class="overlay-header">
-  <h2>Contacts</h2>
-  <button class="close-overlay" aria-label="Close" title="Close">✕</button>
-</div>
+<div class="overlay-contacts" id="overlay-contacts">
+  <div class="overlay-panel">
+    <div class="overlay-header">
+      <h2>Contacts</h2>
+    </div>
 
-<div class="contacts-section">
-  <div class="contact-list">
-    <?php if (!empty($contacts)): ?>
-      <?php foreach ($contacts as $c): ?>
-        <div class="contact-item" data-vc-id="<?= (int)$c['vc_id'] ?>">
-          <strong><?= htmlspecialchars($c['name']) ?></strong>
-          <?php if (!empty($c['company'])): ?> — <?= htmlspecialchars($c['company']) ?><?php endif; ?><br/>
-          <?php if (!empty($c['email'])): ?><?= htmlspecialchars($c['email']) ?><?php endif; ?>
-          <?php if (!empty($c['mobile'])): ?> / <?= htmlspecialchars($c['mobile']) ?><?php endif; ?><br/>
-          <?php
-            $flags = [];
-            if ($c['is_current']) $flags[] = 'Current';
-            if ($c['is_main'])    $flags[] = 'Main';
-            if ($c['show_on_dashboard']) $flags[] = 'Dashboard';
-            if ($c['show_on_trip'])      $flags[] = 'Trip';
-          ?>
-          <?php if ($flags): ?>
-            <small><?= implode(', ', $flags) ?></small><br/>
-          <?php endif; ?>
-          <button type="button" class="edit-contact" data-id="<?= (int)$c['vc_id'] ?>">Edit</button>
-          <button type="button" class="delete-contact" data-id="<?= (int)$c['vc_id'] ?>">Delete</button>
-        </div>
-      <?php endforeach; ?>
-    <?php else: ?>
-      <p>No contacts yet.</p>
-    <?php endif; ?>
-  </div>
+    <div class="overlay-body" data-slug="<?= $slug ?>" id="contactsWrap">
+      <!-- List -->
+      <div id="contactsList" class="contact-list"></div>
+      <button id="btnAddContact" class="btn btn-primary">+ Add contact</button>
 
-  <button id="add-contact" type="button" class="btn btn-primary" style="margin-top:1rem">Add contact</button>
+      <!-- Form -->
+      <div id="contactFormCard" class="card" hidden>
+        <form id="contactForm" class="contact-form">
+          <input type="hidden" name="vc_id" value="">
 
-  <div class="contact-form" style="display:none;margin-top:1rem">
-    <h3 id="contactFormTitle">New Contact</h3>
-    <form id="contactForm" action="" method="post">
-      <input type="hidden" name="vision_id" value="<?= (int)$vision['id'] ?>" />
-      <input type="hidden" name="vc_id" value="" />
-      <div class="form-group"><label>Name</label><input type="text" name="name" required /></div>
-      <div class="form-group"><label>Company</label><input type="text" name="company" /></div>
-      <div class="form-group"><label>Address</label><input type="text" name="address" /></div>
-      <div class="form-group"><label>Mobile</label><input type="text" name="mobile" /></div>
-      <div class="form-group"><label>Email</label><input type="email" name="email" /></div>
-      <div class="form-group"><label>Country</label><input type="text" name="country" /></div>
-      <fieldset>
-        <legend>Flags</legend>
-        <label class="checkbox"><input type="checkbox" name="is_current" value="1" /> Current</label>
-        <label class="checkbox"><input type="checkbox" name="is_main"    value="1" /> Main</label>
-        <label class="checkbox"><input type="checkbox" name="show_on_dashboard" value="1" /> Show on Dashboard</label>
-        <label class="checkbox"><input type="checkbox" name="show_on_trip"      value="1" /> Show on Trip layer</label>
-      </fieldset>
-      <div class="form-actions">
-        <button class="btn btn-primary" type="submit">Save contact</button>
-        <button class="btn btn-ghost" type="button" id="cancelContact">Cancel</button>
+          <h4>Fields</h4>
+          <div id="fieldsWrap">
+            <!-- field rows inserted here -->
+          </div>
+          <button type="button" id="btnAddField" class="btn btn-secondary">Add field</button>
+
+          <h4>Flags</h4>
+          <label class="switch-row"><input type="checkbox" class="ui-switch" name="is_current"> <span class="switch-text">Current</span></label>
+          <label class="switch-row"><input type="checkbox" class="ui-switch" name="is_main"> <span class="switch-text">Main</span></label>
+          <label class="switch-row"><input type="checkbox" class="ui-switch" name="show_on_dashboard"> <span class="switch-text">Show on Dashboard</span></label>
+          <label class="switch-row"><input type="checkbox" class="ui-switch" name="show_on_trip"> <span class="switch-text">Show on Trip layer</span></label>
+
+          <div class="overlay-actions">
+            <button type="submit" class="btn btn-primary">Save</button>
+            <button type="button" class="btn btn-danger" id="btnCancelContact">Cancel</button>
+          </div>
+        </form>
       </div>
-    </form>
+    </div>
   </div>
 </div>
 
-<script>
+<!--script>
 (() => {
-  const addBtn    = document.getElementById('add-contact');
-  const formWrap  = document.querySelector('.contact-form');
-  const form      = document.getElementById('contactForm');
-  const title     = document.getElementById('contactFormTitle');
-  const cancelBtn = document.getElementById('cancelContact');
-  const list      = document.querySelector('.contact-list');
+  const wrap   = document.getElementById('contactsWrap');
+  const slug   = wrap.dataset.slug;
+  const list   = document.getElementById('contactsList');
+  const card   = document.getElementById('contactFormCard');
+  const form   = document.getElementById('contactForm');
+  const addBtn = document.getElementById('btnAddContact');
+  const cancelBtn = document.getElementById('btnCancelContact');
+  const addField = document.getElementById('btnAddField');
+  const fieldsWrap = document.getElementById('fieldsWrap');
 
-  // Show form for new contact
-  addBtn?.addEventListener('click', () => {
-    title.textContent = 'New Contact';
+  const keyOptions = ['Name','Company','Address','Mobile','Email','Country','Custom…'];
+
+  function fieldRow(key='', val='') {
+    return `
+      <div class="field-row">
+        <select class="field-key">
+          ${keyOptions.map(op => `<option value="${op}" ${op===key?'selected':''}>${op}</option>`).join('')}
+        </select>
+        <input type="text" class="field-value" value="${val}">
+        <button type="button" class="btn btn-ghost btn-remove-field">–</button>
+      </div>`;
+  }
+
+  function addFieldRow(k='',v='') {
+    fieldsWrap.insertAdjacentHTML('beforeend', fieldRow(k,v));
+  }
+
+  function clearForm() {
     form.reset();
-    form.querySelector('input[name="vc_id"]').value = '';
-    formWrap.style.display = 'block';
+    form.vc_id.value = '';
+    fieldsWrap.innerHTML = '';
+    // start with Name field row by default
+    addFieldRow('Name','');
+  }
+
+  function toggleForm(show) {
+    card.hidden = !show;
+    if (show) {
+      // scroll the form into view if needed
+      card.scrollIntoView({behavior:'smooth', block:'nearest'});
+    }
+  }
+
+  function renderList(rows){
+    if (!Array.isArray(rows) || rows.length === 0) {
+      list.innerHTML = '<div class="muted">No contacts</div>';
+      return;
+    }
+    list.innerHTML = rows.map(r => {
+      const name = r.name || '';
+      const cmp  = r.company || '';
+      const email= r.email || '';
+      const flags= [];
+      if (r.is_main) flags.push('Main');
+      if (r.is_current) flags.push('Current');
+      const flagTxt = flags.length ? `<small class="badge">${flags.join(', ')}</small>` : '';
+      return `
+        <div class="contact-item" data-id="${r.vc_id}">
+          <div class="info">
+            <div><strong>${name}</strong> ${flagTxt}</div>
+            <div class="small">${[cmp,email].filter(Boolean).join(' — ')}</div>
+          </div>
+          <div class="actions">
+            <button class="btn btn-ghost act-edit">Edit</button>
+            <button class="btn btn-danger act-del">Delete</button>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  function loadList() {
+    fetch(`/api/visions/${encodeURIComponent(slug)}/contacts`)
+      .then(r => r.json())
+      .then(renderList)
+      .catch(() => { list.innerHTML = '<div class="error">Failed to load contacts</div>'; });
+  }
+
+  addBtn.addEventListener('click', () => {
+    clearForm();
+    toggleForm(true);
   });
 
-  // Cancel contact editing
-  cancelBtn?.addEventListener('click', () => {
-    formWrap.style.display = 'none';
+  cancelBtn.addEventListener('click', () => {
+    toggleForm(false);
   });
 
-  // Edit existing contact
-  list?.addEventListener('click', e => {
-    const edit = e.target.closest('.edit-contact');
-    if (!edit) return;
-    const id = edit.dataset.id;
-    fetch(`/api/visions/<?= htmlspecialchars($vision['slug'] ?? '') ?>/contacts/${id}`)
-      .then(res => res.json())
-      .then(data => {
-        if (!data || !data.id) return;
-        title.textContent = 'Edit Contact';
-        formWrap.style.display = 'block';
-        form.querySelector('input[name="vc_id"]').value = data.vc_id;
-        form.querySelector('input[name="name"]').value     = data.name || '';
-        form.querySelector('input[name="company"]').value  = data.company || '';
-        form.querySelector('input[name="address"]').value  = data.address || '';
-        form.querySelector('input[name="mobile"]').value   = data.mobile || '';
-        form.querySelector('input[name="email"]').value    = data.email || '';
-        form.querySelector('input[name="country"]').value  = data.country || '';
-        form.querySelector('input[name="is_current"]').checked        = !!data.is_current;
-        form.querySelector('input[name="is_main"]').checked           = !!data.is_main;
-        form.querySelector('input[name="show_on_dashboard"]').checked = !!data.show_on_dashboard;
-        form.querySelector('input[name="show_on_trip"]').checked      = !!data.show_on_trip;
-      });
+  fieldsWrap.addEventListener('change', (e) => {
+    // handle 'Custom…' → switch to free text key
+    const sel = e.target.closest('select.field-key');
+    if (!sel) return;
+    if (sel.value === 'Custom…') {
+      const newKey = prompt('Enter custom key');
+      if (newKey) {
+        const opt = document.createElement('option');
+        opt.value = newKey;
+        opt.textContent = newKey;
+        // Insert before 'Custom…'
+        sel.insertBefore(opt, sel.querySelector('option[value="Custom…"]'));
+        sel.value = newKey;
+      } else {
+        sel.value = 'Name'; // fallback
+      }
+    }
   });
 
-  // Delete contact
-  list?.addEventListener('click', e => {
-    const del = e.target.closest('.delete-contact');
-    if (!del) return;
-    const id = del.dataset.id;
-    if (!confirm('Delete this contact?')) return;
-    fetch(`/api/visions/<?= htmlspecialchars($vision['slug'] ?? '') ?>/contacts/${id}/delete`, { method:'DELETE' })
-      .then(() => location.reload());
+  fieldsWrap.addEventListener('click', (e) => {
+    if (e.target.classList.contains('btn-remove-field')) {
+      e.target.closest('.field-row').remove();
+    }
   });
 
-  // Submit form (create or update)
-  form?.addEventListener('submit', e => {
+  addField.addEventListener('click', () => { addFieldRow(); });
+
+  // Submit (create or update)
+  form.addEventListener('submit', (e) => {
     e.preventDefault();
-    const fd = new FormData(form);
-    const vcId = fd.get('vc_id');
-    const url  = vcId ? `/api/visions/<?= htmlspecialchars($vision['slug'] ?? '') ?>/contacts/${vcId}` : `/api/visions/<?= htmlspecialchars($vision['slug'] ?? '') ?>/contacts/create`;
-    const method = vcId ? 'PUT' : 'POST';
-    fetch(url, { method, body: fd })
-      .then(res => res.json())
-      .then(data => {
-        if (data && data.success) location.reload();
-        else alert(data.error || 'Save failed');
-      });
+    const vcId = form.vc_id.value.trim();
+    const keyEls = form.querySelectorAll('.field-key');
+    const valEls = form.querySelectorAll('.field-value');
+
+    const keys   = Array.from(keyEls).map(el => el.value.trim());
+    const values = Array.from(valEls).map(el => el.value.trim());
+
+    const fd = new FormData();
+    keys.forEach(k => fd.append('keys[]', k));
+    values.forEach(v => fd.append('values[]', v));
+    if (form.is_current.checked) fd.append('is_current','1');
+    if (form.is_main.checked)    fd.append('is_main','1');
+    if (form.show_on_dashboard.checked) fd.append('show_on_dashboard','1');
+    if (form.show_on_trip.checked)      fd.append('show_on_trip','1');
+
+    const url = vcId
+      ? `/api/visions/${encodeURIComponent(slug)}/contacts/${encodeURIComponent(vcId)}`
+      : `/api/visions/${encodeURIComponent(slug)}/contacts/create`;
+
+    fetch(url, { method:'POST', body: fd })
+      .then(r => r.json())
+      .then(j => {
+        if (j && j.success) {
+          toggleForm(false);
+          loadList();
+        } else {
+          alert(j?.error || 'Save failed');
+        }
+      })
+      .catch(() => { alert('Save failed'); });
   });
+
+  // Edit / Delete buttons in list
+  list.addEventListener('click', (e) => {
+    const row = e.target.closest('.contact-item');
+    if (!row) return;
+    const id = row.dataset.id;
+
+    // Delete
+    if (e.target.classList.contains('act-del')) {
+      if (!confirm('Delete this contact?')) return;
+      fetch(`/api/visions/${encodeURIComponent(slug)}/contacts/${encodeURIComponent(id)}/delete`, { method:'DELETE' })
+        .then(r => r.json())
+        .then(j => {
+          if (j && j.success) loadList(); else alert(j?.error || 'Delete failed');
+        })
+        .catch(() => { alert('Delete failed'); });
+      return;
+    }
+
+    // Edit: load fields + flags
+    if (e.target.classList.contains('act-edit')) {
+      fetch(`/api/visions/${encodeURIComponent(slug)}/contacts/${encodeURIComponent(id)}/get`)
+        .then(r => r.json())
+        .then(j => {
+          clearForm();
+          form.vc_id.value = j.id || '';
+          // Fields
+          j.fields.forEach((f, i) => {
+            addFieldRow(f.field_key, f.field_value);
+          });
+          // Flags
+          form.is_current.checked = (j.flags.is_current || 0) == 1;
+          form.is_main.checked    = (j.flags.is_main    || 0) == 1;
+          form.show_on_dashboard.checked = (j.flags.show_on_dashboard || 0) == 1;
+          form.show_on_trip.checked      = (j.flags.show_on_trip      || 0) == 1;
+          toggleForm(true);
+        })
+        .catch(() => { alert('Failed to load contact'); });
+    }
+  });
+
+  // Initial load
+  loadList();
 })();
-</script>
+</script>-

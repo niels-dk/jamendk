@@ -29,6 +29,8 @@
   box-shadow: -12px 0 24px rgba(0,0,0,.4);
   padding: 20px 0 0 0;
   position: relative;
+	width:400px;
+	border:0px red solid;
 }
 
 /* Close button */

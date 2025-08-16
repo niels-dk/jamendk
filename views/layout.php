@@ -280,6 +280,7 @@
   new MutationObserver(injectTrix).observe(document.documentElement, { childList:true, subtree:true });
 })();
 </script>
+ <script defer src="/public/js/overlay-contacts.js?v=1"></script>
 
 <div id="connectivity-banner"></div>
 <div id="snackbar" class="snackbar"></div>

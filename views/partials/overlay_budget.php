@@ -25,7 +25,6 @@ $commonCurrencies = ['DKK','EUR','USD','GBP','SEK'];
 
 <div class="overlay-header">
   <h2>Budget</h2>
-  <button class="close-overlay" aria-label="Close" title="Close">✕</button>
 </div>
 
 <form id="budgetForm" class="overlay-form" method="post" action="/api/visions/<?= htmlspecialchars($vision['slug'] ?? '') ?>/budget">

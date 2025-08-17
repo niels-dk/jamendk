@@ -303,6 +303,11 @@ class vision_controller
                 }
                 self::updateBasics();
                 break;
+			case 'documents':
+				// no generic autosave; handled via upload API
+				echo json_encode(['ok' => true]);
+				break;
+
             // you can add cases for 'relations','goals','budget','roles','contacts','documents','workflow'
             // For now, just acknowledge success; client sends JSON or form-data
             default:

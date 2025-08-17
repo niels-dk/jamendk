@@ -8,7 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ───────────────────────────────────────────────────────────────────────────
   // NEW: overlays that use custom endpoints → no generic autosave
-  const SKIP_SECTIONS = new Set(['budget', 'contacts', 'relations', 'basics']);
+  const SKIP_SECTIONS = new Set(['budget', 'contacts', 'relations', 'basics', 'documents']);
   // ───────────────────────────────────────────────────────────────────────────
 
   // Cache: section -> {html, ts}
@@ -73,15 +73,21 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // Bind save-on-change
+  // Bind save-on-change / per-section initializers
   function bindOverlay(section, slug) {
     const panel = overlayPanel;
 
-    // NEW: bail out for custom overlays (Budget, Contacts, Relations, Basics)
+    // Documents overlay: attach its own upload handler,
+    // but still skip the generic autosave logic.
+    if (section === 'documents') {
+      bindDocumentsOverlay(panel, slug);
+      return;
+    }
+
+    // Skip autosave for custom sections
     if (SKIP_SECTIONS.has(section)) return;
 
     // Entire switch row toggles the checkbox
-    // NEW: support both .switch and .switch-row wrappers
     panel.querySelectorAll('.switch, .switch-row').forEach(sw => {
       sw.addEventListener('click', ev => {
         const chk = sw.querySelector('input[type="checkbox"]');
@@ -97,6 +103,64 @@ document.addEventListener('DOMContentLoaded', () => {
       el.addEventListener('blur',   () => sendSection(section, slug));
     });
   }
+
+	// Documents overlay: multi-file upload + inline status + table prepend
+	  function bindDocumentsOverlay(root, slug) {
+		// Look inside the currently injected content
+		const form      = root.querySelector('#documentUploadForm');
+		const tableBody = root.querySelector('#docsTable tbody');
+		const statusEl  = root.querySelector('#uploadStatus');
+
+		if (!form || !tableBody || !statusEl) return;
+
+		form.addEventListener('submit', async (ev) => {
+		  ev.preventDefault();
+
+		  const data  = new FormData(form);
+		  const files = data.getAll('file[]');
+		  if (!files || files.length === 0) {
+			statusEl.textContent = 'Please choose at least one file.';
+			return;
+		  }
+
+		  statusEl.textContent = 'Uploading…';
+
+		  try {
+			const res  = await fetch(`/api/visions/${slug}/documents`, { method: 'POST', body: data });
+			const json = await res.json();
+
+			if (!res.ok || !json.success) {
+			  statusEl.textContent = '❌ ' + (json.error || 'Upload failed');
+			  return;
+			}
+
+			(json.files || []).forEach(f => {
+			  const tr = document.createElement('tr');
+			  const uploaded = (f.created_at || '').replace('T',' ').slice(0,16); // fallback formatting
+			  tr.innerHTML = `
+				<td><div class="doc-name">${f.file_name}</div></td>
+				<td>${f.version}</td>
+				<td><span class="status-pill">${f.status.charAt(0).toUpperCase()+f.status.slice(1)}</span></td>
+				<td class="doc-meta">${uploaded || new Date().toISOString().replace('T',' ').slice(0,16)}</td>
+				<td><a class="action-link" href="${f.download_url}">Download</a></td>
+			  `;
+			  tableBody.prepend(tr);
+			});
+
+
+			if (json.errors && json.errors.length) {
+			  statusEl.textContent = '✅ Uploaded with warnings for some files.';
+			} else {
+			  statusEl.textContent = '✅ Uploaded';
+			}
+
+			form.reset(); // keep overlay open, just clear selection
+		  } catch (err) {
+			console.error(err);
+			statusEl.textContent = '❌ Upload failed';
+		  }
+		});
+	  }
 
   let saveTimers = {};
   function sendSection(section, slug) {

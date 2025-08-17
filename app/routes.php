@@ -28,6 +28,8 @@ function route(string $uri): void
 		'/api/visions/([A-Za-z0-9]{6,16})/contacts/([0-9]+)' => ['vision','updateContact'],
 		'/api/visions/([A-Za-z0-9]{6,16})/contacts/([0-9]+)/delete' => ['vision','deleteContact'],
 		'/api/visions/([A-Za-z0-9]{6,16})/contacts/([0-9]+)/get'    => ['vision','getContact'],
+		// Upload API (POST)
+		'/api/visions/([A-Za-z0-9]{6,16})/documents'        => ['document','upload'],
 		
 		// Budget endpoints
 		'/api/visions/([A-Za-z0-9]{6,16})/budget' => ['vision','getBudget'],  // GET
@@ -84,6 +86,12 @@ function route(string $uri): void
         '/visions/([A-Za-z0-9]{6,16})/unarchive'   => ['vision', 'unarchive'],
         '/visions/([A-Za-z0-9]{6,16})/delete'      => ['vision', 'destroy'],
         '/visions/([A-Za-z0-9]{6,16})/restore'     => ['vision', 'restore'],
+		
+		// Download endpoint (GET)
+		'/documents/([a-f0-9]{32})/download'                => ['document','download'],
+		
+		// Overlay view for documents
+		'/visions/([A-Za-z0-9]{6,16})/overlay/documents'   => ['document','overlay'],
 
         // ── Vision AJAX (kept as-is) ──────────────────────────────────────────
         '/api/visions/([A-Za-z0-9]{6,16})/save'    => ['vision', 'ajax_save'],

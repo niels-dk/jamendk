@@ -28,6 +28,13 @@ function route(string $uri): void
 		'/api/visions/([A-Za-z0-9]{6,16})/contacts/([0-9]+)' => ['vision','updateContact'],
 		'/api/visions/([A-Za-z0-9]{6,16})/contacts/([0-9]+)/delete' => ['vision','deleteContact'],
 		'/api/visions/([A-Za-z0-9]{6,16})/contacts/([0-9]+)/get'    => ['vision','getContact'],
+		
+		// Budget endpoints
+		'/api/visions/([A-Za-z0-9]{6,16})/budget' => ['vision','getBudget'],  // GET
+		'/api/visions/([A-Za-z0-9]{6,16})/budget/get' => ['vision','getBudget'],  // GET prefill
+
+		// The POST case stays mapped to your existing 'saveSection' or you can explicitly map:
+		'/api/visions/([A-Za-z0-9]{6,16})/budget' => ['vision','saveBudget'], // POST
 
         // ── General Dashboard ─────────────────────────────────────────────────
         '/dashboard'          => ['home', 'dashboard'],

@@ -1,96 +1,48 @@
 <?php
-/**
- * Vision Budget overlay
- *
- * Capture a single budget for this vision.  Users may choose a currency
- * (with quick access to common ones) and enter a numeric amount.  They
- * can also decide where the budget appears.  This overlay stores its
- * data in the `vision_budgets` table.
- *
- * Expected variables:
- *   $vision            array  Vision record (for id/slug)
- *   $budget            array|null  Existing budget record (currency, amount, flags)
- */
-
-// Prepopulate from existing budget or defaults
-$currency = $budget['currency'] ?? '';
-$amount   = $budget['amount']   ?? '';
-$showDash = (int)($budget['show_on_dashboard'] ?? 0);
-$showTrip = (int)($budget['show_on_trip']      ?? 0);
-
-// Define a small set of common currencies.  These appear first, but
-// the user can still type any ISO code into the search box.
-$commonCurrencies = ['DKK','EUR','USD','GBP','SEK'];
+// Expects $vision (slug) and optionally $budget (currency, amount_cents, show_on_dashboard, show_on_trip).
+$slug     = htmlspecialchars($vision['slug'] ?? '', ENT_QUOTES);
+$currency = isset($budget['currency']) ? htmlspecialchars($budget['currency'], ENT_QUOTES) : '';
+$amount   = isset($budget['amount_cents']) ? number_format(($budget['amount_cents'] / 100), 2, '.', '') : '';
+$showDash = !empty($budget['show_on_dashboard']);
+$showTrip = !empty($budget['show_on_trip']);
 ?>
-
-<div class="overlay-header">
-  <h2>Budget</h2>
-</div>
-
-<form id="budgetForm" class="overlay-form" method="post" action="/api/visions/<?= htmlspecialchars($vision['slug'] ?? '') ?>/budget">
-  <input type="hidden" name="vision_id" value="<?= (int)$vision['id'] ?>" />
-
-  <div class="form-group">
-    <label for="currency-input">Currency</label>
-    <div class="currency-quick">
-      <?php foreach ($commonCurrencies as $cur): ?>
-        <button type="button" class="currency-btn" data-value="<?= $cur ?>" <?= $cur === $currency ? 'data-selected="1"' : '' ?>><?= $cur ?></button>
-      <?php endforeach; ?>
+<div id="overlay-budget" class="overlay">
+  <div class="overlay-panel">
+    <div class="overlay-header">
+      <h2>Budget</h2>
     </div>
-    <input id="currency-input" type="text" name="currency" value="<?= htmlspecialchars($currency) ?>" placeholder="e.g. USD" autocomplete="off" />
-    <div class="currency-suggestions" style="display:none"></div>
+    <div class="overlay-body" data-slug="<?= $slug ?>" id="budgetWrap">
+      <form id="budgetForm" class="form-grid">
+        <div class="form-row">
+          <label for="budgetCurrency">Currency</label>
+          <div class="select-container">
+            <input type="search" id="budgetCurrencySearch" placeholder="Search currency…" autocomplete="off">
+            <div id="currencyList" class="dropdown-list" hidden></div>
+            <input type="hidden" name="currency" id="budgetCurrency" value="<?= $currency ?>">
+            <span id="currencyDisplay" class="selected-currency">
+              <?= $currency ?: 'Select currency' ?>
+            </span>
+          </div>
+        </div>
+        <div class="form-row">
+          <label for="budgetAmount">Amount</label>
+          <input id="budgetAmount" name="amount" type="text" inputmode="decimal" placeholder="0.00" value="<?= $amount ?>">
+        </div>
+        <div class="form-section">
+          <div class="section-title">Visibility</div>
+          <label class="switch-row">
+            <input type="checkbox" class="ui-switch" id="budgetDash" name="show_on_dashboard" value="1" <?= $showDash ? 'checked' : '' ?> />
+            <span class="switch-text">Show on Dashboard</span>
+          </label>
+          <label class="switch-row">
+            <input type="checkbox" class="ui-switch" id="budgetTrip" name="show_on_trip" value="1" <?= $showTrip ? 'checked' : '' ?> />
+            <span class="switch-text">Show on Trip layer</span>
+          </label>
+        </div>
+        <div class="overlay-actions">
+          <button type="submit" class="btn btn-primary">Save</button>
+        </div>
+      </form>
+    </div>
   </div>
-
-  <div class="form-group">
-    <label for="amount">Amount</label>
-    <input id="amount" type="number" name="amount" value="<?= htmlspecialchars($amount) ?>" step="0.01" min="0" />
-  </div>
-
-  <fieldset>
-    <legend>Visibility</legend>
-    <label class="checkbox"><input type="checkbox" name="show_on_dashboard" value="1" <?= $showDash ? 'checked' : '' ?> /> Show on Dashboard</label>
-    <label class="checkbox"><input type="checkbox" name="show_on_trip"      value="1" <?= $showTrip ? 'checked' : '' ?> /> Show on Trip layer</label>
-  </fieldset>
-
-  <div class="form-actions">
-    <button class="btn btn-primary" type="submit">Save</button>
-  </div>
-</form>
-
-<script>
-(() => {
-  const currencyInput   = document.getElementById('currency-input');
-  const currencyButtons = document.querySelectorAll('.currency-btn');
-  const suggestions     = document.querySelector('.currency-suggestions');
-  // Activate quick buttons
-  currencyButtons.forEach(btn => {
-    btn.addEventListener('click', () => {
-      currencyButtons.forEach(b => b.removeAttribute('data-selected'));
-      btn.setAttribute('data-selected','1');
-      currencyInput.value = btn.dataset.value;
-      suggestions.style.display = 'none';
-    });
-  });
-  // Fetch currency suggestions when typing (min 2 chars)
-  currencyInput.addEventListener('input', async () => {
-    const q = currencyInput.value.trim().toUpperCase();
-    if (q.length < 2) { suggestions.style.display = 'none'; return; }
-    try {
-      const res  = await fetch(`/api/currencies?q=${encodeURIComponent(q)}`);
-      const list = await res.json();
-      if (Array.isArray(list) && list.length) {
-        suggestions.innerHTML = list.map(item => `<button type="button" data-value="${item.code}">${item.code} — ${item.name}</button>`).join('');
-        suggestions.style.display = 'block';
-      } else suggestions.style.display = 'none';
-    } catch(err) { suggestions.style.display = 'none'; }
-  });
-  // Choose suggestion
-  suggestions.addEventListener('click', e => {
-    const btn = e.target.closest('button[data-value]');
-    if (!btn) return;
-    currencyButtons.forEach(b => b.removeAttribute('data-selected'));
-    currencyInput.value = btn.dataset.value;
-    suggestions.style.display = 'none';
-  });
-})();
-</script>
+</div>

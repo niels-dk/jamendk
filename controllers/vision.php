@@ -402,52 +402,60 @@ class vision_controller
 			echo json_encode(['error' => 'Remove failed']);
 		}
 	}
+	
+	/** GET /api/visions/{slug}/budget */
+	public static function getBudget(string $slug): void
+	{
+		header('Content-Type: application/json');
+		global $db;
+
+		$vision = vision_model::get($db, $slug);
+		if (!$vision) { http_response_code(404); echo json_encode(['error' => 'Vision not found']); return; }
+
+		$st = $db->prepare("SELECT currency, amount_cents, show_on_dashboard, show_on_trip
+							FROM vision_budget WHERE vision_id = ?");
+		$st->execute([(int)$vision['id']]);
+		$row = $st->fetch(PDO::FETCH_ASSOC);
+
+		// Return empty defaults instead of 404 so the overlay can render cleanly.
+		echo json_encode($row ?: [
+			'currency' => null,
+			'amount_cents' => null,
+			'show_on_dashboard' => 0,
+			'show_on_trip' => 0,
+		]);
+	}
 
 	/** POST /api/visions/{slug}/budget */
 	public static function saveBudget(string $slug): void
 	{
 		header('Content-Type: application/json');
-		try {
-			global $db;
-			$vision = class_exists('vision_model') && method_exists('vision_model','get')
-				? vision_model::get($db, $slug)
-				: self::findVisionBySlug($db, $slug);
+		global $db;
 
-			if (!$vision) { http_response_code(404); echo json_encode(['error'=>'Vision not found']); return; }
+		$vision = vision_model::get($db, $slug);
+		if (!$vision) { http_response_code(404); echo json_encode(['error' => 'Vision not found']); return; }
 
-			$data = $_POST ?: json_decode(file_get_contents('php://input'), true) ?: [];
-			$cur  = strtoupper(trim((string)($data['currency'] ?? '')));
-			$amt  = (string)($data['amount'] ?? '0');
-			$amt  = str_replace(',', '.', $amt);
-			$amt  = is_numeric($amt) ? (float)$amt : 0.0;
+		$cur   = strtoupper(trim($_POST['currency'] ?? ''));
+		$cents = (int)($_POST['amount_cents'] ?? -1);
+		$dash  = !empty($_POST['show_on_dashboard']) ? 1 : 0;
+		$trip  = !empty($_POST['show_on_trip'])      ? 1 : 0;
 
-			$dash = !empty($data['show_on_dashboard']) ? 1 : 0;
-			$trip = !empty($data['show_on_trip'])      ? 1 : 0;
-
-			if ($cur === '') { http_response_code(422); echo json_encode(['error'=>'Currency required']); return; }
-
-			// Upsert (requires UNIQUE index on vision_id)
-			$sql = "INSERT INTO vision_budgets (vision_id, currency, amount, show_on_dashboard, show_on_trip)
-					VALUES (:vid, :cur, :amt, :dash, :trip)
-					ON DUPLICATE KEY UPDATE
-					  currency=VALUES(currency),
-					  amount=VALUES(amount),
-					  show_on_dashboard=VALUES(show_on_dashboard),
-					  show_on_trip=VALUES(show_on_trip)";
-			$st = $db->prepare($sql);
-			$st->execute([
-				':vid'  => (int)$vision['id'],
-				':cur'  => $cur,
-				':amt'  => $amt,
-				':dash' => $dash,
-				':trip' => $trip,
-			]);
-
-			echo json_encode(['success' => true]);
-		} catch (Throwable $e) {
-			http_response_code(500);
-			echo json_encode(['error' => 'Budget save failed']);
+		if ($cur === '' || !preg_match('/^[A-Z]{3}$/', $cur) || $cents < 0) {
+			http_response_code(422);
+			echo json_encode(['error' => 'Invalid currency or amount']);
+			return;
 		}
+
+		$sql = "INSERT INTO vision_budget (vision_id, currency, amount_cents, show_on_dashboard, show_on_trip)
+				VALUES (?,?,?,?,?)
+				ON DUPLICATE KEY UPDATE
+				  currency = VALUES(currency),
+				  amount_cents = VALUES(amount_cents),
+				  show_on_dashboard = VALUES(show_on_dashboard),
+				  show_on_trip = VALUES(show_on_trip)";
+		$ok = $db->prepare($sql)->execute([(int)$vision['id'], $cur, $cents, $dash, $trip]);
+
+		echo json_encode(['success' => (bool)$ok]);
 	}
 
 	/** GET /api/currencies[?q=...] */

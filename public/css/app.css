@@ -63,6 +63,44 @@ a{color:inherit;text-decoration:none}
 /* Tagline (was color/text-align inline) */
 .home-tagline{margin-top:28px;color:#cfd6df;text-align:center}
 
+/* Budget currency dropdown */
+.select-container { position: relative; }
+.select-container .selected-currency {
+  display: inline-block;
+  background: var(--panel-2, #2a2f36);
+  border: 1px solid var(--panel-border, rgba(255,255,255,0.08));
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  user-select: none;
+}
+.select-container #budgetCurrencySearch {
+  width: 100%;
+  margin: 6px 0;
+  border-radius: 8px;
+  border: 1px solid var(--panel-border, rgba(255,255,255,0.08));
+  background: var(--panel-2, #2a2f36);
+  color: inherit;
+  padding: 8px 10px;
+  outline: none;
+}
+.dropdown-list {
+  position: absolute;
+  left: 0; right: 0; top: 100%;
+  z-index: 1000;
+  background: var(--panel-2, #2a2f36);
+  border: 1px solid var(--panel-border, rgba(255,255,255,0.08));
+  border-radius: 10px;
+  max-height: 260px;
+  overflow: auto;
+  box-shadow: 0 10px 24px rgba(0,0,0,.35);
+  margin-top: 6px;
+}
+.dropdown-item { padding: 8px 12px; cursor: pointer; }
+.dropdown-item:hover { background: var(--panel-3, #353b43); }
+.dropdown-item.muted { opacity: .6; cursor: default; }
+
+
 /* ─────────────── */
 /* Mobile tweaks   */
 /* ─────────────── */

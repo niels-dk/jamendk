@@ -1,15 +1,10 @@
 /* public/js/vision-overlays.js – Lazy-loaded overlays for visions */
 document.addEventListener('DOMContentLoaded', () => {
-  const overlayShell   = document.getElementById('overlay-shell');
-  const overlayPanel   = overlayShell?.querySelector('.overlay-panel');
-  const overlayContent = document.getElementById('overlay-content');
-  const overlayClose   = overlayShell?.querySelector('.close-overlay');
+  const overlayShell  = document.getElementById('overlay-shell');
+  const overlayPanel  = overlayShell?.querySelector('.overlay-panel');
+  const overlayContent= document.getElementById('overlay-content');
+  const overlayClose  = overlayShell?.querySelector('.close-overlay');
   if (!overlayShell || !overlayContent || !overlayClose) return;
-
-  // ───────────────────────────────────────────────────────────────────────────
-  // NEW: overlays that use custom endpoints → no generic autosave
-  const SKIP_SECTIONS = new Set(['budget', 'contacts', 'relations', 'basics']);
-  // ───────────────────────────────────────────────────────────────────────────
 
   // Cache: section -> {html, ts}
   const cache = {};
@@ -44,7 +39,7 @@ document.addEventListener('DOMContentLoaded', () => {
       cache[section] = {html, ts: now};
     }
     overlayContent.innerHTML = html;
-    bindOverlay(section, slug);  // attach only the minimal wiring
+    bindOverlay(section, slug);
     showOverlay(trigger);
   }
 
@@ -76,13 +71,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // Bind save-on-change
   function bindOverlay(section, slug) {
     const panel = overlayPanel;
-
-    // NEW: bail out for custom overlays (Budget, Contacts, Relations, Basics)
-    if (SKIP_SECTIONS.has(section)) return;
-
     // Entire switch row toggles the checkbox
-    // NEW: support both .switch and .switch-row wrappers
-    panel.querySelectorAll('.switch, .switch-row').forEach(sw => {
+    panel.querySelectorAll('.switch').forEach(sw => {
       sw.addEventListener('click', ev => {
         const chk = sw.querySelector('input[type="checkbox"]');
         if (!chk || ev.target === chk) return;
@@ -90,11 +80,10 @@ document.addEventListener('DOMContentLoaded', () => {
         chk.dispatchEvent(new Event('change', {bubbles:true}));
       });
     });
-
     // Save on change or blur
     panel.querySelectorAll('input,select,textarea').forEach(el => {
       el.addEventListener('change', () => sendSection(section, slug));
-      el.addEventListener('blur',   () => sendSection(section, slug));
+      el.addEventListener('blur', () => sendSection(section, slug));
     });
   }
 
@@ -102,17 +91,10 @@ document.addEventListener('DOMContentLoaded', () => {
   function sendSection(section, slug) {
     clearTimeout(saveTimers[section]);
     saveTimers[section] = setTimeout(async () => {
-
-      // NEW: get the form inside this overlay, and skip if empty
-      const root = overlayPanel.querySelector(`#overlay-${section}`) || overlayPanel;
-      const form = root.querySelector('form');
-      if (!form) return;
-      const data = new FormData(form);
-      if ([...data.keys()].length === 0) return; // nothing to send → avoid 422
-
+      const data = new FormData(overlayPanel.querySelector('form') || overlayPanel);
       try {
-        await fetch(`/api/visions/${slug}/${section}`, { method: 'POST', body: data });
-        // no toast needed
+        await fetch(`/api/visions/${slug}/${section}`, {method:'POST', body:data});
+        // On success: no toast needed
       } catch (err) {
         console.error('Overlay save failed', err);
       }

@@ -96,7 +96,7 @@ class home_controller
         $tableMap = [
             'dream'  => 'dreams',
             'vision' => 'visions',
-            'mood'   => 'moods',
+            'mood_boards'   => 'moods',
             'trip'   => 'trips',
         ];
         if (!isset($tableMap[$type])) {
@@ -134,7 +134,7 @@ class home_controller
         } catch (\Throwable $e) {
             // ignore and keep default
         }
-
+		print_r($table);
         $sql = "SELECT * FROM `$table` WHERE $where ORDER BY $orderBy";
         $stmt = $db->prepare($sql);
         $stmt->execute($params);

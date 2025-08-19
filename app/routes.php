@@ -99,6 +99,20 @@ function route(string $uri): void
 		
 		// Overlay view for documents
 		'/visions/([A-Za-z0-9]{6,16})/overlay/documents'   => ['document','overlay'],
+		
+		// ── Mood Boards CRUD ─────────────────────────────────────────────────
+		// Similar to dreams and visions, moods support creation, viewing,
+		// editing and archiving.  These routes enable basic navigation and
+		// follow the slug length conventions used elsewhere (6–16 chars).
+		'/moods/new'                               => ['mood', 'create'],
+		'/moods/update'                            => ['mood', 'update'],
+		'/moods/([A-Za-z0-9]{6,16})'               => ['mood', 'show'],
+		'/moods/([A-Za-z0-9]{6,16})/edit'          => ['mood', 'edit'],
+		'/moods/([A-Za-z0-9]{6,16})/archive'       => ['mood', 'archive'],
+		'/moods/([A-Za-z0-9]{6,16})/unarchive'     => ['mood', 'unarchive'],
+		'/moods/([A-Za-z0-9]{6,16})/delete'        => ['mood', 'destroy'],
+		'/moods/([A-Za-z0-9]{6,16})/restore'       => ['mood', 'restore'],
+
 
         // ── Vision AJAX (kept as-is) ──────────────────────────────────────────
         '/api/visions/([A-Za-z0-9]{6,16})/save'    => ['vision', 'ajax_save'],

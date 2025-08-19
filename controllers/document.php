@@ -170,7 +170,92 @@ class document_controller {
 		];
 
 	}
+	
+	// GET /api/visions/{slug}/groups  -> list groups for the vision
+public static function groups_list(string $slug): void {
+    header('Content-Type: application/json'); global $db;
+    require_once __DIR__ . '/../models/vision.php';
+    require_once __DIR__ . '/../models/document_group_model.php';
 
+    $vision = vision_model::get($db, $slug);
+    if (!$vision) { http_response_code(404); echo json_encode(['error'=>'Vision not found']); return; }
+
+    $groups = document_group_model::listForVision($db, (int)$vision['id']);
+    echo json_encode(['success'=>true, 'groups'=>$groups]);
+}
+
+// POST /api/visions/{slug}/groups  body: name=Travel
+public static function groups_create(string $slug): void {
+    header('Content-Type: application/json'); global $db;
+    require_once __DIR__ . '/../models/vision.php';
+    require_once __DIR__ . '/../models/document_group_model.php';
+
+    $name = trim($_POST['name'] ?? '');
+    if ($name === '') { http_response_code(422); echo json_encode(['error'=>'Name required']); return; }
+
+    $vision = vision_model::get($db, $slug);
+    if (!$vision) { http_response_code(404); echo json_encode(['error'=>'Vision not found']); return; }
+
+    try {
+        $id = document_group_model::create($db, (int)$vision['id'], $name);
+        echo json_encode(['success'=>true, 'group'=>['id'=>$id,'name'=>$name]]);
+    } catch (Throwable $e) {
+        // likely unique constraint
+        http_response_code(422);
+        echo json_encode(['error'=>'Group name already exists']);
+    }
+}
+
+	// POST /api/documents/{uuid}/group  body: group_id=123 (or empty to clear)
+	public static function update_group(string $uuid): void {
+		header('Content-Type: application/json'); global $db;
+
+		$raw = trim($_POST['group_id'] ?? '');
+		$groupId = ($raw === '') ? null : (int)$raw;
+
+		// Optional: validate group belongs to the same vision as the document
+		$doc = document_model::findByUuid($db, $uuid);
+		if (!$doc) { http_response_code(404); echo json_encode(['error'=>'Document not found']); return; }
+
+		if (!is_null($groupId)) {
+			$st = $db->prepare("SELECT g.id FROM vision_doc_groups g WHERE g.id=? AND g.vision_id=?");
+			$st->execute([$groupId, (int)$doc['vision_id']]);
+			if (!$st->fetch()) { http_response_code(422); echo json_encode(['error'=>'Invalid group for this vision']); return; }
+		}
+
+		if (!document_model::updateGroup($db, $uuid, $groupId)) {
+			http_response_code(500); echo json_encode(['error'=>'Update failed']); return;
+		}
+		echo json_encode(['success'=>true, 'group_id'=>$groupId]);
+	}
+
+
+	/** POST /api/documents/{uuid}/status  body: status=draft|waiting_brand|final|signed */
+	public static function update_status(string $uuid): void {
+		header('Content-Type: application/json');
+		global $db;
+
+		$allowed = ['draft','waiting_brand','final','signed'];
+		$status  = strtolower(trim($_POST['status'] ?? ''));
+		if (!in_array($status, $allowed, true)) {
+			http_response_code(422);
+			echo json_encode(['error'=>'Invalid status']);
+			return;
+		}
+
+		// Optional: permission check based on vision_id of this doc
+		$doc = document_model::findByUuid($db, $uuid);
+		if (!$doc) { http_response_code(404); echo json_encode(['error'=>'Not found']); return; }
+		// TODO: auth check: user can edit this vision
+
+		if (!document_model::updateStatus($db, $uuid, $status)) {
+			http_response_code(500);
+			echo json_encode(['error'=>'Update failed']);
+			return;
+		}
+
+		echo json_encode(['success'=>true, 'status'=>$status, 'updated_at'=>date('Y-m-d H:i:s')]);
+	}
 
 
     /** GET /documents/{uuid}/download */

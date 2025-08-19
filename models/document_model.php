@@ -11,20 +11,37 @@ class document_model {
                       $version, $encKey]);
     }
 
+	public static function updateStatus(PDO $db, string $uuid, string $status): bool {
+		$st = $db->prepare("UPDATE vision_documents SET status=?, updated_at=NOW() WHERE uuid=? LIMIT 1");
+		return $st->execute([$status, $uuid]);
+	}
+
+
     /** Fetch all documents for a vision */
-    public static function allForVision(PDO $db, int $visionId): array 
+    public static function allForVision(PDO $db, int $visionId): array
 	{
-    // name ASC, version DESC, created_at DESC
 		$st = $db->prepare("
-			SELECT *
-			FROM vision_documents
-			WHERE vision_id=?
-			ORDER BY file_name ASC, version DESC, created_at DESC
+			SELECT v.*,
+				   g.id   AS group_id,
+				   g.name AS group_name
+			FROM vision_documents v
+			LEFT JOIN vision_doc_groups g ON g.id = v.group_id
+			WHERE v.vision_id = ?
+			ORDER BY 
+			  (v.group_id IS NULL) ASC,       -- grouped first
+			  g.sort_order ASC, g.name ASC,
+			  v.file_name ASC,
+			  v.created_at DESC
 		");
 		$st->execute([$visionId]);
 		return $st->fetchAll(PDO::FETCH_ASSOC);
 	}
 
+
+	public static function updateGroup(PDO $db, string $uuid, ?int $groupId): bool {
+		$st = $db->prepare("UPDATE vision_documents SET group_id=?, updated_at=NOW() WHERE uuid=? LIMIT 1");
+		return $st->execute([$groupId, $uuid]);
+	}
 
     /** Get the next version number for a file name within a vision */
     public static function nextVersion(PDO $db, int $visionId, string $fileName): int {

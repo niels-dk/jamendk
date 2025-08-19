@@ -31,6 +31,13 @@ function route(string $uri): void
 		// Upload API (POST)
 		'/api/visions/([A-Za-z0-9]{6,16})/documents'        => ['document','upload'],
 		
+		'/api/documents/([a-f0-9]{32})/status' => ['document','update_status'],
+		'/api/visions/([A-Za-z0-9]{6,16})/groups' => ['document','groups_list'],   // GET
+		// POST (if your router distinguishes by method, use same path)
+		'/api/visions/([A-Za-z0-9]{6,16})/groups:create' => ['document','groups_create'],
+		'/api/documents/([a-f0-9]{32})/group'     => ['document','update_group'],  // POST
+
+		
 		// Budget endpoints
 		'/api/visions/([A-Za-z0-9]{6,16})/budget' => ['vision','getBudget'],  // GET
 		'/api/visions/([A-Za-z0-9]{6,16})/budget/get' => ['vision','getBudget'],  // GET prefill

@@ -26,8 +26,8 @@
     <?php include __DIR__ . '/partials/sidebar.php'; ?>
 
     <!-- NEW: external toggle button so it never hides with the sidebar -->
-    <button class="sidebar-toggle" type="button" aria-label="Toggle sidebar" title="Toggle sidebar">
-      <span class="arrow">◀</span>
+    <button class="sidebar-toggle" type="button" aria-label="Toggle sidebar" title="Menu">
+      <span class="arrow"> ◀ </span>
     </button>
 
     <div class="content">

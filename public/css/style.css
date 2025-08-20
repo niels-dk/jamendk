@@ -989,7 +989,7 @@ header nav { display: none; }
 /* External toggle button: bold arrow in a circle */
 .sidebar-toggle{
   position:fixed;
-  top:18%;
+  top:5rem;
   transform:translateY(-50%);
   left:8px;                      /* JS will shift this when sidebar is open */
   width:40px;height:40px;

@@ -1,13 +1,16 @@
 <?php
 require_once __DIR__ . '/../models/dream.php';
+require_once __DIR__ . '/../models/vision.php';
+require_once __DIR__ . '/../models/mood.php';
+//require_once __DIR__ . '/../models/trip.php';
 require_once __DIR__ . '/../app/auth.php';
 
 // Try to load other board models if they exist.
 // (No fatal if a file is missing; we fall back to a generic SQL query.)
-$__models_base = __DIR__ . '/../models/';
+$__models_base = __DIR__ . '/models/';
 foreach (['vision','mood','trip'] as $__m) {
     $__p = $__models_base . $__m . '.php';
-    if (file_exists($__p)) {
+    if (file_exists($__p)) {	
         require_once $__p;
     }
 }
@@ -96,7 +99,7 @@ class home_controller
         $tableMap = [
             'dream'  => 'dreams',
             'vision' => 'visions',
-            'mood_boards'   => 'moods',
+            'mood'   => 'mood_boards',
             'trip'   => 'trips',
         ];
         if (!isset($tableMap[$type])) {
@@ -134,8 +137,8 @@ class home_controller
         } catch (\Throwable $e) {
             // ignore and keep default
         }
-		print_r($table);
-        $sql = "SELECT * FROM `$table` WHERE $where ORDER BY $orderBy";
+
+		$sql = "SELECT * FROM `$table` WHERE $where ORDER BY $orderBy";
         $stmt = $db->prepare($sql);
         $stmt->execute($params);
         return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];

@@ -1,3 +1,8 @@
+/* =========================================================
+   DreamBoard — App Styles (clean + masonry media library)
+   ========================================================= */
+
+/* ---------- Theme tokens ---------- */
 :root{
   --bg:#0d131e;--surface:#111722;--surface-2:#0f1420;
   --text:#e6edf3;--muted:#9aa5b1;--border:#21262d;
@@ -6,133 +11,255 @@
   --radius:16px;--card-shadow:0 8px 24px rgba(0,0,0,.35);
 }
 
-/* Base (kept) */
+/* ---------- Base ---------- */
 *{box-sizing:border-box}
-html,body{height:100%}
-body{margin:0;background:var(--bg);color:var(--text);
-  font:16px/1.5 system-ui,Inter,Segoe UI,Roboto,Arial}
+html,body{height:100%; overflow-x: hidden;}
+body{
+  margin:0;background:var(--bg);color:var(--text);
+  font:16px/1.5 system-ui,Inter,Segoe UI,Roboto,Arial
+}
 a{color:inherit;text-decoration:none}
 .container{max-width:1100px;margin:0 auto;padding:24px}
-.card{background:var(--surface);border:1px solid var(--border);
-  border-radius:var(--radius);box-shadow:var(--card-shadow)}
+.card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius);box-shadow:var(--card-shadow)
+}
 .h1{font-size:44px;font-weight:800;letter-spacing:.2px;text-align:center}
 .sub{color:var(--muted);font-size:18px;margin-top:8px;text-align:center}
-.btn{display:inline-flex;gap:10px;align-items:center;padding:12px 16px;
-  border-radius:12px;border:1px solid transparent;cursor:pointer;font-weight:600}
+.btn{
+  display:inline-flex;gap:10px;align-items:center;padding:12px 16px;
+  border-radius:12px;border:1px solid transparent;cursor:pointer;font-weight:600
+}
 .btn-primary{background:var(--primary);color:var(--primary-contrast)}
 .btn-primary:hover{filter:brightness(1.05)}
 .btn:focus{outline:var(--ring)}
 .btn-ghost{background:transparent;border-color:var(--border);color:var(--text)}
-/* (…keep the rest of your existing styles here, unchanged) */
 
-
-/* ─────────────────────────────────────────────────────────── */
-/* NEW: Home header + hero utilities (replaces inline styles)  */
-/* ─────────────────────────────────────────────────────────── */
-
+/* ---------- Home header + hero ---------- */
 .home-wrap{position:relative}
-
-/* Header row */
 .home-header{
   display:flex;align-items:center;justify-content:space-between;
-  gap:12px;flex-wrap:wrap;
-	padding: 0.75rem 1rem;
-	margin: 0 auto;
-    max-width: 960px;
+  gap:12px;flex-wrap:wrap;padding:.75rem 1rem;margin:0 auto;max-width:960px
 }
 .home-brand{display:flex;align-items:center;gap:10px}
 .brand-title{font-weight:700}
-
-/* Logo grid */
 .logo-mark{
-   width:26px;height:26px;border:2px solid #fff;border-radius:6px;
+  width:26px;height:26px;border:2px solid #fff;border-radius:6px;
   display:grid;grid-template-columns:repeat(3,1fr);gap:4px;padding:4px
 }
 .logo-mark span{background:#fff;border-radius:50%}
-
-/* Right actions */
 .home-actions{display:flex;gap:10px;flex-wrap:wrap}
-
-/* Hero spacing (was margin-top:80px inline) */
 .hero{padding:40px}
 .hero-offset{margin-top:56px}
-
-/* CTA layout */
 .cta{margin-top:24px;display:flex;gap:14px;flex-wrap:wrap;justify-content:center}
-
-/* Tagline (was color/text-align inline) */
 .home-tagline{margin-top:28px;color:#cfd6df;text-align:center}
 
-/* Budget currency dropdown */
-.select-container { position: relative; }
-.select-container .selected-currency {
-  display: inline-block;
-  background: var(--panel-2, #2a2f36);
-  border: 1px solid var(--panel-border, rgba(255,255,255,0.08));
-  padding: 8px 10px;
-  border-radius: 8px;
-  cursor: pointer;
-  user-select: none;
+/* ---------- Budget dropdown (kept) ---------- */
+.select-container{position:relative}
+.select-container .selected-currency{
+  display:inline-block;background:var(--panel-2,#2a2f36);
+  border:1px solid var(--panel-border,rgba(255,255,255,.08));
+  padding:8px 10px;border-radius:8px;cursor:pointer;user-select:none
 }
-.select-container #budgetCurrencySearch {
-  width: 100%;
-  margin: 6px 0;
-  border-radius: 8px;
-  border: 1px solid var(--panel-border, rgba(255,255,255,0.08));
-  background: var(--panel-2, #2a2f36);
-  color: inherit;
-  padding: 8px 10px;
-  outline: none;
+.select-container #budgetCurrencySearch{
+  width:100%;margin:6px 0;border-radius:8px;
+  border:1px solid var(--panel-border,rgba(255,255,255,.08));
+  background:var(--panel-2,#2a2f36);color:inherit;padding:8px 10px;outline:none
 }
-.dropdown-list {
-  position: absolute;
-  left: 0; right: 0; top: 100%;
-  z-index: 1000;
-  background: var(--panel-2, #2a2f36);
-  border: 1px solid var(--panel-border, rgba(255,255,255,0.08));
-  border-radius: 10px;
-  max-height: 260px;
-  overflow: auto;
-  box-shadow: 0 10px 24px rgba(0,0,0,.35);
-  margin-top: 6px;
+.dropdown-list{
+  position:absolute;left:0;right:0;top:100%;z-index:1000;background:var(--panel-2,#2a2f36);
+  border:1px solid var(--panel-border,rgba(255,255,255,.08));border-radius:10px;
+  max-height:260px;overflow:auto;box-shadow:0 10px 24px rgba(0,0,0,.35);margin-top:6px
 }
-.dropdown-item { padding: 8px 12px; cursor: pointer; }
-.dropdown-item:hover { background: var(--panel-3, #353b43); }
-.dropdown-item.muted { opacity: .6; cursor: default; }
+.dropdown-item{padding:8px 12px;cursor:pointer}
+.dropdown-item:hover{background:var(--panel-3,#353b43)}
+.dropdown-item.muted{opacity:.6;cursor:default}
 
- /* Table look & feel */
-  .docs-card { background:#121212; border:1px solid #2a2a2a; border-radius:16px; overflow:hidden; }
-  .docs-head { background:#181818; padding:12px 16px; font-weight:600; letter-spacing:.3px; border-bottom:1px solid #242424; }
-  #docsTable { width:100%; border-collapse:separate; border-spacing:0; position: absolute}
-  #docsTable thead th {
-    text-align:left; font-weight:600; font-size:.92rem; color:#bfbfbf; padding:10px 14px;
-    background:#181818; position:sticky; top:0; z-index:1; border-bottom:1px solid #242424;
+/* ---------- Docs / tables (kept) ---------- */
+.docs-card{background:#121212;border:1px solid #2a2a2a;border-radius:16px;overflow:hidden}
+.docs-head{background:#181818;padding:12px 16px;font-weight:600;letter-spacing:.3px;border-bottom:1px solid #242424}
+#docsTable{width:100%;border-collapse:separate;border-spacing:0}
+#docsTable thead th{
+  text-align:left;font-weight:600;font-size:.92rem;color:#bfbfbf;padding:10px 14px;
+  background:#181818;position:sticky;top:0;z-index:1;border-bottom:1px solid #242424
+}
+#docsTable tbody td{padding:12px 14px;vertical-align:middle;border-bottom:1px solid #1e1e1e}
+#docsTable tbody tr:nth-child(odd){background:#141414}
+#docsTable tbody tr:nth-child(even){background:#171717}
+#docsTable tbody tr:hover{background:#1f1f1f}
+.doc-name{display:flex;gap:10px;align-items:center;font-weight:600;color:#eaeaea}
+.doc-meta{font-size:.86rem;color:#9a9a9a}
+.status-pill{display:inline-block;padding:3px 8px;border-radius:999px;font-size:.78rem;border:1px solid #2b2b2b;color:#cfcfcf;background:#1b1b1b}
+.status-pill.is-final{border-color:#2f6;color:#cfc;background:#163}
+.action-link{color:#7ab7ff;text-decoration:none}
+.action-link:hover{text-decoration:underline}
+.docs-topbar{display:flex;align-items:center;gap:12px;padding:12px 16px 0}
+.docs-topbar .hint{font-size:.9rem;color:#8a8a8a}
+
+/* =========================================================
+   MEDIA LIBRARY  (Mood boards) — MASONRY GRID
+   ========================================================= */
+
+/* Full‑bleed container on edit page */
+.media-section,#libraryGrid{max-width: 100%;box-sizing: border-box;padding: 0 8px; }
+
+/* Use multi‑column masonry; cards flow top‑to‑bottom per column */
+#libraryGrid.masonry-cols{column-gap:16px}
+
+@media (max-width:599px){ #libraryGrid.masonry-cols{column-count:1} }
+/* Force 2-column layout on small screens */
+@media (max-width: 640px) {
+  #libraryGrid.masonry-cols {
+    column-count: 2 !important;
+    column-gap: 12px;
   }
-  #docsTable tbody td { padding:12px 14px; vertical-align:middle; border-bottom:1px solid #1e1e1e; }
-  #docsTable tbody tr:nth-child(odd)  { background:#141414; }
-  #docsTable tbody tr:nth-child(even) { background:#171717; }
-  #docsTable tbody tr:hover { background:#1f1f1f; }
-  .doc-name { display:flex; gap:10px; align-items:center; font-weight:600; color:#eaeaea; }
-  .doc-meta { font-size:.86rem; color:#9a9a9a; }
-  .status-pill { display:inline-block; padding:3px 8px; border-radius:999px; font-size:.78rem; border:1px solid #2b2b2b; color:#cfcfcf; background:#1b1b1b; }
-  .action-link { color:#7ab7ff; text-decoration:none; }
-  .action-link:hover { text-decoration:underline; }
-  .docs-topbar { display:flex; align-items:center; gap:12px; padding:12px 16px 0; }
-  .docs-topbar .hint { font-size:.9rem; color:#8a8a8a; }
-  .status-pill.is-final { border-color:#2f6; color:#cfc; background:#163; }
+}
+@media (min-width:600px){ #libraryGrid.masonry-cols{column-count:2} }
+@media (min-width:900px){ #libraryGrid.masonry-cols{column-count:3} }
+@media (min-width:1200px){ #libraryGrid.masonry-cols{column-count:4} }
+@media (min-width:1600px){ #libraryGrid.masonry-cols{column-count:5} }
+
+/* === Fix: full-bleed library grid + 2 columns on mobile === */
+
+/* Full-bleed: let the grid span the viewport even if a parent has padding */
+#libraryGrid {
+  max-width: 100vw;
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
+  padding-inline: 8px;            /* small gutters so nothing kisses the edge */
+  box-sizing: border-box;
+}
+
+/* Kill any horizontal scroll that might still appear */
+html, body { overflow-x: hidden; }
+
+/* Mobile: always 2 columns (tight gap) */
+@media (max-width: 640px) {
+  #libraryGrid.masonry-cols {
+    column-count: 2 !important;
+    column-gap: 12px;
+  }
+}
+
+/* (Optional) Very small phones: still 2 cols but with smaller gutters */
+@media (max-width: 380px) {
+  #libraryGrid { padding-inline: 6px; }
+  #libraryGrid.masonry-cols { column-gap: 10px; }
+}
 
 
-/* ─────────────── */
-/* Mobile tweaks   */
-/* ─────────────── */
+/* Card */
+.media-card{
+  display:inline-block;           /* needed for masonry columns */
+  width:100%;
+  margin:0 0 16px;
+  background:#151922;border:1px solid #222938;border-radius:12px;
+  overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.25);
+  position:relative;break-inside:avoid
+}
+
+/* Thumbnail area — **natural height** for images (Pinterest look) */
+.media-card .thumb{width:100%;background:#1f2430;position:relative}
+.media-card .thumb img{
+  width:100%;
+  height:auto !important;         /* never force fixed heights on images */
+  display:block;object-fit:cover
+}
+
+/* For files without a real preview (pdf/doc/etc.) show a soft placeholder */
+.media-card .thumb-fallback{
+  width:100%;padding:28% 0;display:flex;align-items:center;justify-content:center;
+  color:#bdb6c9;background:#1f2430;font-size:12px
+}
+
+/* YouTube/Video embeds — keep a tidy 16:9 box inside the card */
+.media-card .thumb.embed{aspect-ratio:16/9}
+.media-card .thumb iframe{
+  position:absolute;inset:0;width:100%;height:100%;border:0
+}
+
+/* Optional tiny play badge for videos */
+.media-card .play-badge{
+  position:absolute;right:8px;bottom:8px;background:rgba(0,0,0,.55);
+  color:#fff;font-size:12px;padding:2px 6px;border-radius:6px
+}
+
+/* Meta row */
+.media-card .meta{
+  display:flex;align-items:center;justify-content:space-between;
+  gap:8px;padding:10px 12px
+}
+.media-card .name{
+  flex:1;font-size:13px;color:#c9d2ea;white-space:nowrap;overflow:hidden;text-overflow:ellipsis
+}
+.media-card .badge{
+  font-size:11px;color:#aab3c8;background:#232b3a;border:1px solid #303a4e;
+  padding:2px 6px;border-radius:8px
+}
+
+/* Kebab menu */
+.media-card .menu-toggle{
+  position:absolute;right:6px;top:6px;background:transparent;border:0;
+  color:#9db0d7;font-size:18px;cursor:pointer
+}
+.media-card .card-menu{
+  display:none;position:absolute;right:8px;top:32px;background:#0e1320;
+  border:1px solid #263149;border-radius:8px;z-index:5
+}
+.media-card .card-menu ul{list-style:none;margin:0;padding:6px}
+.media-card .card-menu li{padding:6px 10px;cursor:pointer;color:#c9d2ea}
+.media-card .card-menu li:hover{background:#1b2231}
+
+/* Utility: when you need a strict 4:3 tile somewhere else */
+.tile-4x3{aspect-ratio:4/3;overflow:hidden}
+.tile-4x3 > img{width:100%;height:100%;object-fit:cover}
+
+/* Global queue pill */
+.upl-pill{
+  position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
+  background:#0f1522; border:1px solid #283149; color:#cfe0ff;
+  padding:8px 12px; border-radius:999px; display:flex; gap:10px; align-items:center;
+  box-shadow:0 6px 18px rgba(0,0,0,.35); z-index: 9999;
+}
+.upl-pill .upl-cancel{ background:transparent;border:0;color:#9db0d7;cursor:pointer;font-size:14px }
+
+/* Uploading state overlay on a card */
+.media-card.uploading{ position:relative; opacity:.92 }
+.media-card.uploading .upl-overlay{
+  position:absolute; inset:0; background:rgba(0,0,0,.45);
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:8px; color:#e9f0ff; font-weight:600;
+}
+.media-card.uploading .upl-bar{
+  width:82%; height:6px; background:rgba(255,255,255,.15);
+  border-radius:999px; overflow:hidden;
+}
+.media-card.uploading .upl-bar > i{
+  display:block; height:100%; width:0%; background:linear-gradient(90deg,#60a5fa,#34d399);
+}
+
+/* Error state */
+.media-card.upl-error .upl-overlay{ background:rgba(145,20,20,.65) }
+.media-card.upl-error .upl-msg{ color:#ffd7d7 }
+.media-card.upl-error .upl-actions button{
+  background:#fff; color:#111; border:0; border-radius:6px; padding:4px 8px; cursor:pointer;
+}
+
+/* Small spinner (while size/virus checks run server-side) */
+.upl-spinner{ width:18px; height:18px; border-radius:50%; border:3px solid rgba(255,255,255,.4); border-top-color:#fff; animation:spin .8s linear infinite }
+@keyframes spin { to { transform: rotate(360deg) } }
+
+
+/* ---------- Mobile tweaks ---------- */
 @media (max-width:640px){
-	.brand-title{display: none;}
-	.logo-mark{ width:46px;height:46px;}
+  .brand-title{display:none}
+  .logo-mark{width:46px;height:46px}
   .container{padding:0}
   .home-header{margin-top:12px}
   .h1{font-size:32px}
   .hero{padding:24px}
   .hero-offset{margin-top:32px}
-  .home-actions .btn{width:auto}  /* keep side-by-side if space allows */
+  .home-actions .btn{width:auto}
   .cta .btn{width:100%;justify-content:center}
 }

@@ -44,6 +44,15 @@ function route(string $uri): void
 
 		// The POST case stays mapped to your existing 'saveSection' or you can explicitly map:
 		'/api/visions/([A-Za-z0-9]{6,16})/budget' => ['vision','saveBudget'], // POST
+		
+		// ... inside $routes array:
+		'/api/visions/([A-Za-z0-9]{6,16})/media:upload'   => ['media','upload'],
+		'/api/visions/([A-Za-z0-9]{6,16})/media:link'    => ['media','link'],
+		'/api/visions/([A-Za-z0-9]{6,16})/media'         => ['media','list'],   // GET
+		'/api/visions/([A-Za-z0-9]{6,16})/media:delete'  => ['media','delete'],
+		'/api/moods/([A-Za-z0-9]{6,16})/library:attach'  => ['media','attach'],
+		'/api/moods/([A-Za-z0-9]{6,16})/library:detach'  => ['media','detach'],
+
 
         // ── General Dashboard ─────────────────────────────────────────────────
         '/dashboard'          => ['home', 'dashboard'],

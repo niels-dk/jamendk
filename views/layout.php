@@ -283,6 +283,8 @@
 <script defer src="/public/js/overlay-contacts.js?v=1"></script>
 <script defer src="/public/js/overlay_budget.js?v=3"></script>
 <script defer src="/public/js/overlay-documents.js"></script>
+<!-- Include the JS -->
+<script src="/public/js/mood-board-library.js" defer></script>
 
 
 <div id="connectivity-banner"></div>

@@ -1,15 +1,19 @@
-# -- jamen.dk root .htaccess --
+# /.htaccess (root)
+Options -Multiviews
 RewriteEngine On
 RewriteBase /
 
-# If someone hits /index.php directly, bounce them to /
+# 1) Let Apache serve any real file or directory directly.
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# 2) If someone hits /index.php directly, bounce them to /
 RewriteRule ^index\.php$ / [L,R=302]
 
-# Send EVERYTHING ELSE that isn't an existing file/dir to index.php
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^(.*)$ /index.php [QSA,L]
+# 3) Everything else goes through index.php (front controller)
+RewriteRule . index.php [QSA,L]
 
+# PHP limits (your originals)
 php_value upload_max_filesize 64M
 php_value post_max_size 64M
-

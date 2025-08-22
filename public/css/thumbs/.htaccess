@@ -1,0 +1,14 @@
+# /storage/thumbs/.htaccess
+<IfModule mod_authz_core.c>
+  Require all granted
+</IfModule>
+<IfModule !mod_authz_core.c>
+  Order allow,deny
+  Allow from all
+</IfModule>
+
+# Optional: long cache for images
+<IfModule mod_expires.c>
+  ExpiresActive On
+  ExpiresDefault "access plus 30 days"
+</IfModule>

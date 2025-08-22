@@ -1,28 +1,59 @@
-<?php
-/**
- * Mood board editing form
- *
- * Displays a simple form for entering a mood board title and associating
- * the board with a vision.  Future enhancements should include the
- * full canvas editor described in the product spec.  For now this form
- * provides a minimal UI so the new CRUD routes do not result in a 404.
- */
-?>
-<div class="card">
-  <h2>Edit Mood Board</h2>
-  <form method="post" action="/moods/update">
-    <input type="hidden" name="mood_id" value="<?= htmlspecialchars($board['id']) ?>">
-    <div class="field">
-      <label for="title">Title</label>
-      <input type="text" id="title" name="title" value="<?= htmlspecialchars($board['title'] ?? '') ?>" placeholder="e.g. Brand A mood">
+<!-- Library Drawer Root + Controls -->
+<div id="mood-lib-root"
+     data-vision-slug="<?= htmlspecialchars($board['vision_slug'] ?? '') ?>"
+     data-board-slug="<?= htmlspecialchars($board['slug']) ?>"
+     data-board-id="<?= (int)$board['id'] ?>">
+
+  <div class="library-tabs">
+    <button class="tab-btn active" data-scope="board">Board Files</button>
+    <button class="tab-btn" data-scope="vision">All Vision Files</button>
+  </div>
+
+  <div class="library-actions">
+    <button id="uploadBtn" type="button">Upload</button>
+    <input id="mediaUploadInput" type="file" name="file[]" multiple style="display:none">
+    <button id="linkBtn" type="button">Add Link</button>
+    <div id="linkWrap" style="display:none;margin-top:8px;">
+      <input id="linkUrl" type="url" placeholder="Paste YouTube URL…" style="width:100%">
+      <button id="linkSubmit" type="button" style="margin-top:6px;">Add</button>
     </div>
-    <div class="field">
-      <label for="vision_id">Vision (optional)</label>
-      <input type="number" id="vision_id" name="vision_id" value="<?= htmlspecialchars($board['vision_id'] ?? '') ?>" placeholder="Vision ID">
-    </div>
-    <div class="btnbar">
-      <button class="btn primary" type="submit">Save</button>
-      <a class="btn ghost" href="/moods/<?= htmlspecialchars($board['slug']) ?>">Cancel</a>
-    </div>
-  </form>
+  </div>
+
+	<!-- Global upload pill -->
+	<div id="uploadQueuePill" class="upl-pill" hidden>
+	  <span class="upl-text">Uploading…</span>
+	  <button class="upl-cancel" title="Cancel all">✕</button>
+	</div>
+
+	<!-- Hidden input for file picker (you likely already have one) -->
+	<input id="libraryFileInput" type="file" multiple hidden
+		   accept=".jpg,.jpeg,.png,.gif,.webp,.bmp,.pdf" />
+
+  <div class="library-filters">
+    <input type="text" id="mediaSearch" placeholder="Search…">
+    <select id="mediaTypeFilter">
+      <option value="">All Types</option>
+      <option value="image">Images</option>
+      <option value="gif">GIFs</option>
+      <option value="video">Videos</option>
+      <option value="doc">Docs</option>
+    </select>
+    <select id="mediaSort">
+      <option value="date">Newest</option>
+      <option value="name">Name</option>
+      <option value="type">Type</option>
+      <option value="size">Size</option>
+    </select>
+  </div>
+	
+  <div id="libraryGrid" class="masonry-cols"></div>
+  <div id="mediaGrid" class="media-grid"></div>
+  <div id="libraryGrid" class="media-grid masonry-cols"></div>
+  <div id="libraryGrid" class="media-grid"></div>
+  <div id="libraryStatus" class="hint"></div>
+</div>
+
+<!-- Canvas drop target somewhere in your editor -->
+<div id="canvasDropZone" class="canvas-area">
+  <!-- Your canvas content goes here -->
 </div>

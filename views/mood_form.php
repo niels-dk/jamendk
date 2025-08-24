@@ -18,6 +18,10 @@
       <button id="linkSubmit" type="button" style="margin-top:6px;">Add</button>
     </div>
   </div>
+	
+	<input id="tagFilterInput" placeholder="Filter by tags (comma)…" />
+	<select id="groupFilterSelect"><option value="">All groups</option></select>
+
 
 	<!-- Global upload pill -->
 	<div id="uploadQueuePill" class="upl-pill" hidden>

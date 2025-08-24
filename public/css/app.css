@@ -248,6 +248,14 @@ html, body { overflow-x: hidden; }
 
 /* Small spinner (while size/virus checks run server-side) */
 .upl-spinner{ width:18px; height:18px; border-radius:50%; border:3px solid rgba(255,255,255,.4); border-top-color:#fff; animation:spin .8s linear infinite }
+
+.tags-row{display:flex;gap:6px;flex-wrap:wrap;margin:6px 12px 2px}
+.groups-row{margin:0 12px 10px;color:#aeb9d6;font-size:11px}
+.chip{font-size:11px;padding:2px 6px;border-radius:999px;background:#283146;color:#cddaef;border:1px solid #33405b}
+.chip.more{opacity:.75}
+.grp{background:#232b3a;border:1px solid #303a4e;border-radius:6px;padding:1px 6px}
+
+
 @keyframes spin { to { transform: rotate(360deg) } }
 
 

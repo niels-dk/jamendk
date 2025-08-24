@@ -5,6 +5,8 @@ require_once __DIR__ . '/../models/vision.php';
 require_once __DIR__ . '/../models/mood.php';
 require_once __DIR__ . '/../models/media_model.php';
 
+@include_once __DIR__ . '/../models/media_meta.php';
+
 class media_controller
 {
     // POST /api/visions/{slug}/media:upload
@@ -303,8 +305,77 @@ class media_controller
                 $rows = media_model::allForVisionFiltered($db, $visionId, $boardId, $q, $type, $sort);
             }
         }
+
+		// Graceful enrichment (only if helper + tables exist)
+		$hasMeta = class_exists('media_meta') && method_exists('media_meta', 'is_ready') && media_meta::is_ready($db);
+		if ($hasMeta) {
+			foreach ($rows as &$row) {
+				try {
+					$row['tags']   = media_meta::tags_for_media($db, (int)$row['id']);
+					$row['groups'] = media_meta::groups_for_media($db, (int)$row['id']);
+				} catch (Throwable $e) {
+					// Never let JSON break because of meta lookups
+					$row['tags'] = $row['groups'] = [];
+				}
+			}
+			unset($row);
+		}
+
         echo json_encode(['success'=>true,'media'=>$rows]);
     }
+	
+	// POST /api/media/{id}/groups:set   (group_ids="1,2,3")
+	public static function set_groups(string $mediaId): void
+	{
+		header('Content-Type: application/json');
+		global $db;
+
+		$mid = (int)$mediaId;
+		if ($mid <= 0) { http_response_code(400); echo json_encode(['error'=>'Invalid media id']); return; }
+
+		session_start();
+		$userId = $_SESSION['user_id'] ?? 0;
+		if (!$userId) { http_response_code(401); echo json_encode(['error'=>'Not authenticated']); return; }
+
+		// Ensure media exists and belongs to a vision the user can see (light check)
+		$media = $db->prepare("SELECT id FROM vision_media WHERE id=?");
+		$media->execute([$mid]);
+		if (!$media->fetchColumn()) { http_response_code(404); echo json_encode(['error'=>'Media not found']); return; }
+
+		// Ensure link table exists
+		// media_group_links (media_id, group_id) PK(media_id, group_id)
+		$db->query("CREATE TABLE IF NOT EXISTS media_group_links (
+			media_id BIGINT UNSIGNED NOT NULL,
+			group_id BIGINT UNSIGNED NOT NULL,
+			PRIMARY KEY (media_id, group_id),
+			CONSTRAINT fk_mgl_media FOREIGN KEY (media_id) REFERENCES vision_media(id) ON DELETE CASCADE,
+			CONSTRAINT fk_mgl_group FOREIGN KEY (group_id) REFERENCES media_groups(id) ON DELETE CASCADE
+		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+		// Parse posted ids
+		$raw = trim($_POST['group_ids'] ?? '');
+		$ids = array_values(array_unique(array_filter(array_map('intval', explode(',', $raw)), fn($v)=>$v>0)));
+
+		// Reset links for this media
+		$stDel = $db->prepare("DELETE FROM media_group_links WHERE media_id=?");
+		$stDel->execute([$mid]);
+
+		if ($ids) {
+			$values = [];
+			$params = [];
+			foreach ($ids as $gid) {
+				$values[] = "(?, ?)";
+				$params[] = $mid;
+				$params[] = $gid;
+			}
+			$sql = "INSERT INTO media_group_links (media_id, group_id) VALUES " . implode(',', $values);
+			$ins = $db->prepare($sql);
+			$ins->execute($params);
+		}
+
+		echo json_encode(['success'=>true, 'media_id'=>$mid, 'group_ids'=>$ids]);
+	}
+
 
     // POST /api/moods/{slug}/library:attach  (media_id[]=...)
     public static function attach(string $slug): void

@@ -7,6 +7,7 @@
 
 // Robust image fallback without inline quoting headaches
 window.DBL_thumbError = function(img) {
+	
   const card = img.closest('.media-card');
   const id = card?.dataset.id;
   const item = (window.__mediaItems || []).find(x => String(x.id) === String(id));
@@ -25,12 +26,32 @@ window.DBL_thumbError = function(img) {
   }
 
   img.onerror = null;
-  const box = img.closest('.thumb');
-  if (box) box.innerHTML = '<div class="thumb-fallback">No preview</div>';
-};
-
+	  const box = img.closest('.thumb');
+	  if (box) box.innerHTML = '<div class="thumb-fallback">No preview</div>';
+	};
 
 (function () {
+	
+  // === Single source of truth: Tag/Group caches + loaders ===
+  let TAGS_CACHE = null;
+  let GROUPS_CACHE = null;
+
+  function loadTags() {
+    if (TAGS_CACHE) return Promise.resolve(TAGS_CACHE);
+    return fetch('/api/tags', { credentials: 'same-origin' })
+      .then(r => r.ok ? r.json() : Promise.reject())
+      .then(j => (TAGS_CACHE = (j.tags || [])))
+      .catch(() => (TAGS_CACHE = []));
+  }
+  function loadGroups() {
+    if (GROUPS_CACHE) return Promise.resolve(GROUPS_CACHE);
+    const base = `/api/visions/${encodeURIComponent(apiBaseSlug())}/groups`;
+    return fetch(base, { credentials: 'same-origin' })
+      .then(r => r.ok ? r.json() : Promise.reject())
+      .then(j => (GROUPS_CACHE = (j.groups || j.data || [])))
+      .catch(() => (GROUPS_CACHE = []));
+  }
+	
   const $ = (sel, el) => (el || document).querySelector(sel);
   const $$ = (sel, el) => Array.from((el || document).querySelectorAll(sel));
 
@@ -54,14 +75,27 @@ window.DBL_thumbError = function(img) {
   const linkUrl     = $('#linkUrl');
   const linkSubmit  = $('#linkSubmit');
 
-//  const grid     = $('#mediaGrid');
   const statusEl = $('#libraryStatus');
   const typeSel  = $('#mediaTypeFilter');
   const sortSel  = $('#mediaSort');
   const qInput   = $('#mediaSearch');
   const grid = document.getElementById('libraryGrid') || document.getElementById('mediaGrid');
   if (!grid) { console.warn('[MediaLibrary] grid container not found'); }
+	
+  const tagFilterInput   = document.getElementById('tagFilterInput');
+  const groupFilterSelect = document.getElementById('groupFilterSelect');
+  let tagsMode = 'or'; // keep simple; add toggle later
+	
+  if (tagFilterInput) {
+	  tagFilterInput.addEventListener('input', () => {
+		clearTimeout(tagFilterInput._t);
+		tagFilterInput._t = setTimeout(fetchList, 300);
+	  });
+	}
 
+	if (groupFilterSelect) {
+	  groupFilterSelect.addEventListener('change', fetchList);
+	}
 
   let currentScope = 'board'; // 'board' | 'vision'
   let items = []; // current fetched items
@@ -80,149 +114,193 @@ window.DBL_thumbError = function(img) {
   function deriveThumbUrl(m)  { return m.uuid ? `/storage/thumbs/${m.uuid}_thumb.jpg` : ''; }
   function deriveLargeUrl(m)  { return m.uuid ? `/storage/thumbs/${m.uuid}_1280.jpg` : ''; }
   function deriveOrigUrl(m) {
-	  if (!m.uuid || !m.file_name) return '';
-	  const ext = m.file_name.split('.').pop().toLowerCase();
-	  return `/storage/private/${m.uuid}.${ext}`;
-	}
-	
-   function bestThumb(m) {
-  // youtube
-	  if (m.provider === 'youtube') {
-		const pid = m.provider_id || ytIdFromUrl( 	m.external_url);
-		if (pid) return `https://img.youtube.com/vi/${pid}/hqdefault.jpg`;
-	  }
-	  return m.thumb_url || deriveThumbUrl(m) || '';
-	}
-	
-	function bestLarge(m)  { return m.large_url || deriveLargeUrl(m) || ''; }
-	function bestOrig(m)   { return deriveOrigUrl(m) || ''; }
+    if (!m.uuid || !m.file_name) return '';
+    const ext = m.file_name.split('.').pop().toLowerCase();
+    return `/storage/private/${m.uuid}.${ext}`;
+  }
 
-	function deriveThumb(m){ return m.thumb_url || (m.uuid ? `/storage/thumbs/${m.uuid}_thumb.jpg` : ''); }
-	function deriveLarge(m){ return m.large_url || (m.uuid ? `/storage/thumbs/${m.uuid}_1280.jpg` : ''); }
-	function deriveOrig(m){
-	  if (!m.uuid || !m.file_name) return '';
-	  const ext = m.file_name.split('.').pop().toLowerCase();
-	  return `/storage/private/${m.uuid}.${ext}`;
-	}
+  function bestThumb(m) {
+    // youtube
+    if (m.provider === 'youtube') {
+      const pid = m.provider_id || ytIdFromUrl( m.external_url);
+      if (pid) return `https://img.youtube.com/vi/${pid}/hqdefault.jpg`;
+    }
+    return m.thumb_url || deriveThumbUrl(m) || '';
+  }
 
-	function ytIdFromUrl(url) {
-	  if (!url) return '';
-	  try {
-		const u = new URL(url);
-		if (u.hostname.includes('youtu.be')) return u.pathname.split('/')[1];
-		if (u.hostname.includes('youtube.com')) return u.searchParams.get('v') || '';
-	  } catch (_) {}
-	  return '';
-	}
+  function bestLarge(m)  { return m.large_url || deriveLargeUrl(m) || ''; }
+  function bestOrig(m)   { return deriveOrigUrl(m) || ''; }
 
-	// Handles watch?v=, youtu.be/, /embed/, /shorts/, with extra params
-	function youtubeIdFromUrl(url){
-	  if (!url) return null;
-	  try {
-		const u = new URL(url);
-		const host = u.hostname.replace(/^www\./,'');
-		// 1) youtu.be/<id>
-		if (host === 'youtu.be') {
-		  const id = u.pathname.split('/').filter(Boolean)[0];
-		  return id || null;
-		}
-		// 2) youtube.com/watch?v=<id>
-		if (host.endsWith('youtube.com')) {
-		  if (u.searchParams.get('v')) return u.searchParams.get('v');
-		  // 3) /embed/<id>
-		  const m1 = u.pathname.match(/\/embed\/([A-Za-z0-9_-]{6,})/);
-		  if (m1) return m1[1];
-		  // 4) /shorts/<id>
-		  const m2 = u.pathname.match(/\/shorts\/([A-Za-z0-9_-]{6,})/);
-		  if (m2) return m2[1];
-		}
-	  } catch(_) {}
-	  // 5) last‑resort regex (if url wasn’t parseable by URL())
-	  const m = String(url).match(/(?:v=|youtu\.be\/|\/embed\/|\/shorts\/)([A-Za-z0-9_-]{6,})/);
-	  return m ? m[1] : null;
-	}
-	
+  function deriveThumb(m){ return m.thumb_url || (m.uuid ? `/storage/thumbs/${m.uuid}_thumb.jpg` : ''); }
+  function deriveLarge(m){ return m.large_url || (m.uuid ? `/storage/thumbs/${m.uuid}_1280.jpg` : ''); }
+  function deriveOrig(m){
+    if (!m.uuid || !m.file_name) return '';
+    const ext = m.file_name.split('.').pop().toLowerCase();
+    return `/storage/private/${m.uuid}.${ext}`;
+  }
 
-	function templateCard(m){
-	  // discover possible link fields the API might use
-	  const linkUrl = m.external_url || m.url || m.source_url || m.link_url || '';
+  function ytIdFromUrl(url) {
+    if (!url) return '';
+    try {
+      const u = new URL(url);
+      if (u.hostname.includes('youtu.be')) return u.pathname.split('/')[1];
+      if (u.hostname.includes('youtube.com')) return u.searchParams.get('v') || '';
+    } catch (_) {}
+    return '';
+  }
 
-	  // derive YT id even if provider/provider_id are missing
-	  const ytId = m.provider_id || youtubeIdFromUrl(linkUrl);
-	  const isYouTube = !!ytId;
+  // Handles watch?v=, youtu.be/, /embed/, /shorts/, with extra params
+  function youtubeIdFromUrl(url){
+    if(!url) return null;
+    try {
+      const u = new URL(url);
+      const host = u.hostname.replace(/^www\./,'');
+      // 1) youtu.be/<id>
+      if (host === 'youtu.be') {
+        const id = u.pathname.split('/').filter(Boolean)[0];
+        return id || null;
+      }
+      // 2) youtube.com/watch?v=<id>
+      if (host.endsWith('youtube.com')) {
+        if (u.searchParams.get('v')) return u.searchParams.get('v');
+        // 3) /embed/<id>
+        const m1 = u.pathname.match(/\/embed\/([A-Za-z0-9_-]{6,})/);
+        if (m1) return m1[1];
+        // 4) /shorts/<id>
+        const m2 = u.pathname.match(/\/shorts\/([A-Za-z0-9_-]{6,})/);
+        if (m2) return m2[1];
+      }
+    } catch(_) {}
+    // 5) last‑resort regex (if url wasn’t parseable by URL())
+    const m = String(url).match(/(?:v=|youtu\.be\/|\/embed\/|\/shorts\/)([A-Za-z0-9_-]{6,})/);
+    return m ? m[1] : null;
+  }
 
-	  // derive label
-	  let label = 'file';
-	  if (isYouTube || (m.mime_type && m.mime_type.startsWith('video/'))) label = 'video';
-	  else if (m.mime_type === 'image/gif') label = 'gif';
-	  else if (m.mime_type === 'application/pdf') label = 'pdf';
-	  else if (m.mime_type && m.mime_type.startsWith('image/')) label = 'image';
+  /* =========================
+     NEW: chips render helpers
+     ========================= */
+  function renderTagChips(m) {
+    const tags = Array.isArray(m.tags) ? m.tags : [];
+    if (!tags.length) return '';
+    const chips = tags.slice(0, 3).map(t => {
+      const name = (t && (t.name || t.slug || '')).toString();
+      return `<span class="chip">${name}</span>`;
+    }).join('');
+    const more = tags.length > 3 ? `<span class="chip more">+${tags.length - 3}</span>` : '';
+    return `<div class="tags-row">${chips}${more}</div>`;
+  }
+  function renderGroupLine(m) {
+    const groups = Array.isArray(m.groups) ? m.groups : [];
+    if (!groups.length) return '';
+    const names = groups.map(g => (g && (g.name || g.slug || '')).toString()).filter(Boolean).join(', ');
+    if (!names) return '';
+    return `<div class="groups-row">${names}</div>`;
+  }
 
-	  const name = m.file_name || m.title || '';
+  function templateCard(m){
+    // discover possible link fields the API might use
+    const linkUrl = m.external_url || m.url || m.source_url || m.link_url || '';
 
-	  // pick best thumbnail (YT first if we can)
-	  const ytThumb = isYouTube
-		? `https://i.ytimg.com/vi/${ytId}/hqdefault.jpg`
-		: '';
+    // derive YT id even if provider/provider_id are missing
+    const ytId = m.provider_id || youtubeIdFromUrl(linkUrl);
+    const isYouTube = !!ytId;
 
-	  const thumb =
-		m.thumb_url ||
-		(ytThumb) ||
-		(m.uuid ? `/storage/thumbs/${m.uuid}_thumb.jpg` : '') ||
-		m.large_url ||
-		(m.uuid && m.file_name
-		  ? `/storage/private/${m.uuid}.${(m.file_name.split('.').pop()||'jpg').toLowerCase()}`
-		  : '');
+    // derive label
+    let label = 'file';
+    if (isYouTube || (m.mime_type && m.mime_type.startsWith('video/'))) label = 'video';
+    else if (m.mime_type === 'image/gif') label = 'gif';
+    else if (m.mime_type === 'application/pdf') label = 'pdf';
+    else if (m.mime_type && m.mime_type.startsWith('image/')) label = 'image';
 
-	  const srcset = [
-		ytThumb && `https://i.ytimg.com/vi/${ytId}/maxresdefault.jpg 1280w`,
-		m.large_url && `${m.large_url} 1280w`
-	  ].filter(Boolean).join(', ');
+    const name = m.file_name || m.title || '';
 
-	  const sizes  = '(max-width: 700px) 48vw, (max-width: 1100px) 33vw, 260px';
+    // pick best thumbnail (YT first if we can)
+    const ytThumb = isYouTube
+      ? `https://i.ytimg.com/vi/${ytId}/hqdefault.jpg`
+      : '';
 
-	  return `
-		<div class="media-card" data-id="${m.id}" data-type="${label}" draggable="true">
-		  <button class="menu-toggle" aria-label="menu">⋮</button>
-		  <div class="thumb">
-			<img src="${thumb}" ${srcset ? `srcset="${srcset}" sizes="${sizes}"` : ''}
-				 alt="${name.replace(/"/g,'&quot;')}" loading="lazy" decoding="async"
-				 onerror="this.onerror=null; this.src='${m.large_url || ''}'; if(!this.src) this.closest('.thumb').innerHTML='<div class=\\'thumb-fallback\\'>No preview</div>';">
-			${label === 'video' ? `<div class="play-badge">▶</div>` : ``}
-		  </div>
-		  <div class="meta">
-			<div class="name" title="${name.replace(/"/g,'&quot;')}">${name}</div>
-			<div class="badge">${label}</div>
-		  </div>
-		  <div class="card-menu"><ul>
-			<!-- your attach/detach/delete items rendered as before -->
-		  </ul></div>
-		</div>
-	  `;
-	}
+    const thumb =
+      m.thumb_url ||
+      (ytThumb) ||
+      (m.uuid ? `/storage/thumbs/${m.uuid}_thumb.jpg` : '') ||
+      m.large_url ||
+      (m.uuid && m.file_name
+        ? `/storage/private/${m.uuid}.${(m.file_name.split('.').pop()||'jpg').toLowerCase()}` :
+        '');
 
+    const srcset = [
+      ytThumb && `https://i.ytimg.com/vi/${ytId}/maxresdefault.jpg 1280w`,
+      m.large_url && `${m.large_url} 1280w`
+    ].filter(Boolean).join(', ');
 
+    const sizes  = '(max-width: 700px) 48vw, (max-width: 1100px) 33vw, 260px';
 
+    /* NEW: chips HTML */
+    const chipsHtml  = renderTagChips(m);
+    const groupsHtml = renderGroupLine(m);
+
+    return `
+      <div class="media-card" data-id="${m.id}" data-type="${label}" draggable="true">
+        <button class="menu-toggle" aria-label="menu">⋮</button>
+        <div class="thumb">
+          <img src="${thumb}" ${srcset ? `srcset="${srcset}" sizes="${sizes}"` : ''}
+               alt="${name.replace(/"/g,'&quot;')}" loading="lazy" decoding="async"
+               onerror="this.onerror=null; this.src='${m.large_url || ''}'; if(!this.src) this.closest('.thumb').innerHTML='<div class=\\'thumb-fallback\\'>No preview</div>';">
+          ${label === 'video' ? `<div class="play-badge">▶</div>` : ``}
+        </div>
+        <div class="meta">
+          <div class="name" title="${name.replace(/"/g,'&quot;')}">${name}</div>
+          <div class="badge">${label}</div>
+        </div>
+        ${chipsHtml}
+        ${groupsHtml}
+        <div class="card-menu"><ul>
+          <!-- your attach/detach/delete items rendered as before -->
+        </ul></div>
+      </div>
+    `;
+  }
 
   function render() {
-	  if (!grid) return;
-	  window.__mediaItems = items;
+    if (!grid) return;
+    window.__mediaItems = items;
 
-	  if (!items.length) {
-		grid.innerHTML = `<div class="empty" style="opacity:.7;padding:12px">No files yet.</div>`;
-		return;
+    if (!items.length) {
+      grid.innerHTML = `<div class="empty" style="opacity:.7;padding:12px">No files yet.</div>`;
+      return;
+    }
+    grid.innerHTML = items.map(templateCard).join('');
+    bindCardEvents?.();
+  }
+	
+  loadGroups().then(gs => {
+	  if (!groupFilterSelect) return;
+	  gs.forEach(g => {
+		const opt = document.createElement('option');
+		opt.value = g.id;
+		opt.textContent = g.name;
+		groupFilterSelect.appendChild(opt);
+	  });
+	});
+	
+	function addListFilters(qs) {
+	  if (tagFilterInput && tagFilterInput.value.trim()) {
+		qs.set('tags', tagFilterInput.value.trim());
+		qs.set('tags_mode', tagsMode);
 	  }
-	  grid.innerHTML = items.map(templateCard).join('');
-	  bindCardEvents?.();
+	  if (groupFilterSelect && groupFilterSelect.value) {
+		qs.set('group_id', groupFilterSelect.value);
+	  }
 	}
 
   function fetchList() {
     const qs = new URLSearchParams();
     qs.set('scope', currentScope);
+	addListFilters(qs);
     if (boardId) qs.set('board_id', String(boardId));
-    if (typeSel.value) qs.set('type', typeSel.value);
-    if (sortSel.value) qs.set('sort', sortSel.value);
-    if (qInput.value.trim()) qs.set('q', qInput.value.trim());
+    if (typeSel?.value) qs.set('type', typeSel.value);
+    if (sortSel?.value) qs.set('sort', sortSel.value);
+    if (qInput && qInput.value.trim()) qs.set('q', qInput.value.trim());
 
     setStatus('Loading…');
     fetch(`/api/visions/${encodeURIComponent(apiBaseSlug())}/media?` + qs.toString(), { credentials: 'same-origin' })
@@ -268,6 +346,54 @@ window.DBL_thumbError = function(img) {
       .catch(e => alert(e.message || 'Delete failed'));
   }
 
+	// Simple prompt-based editors (can replace with a nicer popover later)
+	function editTags(mediaId, current=[]) {
+	  loadTags().then(tags=>{
+		const names = current.map(t=>t.name);
+		const input = prompt("Tags (comma separated). Existing: "+tags.map(t=>t.name).join(', '), names.join(', '));
+		if (input===null) return;
+		const want = Array.from(new Set(input.split(',').map(s=>s.trim()).filter(Boolean)));
+		// upsert any new names first
+		const ensureAll = want.map(n=>{
+		  const found = tags.find(t=>t.name.toLowerCase()===n.toLowerCase());
+		  return found ? Promise.resolve(found) :
+			fetch(`/api/visions/${encodeURIComponent(apiBaseSlug())}/groups:create`, {
+			  method:'POST', credentials:'same-origin',
+			  body: new URLSearchParams({ name: n })
+			})
+		});
+		Promise.all(ensureAll).then(final=>{
+		  const ids = final.map(t=>t.id);
+		  return fetch(`/api/media/${mediaId}/tags:set`, {method:'POST',credentials:'same-origin',
+				  body:new URLSearchParams({ 'tag_ids': ids.join(',') })});
+		}).then(()=>{ TAGS_CACHE=null; fetchList(); });
+	  });
+	}
+
+	function editGroups(mediaId, current=[]) {
+	  loadGroups().then(groups=>{
+		const names = current.map(g=>g.name);
+		const input = prompt("Groups (comma separated). Existing: "+groups.map(g=>g.name).join(', '), names.join(', '));
+		if (input===null) return;
+		const want = Array.from(new Set(input.split(',').map(s=>s.trim()).filter(Boolean)));
+		// create missing
+		const ensureAll = want.map(n=>{
+		  const found = groups.find(g=>g.name.toLowerCase()===n.toLowerCase());
+		  return found ? Promise.resolve(found) :
+			fetch(`/api/visions/${encodeURIComponent(apiBaseSlug())}/groups:create`, {
+			  method:'POST', credentials:'same-origin',
+			  body: new URLSearchParams({ name: n })
+			})
+		});
+		Promise.all(ensureAll).then(final=>{
+		  const ids = final.map(g=>g.id);
+		  return fetch(`/api/media/${mediaId}/groups:set`, {method:'POST',credentials:'same-origin',
+				  body:new URLSearchParams({ 'group_ids': ids.join(',') })});
+		}).then(()=>{ GROUPS_CACHE=null; fetchList(); });
+	  });
+	}
+
+
   function bindCardEvents() {
     // open/close menus
     $$('.media-card .menu-toggle', grid).forEach(btn => {
@@ -294,6 +420,21 @@ window.DBL_thumbError = function(img) {
         ev.dataTransfer.effectAllowed = 'copy';
       });
     });
+	
+	$$('.media-card .act-edit-tags', grid).forEach(el=>{
+	  el.addEventListener('click',()=>{
+		const id = parseInt(el.dataset.id,10);
+		const m  = items.find(x=>Number(x.id)===id);
+		editTags(id, m?.tags||[]);
+	  });
+	});
+	$$('.media-card .act-edit-groups', grid).forEach(el=>{
+	  el.addEventListener('click',()=>{
+		const id = parseInt(el.dataset.id,10);
+		const m  = items.find(x=>Number(x.id)===id);
+		editGroups(id, m?.groups||[]);
+	  });
+	});
   }
 
   // Canvas drop binding (expects an element with id="canvasDropZone")
@@ -358,169 +499,169 @@ window.DBL_thumbError = function(img) {
   });
 
   // ===== Upload with per-file progress (XHR) =====
-	if (uploadBtn && uploadInput) {
-	  uploadBtn.addEventListener('click', () => uploadInput.click());
-	  uploadInput.addEventListener('change', () => {
-		if (!uploadInput.files || !uploadInput.files.length) return;
-		cancelledAll = false;
-		enqueueUploads(Array.from(uploadInput.files));
-		uploadInput.value = '';
-	  });
-	}
-	// --- queue state (scoped to this IIFE) ---
-	const MAX_PARALLEL = 3;
-	const upQueue = [];
-	let inFlight = 0;
-	let cancelledAll = false;
-	  
-	//optional global pill
-	const pill = document.getElementById('uploadQueuePill');
-	pill?.querySelector('.upl-cancel')?.addEventListener('click', () => {
-	  cancelledAll = true;
-	  upQueue.length = 0;
-	  // NOTE: running XHRs are not aborted here; add a reference store+abort if you need hard cancel
-	});
-	  
-	function enqueueUploads(files) {
-	  files.forEach(f => upQueue.push(f));
-	  pillUpdate();
-	  pumpUploads();
-	}
-	  
-	function pumpUploads() {
-	  while (inFlight < MAX_PARALLEL && upQueue.length && !cancelledAll) {
-		const file = upQueue.shift();
-		uploadOneFile(file);
-	  }
-	  pillUpdate();
-	}
-	
-	function makeTempCard(file) {
-	  const el = document.createElement('div');
-	  el.className = 'media-card uploading';
-	  const imgPreview = file.type && file.type.startsWith('image/')
-		? `<img src="${URL.createObjectURL(file)}" alt="">`
-		: `<div class="thumb-fallback">${(file.name.split('.').pop() || 'FILE').toUpperCase()}</div>`;
-	  el.innerHTML = `
-		<div class="thumb">${imgPreview}</div>
-		<div class="meta"><div class="name">${file.name}</div><div class="badge">upload</div></div>
-		<div class="upl-overlay">
-		  <div class="upl-msg">Preparing…</div>
-		  <div class="upl-bar"><i style="width:0%"></i></div>
-		</div>`;
-	  grid?.prepend(el);
-	  return el;
-	}
-	  
-	function replaceTempWithReal(tmpEl, mediaObj) {
-	  // reuse your templateCard()
-	  const html = templateCard(mediaObj);
-	  const wrap = document.createElement('div');
-	  wrap.innerHTML = html.trim();
-	  const real = wrap.firstElementChild;
-	  tmpEl.replaceWith(real);
-	  bindCardEvents?.(); // keep behaviors
-	}
-	  
-	function uploadOneFile(file) {
-	  inFlight++; pillUpdate();
+  if (uploadBtn && uploadInput) {
+    uploadBtn.addEventListener('click', () => uploadInput.click());
+    uploadInput.addEventListener('change', () => {
+      if (!uploadInput.files || !uploadInput.files.length) return;
+      cancelledAll = false;
+      enqueueUploads(Array.from(uploadInput.files));
+      uploadInput.value = '';
+    });
+  }
+  // --- queue state (scoped to this IIFE) ---
+  const MAX_PARALLEL = 3;
+  const upQueue = [];
+  let inFlight = 0;
+  let cancelledAll = false;
 
-	  const tmpEl = makeTempCard(file);
-	  const bar = tmpEl.querySelector('.upl-bar i');
-	  const msg = tmpEl.querySelector('.upl-msg');
+  //optional global pill
+  const pill = document.getElementById('uploadQueuePill');
+  pill?.querySelector('.upl-cancel')?.addEventListener('click', () => {
+    cancelledAll = true;
+    upQueue.length = 0;
+    // NOTE: running XHRs are not aborted here; add a reference store+abort if you need hard cancel
+  });
 
-	  const fd = new FormData();
-	  // your endpoint accepts multiple: keep "file[]" but send one per XHR
-	  fd.append('file[]', file);
-	  if (boardId) fd.append('board_id', String(boardId));
+  function enqueueUploads(files) {
+    files.forEach(f => upQueue.push(f));
+    pillUpdate();
+    pumpUploads();
+  }
 
-	  const url = `/api/visions/${encodeURIComponent(apiBaseSlug())}/media:upload`;
+  function pumpUploads() {
+    while (inFlight < MAX_PARALLEL && upQueue.length && !cancelledAll) {
+      const file = upQueue.shift();
+      uploadOneFile(file);
+    }
+    pillUpdate();
+  }
 
-	  const xhr = new XMLHttpRequest();
-	  xhr.open('POST', url, true);
-	  xhr.withCredentials = true;
+  function makeTempCard(file) {
+    const el = document.createElement('div');
+    el.className = 'media-card uploading';
+    const imgPreview = file.type && file.type.startsWith('image/')
+      ? `<img src="${URL.createObjectURL(file)}" alt="">`
+      : `<div class="thumb-fallback">${(file.name.split('.').pop() || 'FILE').toUpperCase()}</div>`;
+    el.innerHTML = `
+      <div class="thumb">${imgPreview}</div>
+      <div class="meta"><div class="name">${file.name}</div><div class="badge">upload</div></div>
+      <div class="upl-overlay">
+        <div class="upl-msg">Preparing…</div>
+        <div class="upl-bar"><i style="width:0%"></i></div>
+      </div>`;
+    grid?.prepend(el);
+    return el;
+  }
 
-	  xhr.upload.onprogress = (e) => {
-		if (!e.lengthComputable) { msg.textContent = 'Uploading…'; return; }
-		const pct = Math.max(1, Math.round((e.loaded / e.total) * 100));
-		msg.textContent = `Uploading ${pct}%`;
-		if (bar) bar.style.width = pct + '%';
-	  };
+  function replaceTempWithReal(tmpEl, mediaObj) {
+    // reuse your templateCard()
+    const html = templateCard(mediaObj);
+    const wrap = document.createElement('div');
+    wrap.innerHTML = html.trim();
+    const real = wrap.firstElementChild;
+    tmpEl.replaceWith(real);
+    bindCardEvents?.(); // keep behaviors
+  }
 
-	  xhr.onloadstart = () => { msg.textContent = 'Uploading…'; };
-	  xhr.onreadystatechange = () => { if (xhr.readyState === 3) msg.textContent = 'Processing…'; };
+  function uploadOneFile(file) {
+    inFlight++; pillUpdate();
 
-	  xhr.onerror = fail;
-	  xhr.onabort = fail;
+    const tmpEl = makeTempCard(file);
+    const bar = tmpEl.querySelector('.upl-bar i');
+    const msg = tmpEl.querySelector('.upl-msg');
 
-	  xhr.onload = () => {
-		try {
-		  if (xhr.status >= 200 && xhr.status < 300) {
-			const res = JSON.parse(xhr.responseText || '{}');
+    const fd = new FormData();
+    // your endpoint accepts multiple: keep "file[]" but send one per XHR
+    fd.append('file[]', file);
+    if (boardId) fd.append('board_id', String(boardId));
 
-			// Your backend sometimes returns just success, sometimes media; handle both:
-			let mediaObj = null;
+    const url = `/api/visions/${encodeURIComponent(apiBaseSlug())}/media:upload`;
 
-			// Case A: { success:true, media:[...] }
-			if (res && res.success && Array.isArray(res.media) && res.media.length) {
-			  mediaObj = res.media[0];
-			}
-			// Case B: a direct media object (id/uuid/mime/thumb_url/large_url…)
-			else if (res && res.id && (res.thumb_url || res.uuid)) {
-			  mediaObj = res;
-			}
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', url, true);
+    xhr.withCredentials = true;
 
-			if (mediaObj) {
-			  // if upload implicitly attaches when board_id is present, we’re done
-			  replaceTempWithReal(tmpEl, mediaObj);
-			  // also update items in memory for fallback logic
-			  try { items.unshift(mediaObj); } catch(_) {}
-			} else {
-			  // fallback: just refresh list
-			  tmpEl.remove();
-			  fetchList();
-			}
-		  } else {
-			fail();
-		  }
-		} catch (_) { fail(); }
-		finally { done(); }
-	  };
+    xhr.upload.onprogress = (e) => {
+      if (!e.lengthComputable) { msg.textContent = 'Uploading…'; return; }
+      const pct = Math.max(1, Math.round((e.loaded / e.total) * 100));
+      msg.textContent = `Uploading ${pct}%`;
+      if (bar) bar.style.width = pct + '%';
+    };
 
-	  function fail() {
-		tmpEl.classList.add('upl-error');
-		const ov = tmpEl.querySelector('.upl-overlay');
-		if (ov) ov.innerHTML = `
-		  <div class="upl-msg">Upload failed</div>
-		  <div><button type="button" class="retry"
-			style="background:#fff;color:#111;border:0;border-radius:6px;padding:4px 8px;cursor:pointer">Retry</button></div>`;
-		tmpEl.querySelector('.retry')?.addEventListener('click', () => {
-		  tmpEl.remove();
-		  upQueue.unshift(file);
-		  pumpUploads();
-		});
-	  }
+    xhr.onloadstart = () => { msg.textContent = 'Uploading…'; };
+    xhr.onreadystatechange = () => { if (xhr.readyState === 3) msg.textContent = 'Processing…'; };
 
-	  function done() {
-		inFlight--; pillUpdate();
-		if (!upQueue.length && inFlight === 0) {
-		  if (pill) pill.hidden = true;
-		} else {
-		  pumpUploads();
-		}
-	  }
+    xhr.onerror = fail;
+    xhr.onabort = fail;
 
-	  xhr.send(fd);
-	}
-	  
-	function pillUpdate() {
-	  if (!pill) return;
-	  const total = upQueue.length + inFlight;
-	  if (total <= 0) { pill.hidden = true; return; }
-	  pill.hidden = false;
-	  pill.querySelector('.upl-text').textContent = `Uploading ${inFlight}/${total}…`;
-	}
-	  
+    xhr.onload = () => {
+      try {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          const res = JSON.parse(xhr.responseText || '{}');
+
+          // Your backend sometimes returns just success, sometimes media; handle both:
+          let mediaObj = null;
+
+          // Case A: { success:true, media:[...] }
+          if (res && res.success && Array.isArray(res.media) && res.media.length) {
+            mediaObj = res.media[0];
+          }
+          // Case B: a direct media object (id/uuid/mime/thumb_url/large_url…)
+          else if (res && res.id && (res.thumb_url || res.uuid)) {
+            mediaObj = res;
+          }
+
+          if (mediaObj) {
+            // if upload implicitly attaches when board_id is present, we’re done
+            replaceTempWithReal(tmpEl, mediaObj);
+            // also update items in memory for fallback logic
+            try { items.unshift(mediaObj); } catch(_) {}
+          } else {
+            // fallback: just refresh list
+            tmpEl.remove();
+            fetchList();
+          }
+        } else {
+          fail();
+        }
+      } catch (_) { fail(); }
+      finally { done(); }
+    };
+
+    function fail() {
+      tmpEl.classList.add('upl-error');
+      const ov = tmpEl.querySelector('.upl-overlay');
+      if (ov) ov.innerHTML = `
+        <div class="upl-msg">Upload failed</div>
+        <div><button type="button" class="retry"
+          style="background:#fff;color:#111;border:0;border-radius:6px;padding:4px 8px;cursor:pointer">Retry</button></div>`;
+      tmpEl.querySelector('.retry')?.addEventListener('click', () => {
+        tmpEl.remove();
+        upQueue.unshift(file);
+        pumpUploads();
+      });
+    }
+
+    function done() {
+      inFlight--; pillUpdate();
+      if (!upQueue.length && inFlight === 0) {
+        if (pill) pill.hidden = true;
+      } else {
+        pumpUploads();
+      }
+    }
+
+    xhr.send(fd);
+  }
+
+  function pillUpdate() {
+    if (!pill) return;
+    const total = upQueue.length + inFlight;
+    if (total <= 0) { pill.hidden = true; return; }
+    pill.hidden = false;
+    pill.querySelector('.upl-text').textContent = `Uploading ${inFlight}/${total}…`;
+  }
+
   if (linkBtn && linkWrap && linkUrl && linkSubmit) {
     linkBtn.addEventListener('click', () => {
       linkWrap.style.display = linkWrap.style.display === 'none' ? '' : 'none';
@@ -545,15 +686,15 @@ window.DBL_thumbError = function(img) {
   }
 
   // ensure grid has masonry class (one-time)
-	document.addEventListener('DOMContentLoaded', () => {
-	  const grid = document.getElementById('libraryGrid') || document.getElementById('mediaGrid');
-	  if (!grid) { console.warn('[MediaLibrary] grid container not found'); }
-		
-		if (grid && !grid.classList.contains('masonry-cols')) {
-		grid.classList.add('masonry-cols');
-}
-	});
-	
+  document.addEventListener('DOMContentLoaded', () => {
+    const grid = document.getElementById('libraryGrid') || document.getElementById('mediaGrid');
+    if (!grid) { console.warn('[MediaLibrary] grid container not found'); }
+
+    if (grid && !grid.classList.contains('masonry-cols')) {
+      grid.classList.add('masonry-cols');
+    }
+  });
+
   // Initial load
   fetchList();
 })();

@@ -7,6 +7,7 @@
 
 // Robust image fallback without inline quoting headaches
 window.DBL_thumbError = function(img) {
+	
   const card = img.closest('.media-card');
   const id = card?.dataset.id;
   const item = (window.__mediaItems || []).find(x => String(x.id) === String(id));
@@ -25,13 +26,13 @@ window.DBL_thumbError = function(img) {
   }
 
   img.onerror = null;
-  const box = img.closest('.thumb');
-  if (box) box.innerHTML = '<div class="thumb-fallback">No preview</div>';
-};
+	  const box = img.closest('.thumb');
+	  if (box) box.innerHTML = '<div class="thumb-fallback">No preview</div>';
+	};
 
 (function () {
-
-  // === Tag/Group caches + loaders (keep before any call to loadGroups) ===
+	
+  // === Single source of truth: Tag/Group caches + loaders ===
   let TAGS_CACHE = null;
   let GROUPS_CACHE = null;
 
@@ -42,222 +43,166 @@ window.DBL_thumbError = function(img) {
       .then(j => (TAGS_CACHE = (j.tags || [])))
       .catch(() => (TAGS_CACHE = []));
   }
-
   function loadGroups() {
     if (GROUPS_CACHE) return Promise.resolve(GROUPS_CACHE);
-    // A) FIX: use moods/{boardSlug}/groups
-    const base = `/api/moods/${encodeURIComponent(boardSlug)}/groups`;
+    const base = `/api/visions/${encodeURIComponent(apiBaseSlug())}/groups`;
     return fetch(base, { credentials: 'same-origin' })
       .then(r => r.ok ? r.json() : Promise.reject())
-      .then(j => (GROUPS_CACHE = (j.groups || [])))
+      .then(j => (GROUPS_CACHE = (j.groups || j.data || [])))
       .catch(() => (GROUPS_CACHE = []));
   }
+	
+	// ===== Modal infrastructure =====
+	const overlay = document.getElementById('ml-overlay');
+	const sheet   = overlay ? overlay.querySelector('.ml-sheet') : null;
 
-  // ===== Modal infrastructure (unchanged UI) =====
-  const overlay = document.getElementById('ml-overlay');
-  const sheet   = overlay ? overlay.querySelector('.ml-sheet') : null;
+	function openSheet(title, bodyHTML, actionsHTML) {
+	  if (!overlay || !sheet) return false;
+	  sheet.innerHTML = `
+		<div class="ml-head">
+		  <div class="ml-title" id="ml-title">${title}</div>
+		  <button class="ml-close" aria-label="Close">✕</button>
+		</div>
+		<div class="ml-body">${bodyHTML}</div>
+		<div class="ml-actions">${actionsHTML || ''}</div>
+	  `;
+	  overlay.hidden = false;
+	  sheet.querySelector('.ml-close')?.addEventListener('click', closeSheet);
+	  overlay.addEventListener('click', (e) => { if (e.target === overlay) closeSheet(); }, { once:true });
+	  document.addEventListener('keydown', escCloseOnce, { once:true });
+	  return true;
+	}
+	function escCloseOnce(e){ if (e.key === 'Escape') closeSheet(); }
+	function closeSheet(){ if (overlay) overlay.hidden = true; }
 
-  function openSheet(title, bodyHTML, actionsHTML) {
-    if (!overlay || !sheet) return false;
-    sheet.innerHTML = `
-      <div class="ml-head">
-        <div class="ml-title" id="ml-title">${title}</div>
-        <button class="ml-close" aria-label="Close">✕</button>
-      </div>
-      <div class="ml-body">${bodyHTML}</div>
-      <div class="ml-actions">${actionsHTML || ''}</div>
-    `;
-    overlay.hidden = false;
-    sheet.querySelector('.ml-close')?.addEventListener('click', closeSheet);
-    overlay.addEventListener('click', (e) => { if (e.target === overlay) closeSheet(); }, { once:true });
-    document.addEventListener('keydown', escCloseOnce, { once:true });
-    return true;
-  }
-  function escCloseOnce(e){ if (e.key === 'Escape') closeSheet(); }
-  function closeSheet(){ if (overlay) overlay.hidden = true; }
+	// ===== GROUP MODAL =====
+	async function openGroupModal(mediaId, currentGroupId=null) {
+	  // If no overlay in DOM, fallback to prompt
+	  if (!overlay || !sheet) {
+		const name = prompt('Add to group: type existing or new group name');
+		if (!name) return;
+		const fd = new FormData();
+		fd.append('group_name', name);
+		await fetch(`/api/media/${mediaId}/group`, { method:'POST', body:fd, credentials:'same-origin' });
+		// refresh lists
+		loadGroups(); fetchList();
+		return;
+	  }
 
-  // ===== GROUP MODAL (unchanged UI; posts to /api/media/{id}/group) =====
-  async function openGroupModal(mediaId, currentGroupId=null) {
-    if (!overlay || !sheet) {
-      const name = prompt('Add to group: type existing or new group name');
-      if (!name) return;
-      const fd = new FormData();
-      fd.append('group_name', name);
-      await fetch(`/api/media/${mediaId}/group`, { method:'POST', body:fd, credentials:'same-origin' });
-      loadGroups(); fetchList();
-      return;
-    }
-	  // after a successful POST:
-	try {
-	  // update in-memory item so the next open uses the new tags
-	  const it = (window.__mediaItems || []).find(x => Number(x.id) === Number(mediaId));
-	  if (it) it.tags = final.join(','); // store as CSV (matches DB), getTags() will normalize later
-	} catch (_) {}
+	  const groups = await loadGroups(apiBaseSlug()); // array: [{id, name}, ...]
+	  const options = ['<option value="">— No group —</option>']
+		.concat(groups.map(g => `<option value="${g.id}" ${String(g.id)===String(currentGroupId)?'selected':''}>${g.name}</option>`))
+		.join('');
 
-    const groups = await loadGroups();
-    const options = ['<option value="">— No group —</option>']
-      .concat(groups.map(g => `<option value="${g.id}" ${String(g.id)===String(currentGroupId)?'selected':''}>${g.name}</option>`))
-      .join('');
+	  openSheet(
+		'Add to group',
+		`
+		  <label>Choose existing group</label>
+		  <select class="ml-select" id="ml-group-select">${options}</select>
+		  <div class="ml-hint">or create a new group below</div>
+		  <input class="ml-input" id="ml-group-new" placeholder="New group name">
+		`,
+		`
+		  <button class="ml-btn" id="ml-cancel">Cancel</button>
+		  <button class="ml-btn primary" id="ml-save">Save</button>
+		`
+	  );
 
-    openSheet(
-      'Add to group',
-      `
-        <label>Choose existing group</label>
-        <select class="ml-select" id="ml-group-select">${options}</select>
-        <div class="ml-hint">or create a new group below</div>
-        <input class="ml-input" id="ml-group-new" placeholder="New group name">
-      `,
-      `
-        <button class="ml-btn" id="ml-cancel">Cancel</button>
-        <button class="ml-btn primary" id="ml-save">Save</button>
-      `
-    );
+	  sheet.querySelector('#ml-cancel').addEventListener('click', closeSheet);
+	  sheet.querySelector('#ml-save').addEventListener('click', async () => {
+		const sel = sheet.querySelector('#ml-group-select').value;
+		const newName = (sheet.querySelector('#ml-group-new').value || '').trim();
 
-    sheet.querySelector('#ml-cancel').addEventListener('click', closeSheet);
-    sheet.querySelector('#ml-save').addEventListener('click', async () => {
-      const sel = sheet.querySelector('#ml-group-select').value;
-      const newName = (sheet.querySelector('#ml-group-new').value || '').trim();
-
-      const fd = new FormData();
-      if (newName) {
-        fd.append('group_name', newName);
-      } else {
-        fd.append('group_id', sel || '');
-      }
-      await fetch(`/api/media/${mediaId}/group`, { method:'POST', body:fd, credentials:'same-origin' });
-      closeSheet();
-      loadGroups();  // refresh cache
-      fetchList();
-    });
-  }
-
-	async function getTags(mediaId) {
-	  // Expect backend to return either {tags:["a","b"]} OR {tags:"a,b"}
-	  const res = await fetch(`/api/media/${mediaId}/tags`, { credentials: 'same-origin' });
-	  if (!res.ok) throw new Error('Failed to load tags');
-	  const j = await res.json();
-	  return toTagsArray(j.tags);
+		const fd = new FormData();
+		if (newName) {
+		  fd.append('group_name', newName);
+		} else {
+		  fd.append('group_id', sel || '');
+		}
+		await fetch(`/api/media/${mediaId}/group`, { method:'POST', body:fd, credentials:'same-origin' });
+		closeSheet();
+		loadGroups(apiBaseSlug());  // refresh cache for dropdowns
+		fetchList();
+	  });
 	}
 
+	// ===== TAGS MODAL =====
+	async function openTagsModal(mediaId, currentTags=[]) {
+	  if (!overlay || !sheet) {
+		const input = prompt('Tags (comma separated):', currentTags.join(', '));
+		if (input == null) return;
+		const fd = new FormData();
+		fd.append('tags', input);
+		await fetch(`/api/media/${mediaId}/tags`, { method:'POST', body:fd, credentials:'same-origin' });
+		fetchList();
+		return;
+	  }
 
-  // ===== TAGS MODAL (kept; posts to /api/media/{id}/tags) =====
-  async function openTagsModal(mediaId, currentTags=[]) {
-    if (!overlay || !sheet) {
-      const input = prompt('Tags (comma separated):', (currentTags||[]).map(t=>t.name||t).join(', '));
-      if (input == null) return;
-      const fd = new FormData();
-      fd.append('tags', input);
-      await fetch(`/api/media/${mediaId}/tags`, { method:'POST', body:fd, credentials:'same-origin' });
-      fetchList();
-      return;
-    }
+	  const tags = await loadTags(apiBaseSlug()); // array of strings or [{name}]
+	  const existing = new Set((currentTags || []).map(t => (t.name || t).toLowerCase()));
+	  const chipHtml = (name) =>
+		`<span class="ml-chip" data-name="${name}">
+		   ${name}
+		   <button type="button" aria-label="remove">×</button>
+		 </span>`;
+	  const availableList = (tags || []).filter(t => !existing.has((t.name||t).toLowerCase()))
+		  .map(t => `<option value="${t.name||t}">`).join('');
 
-    const tags = await loadTags();
-    const list = normalizeTagsShape(currentTags);
-	const existing = new Set(list.map(t => t.name.toLowerCase()));
-    const chipHtml = (name) =>
-      `<span class="ml-chip" data-name="${name}">
-         ${name}
-         <button type="button" aria-label="remove">×</button>
-       </span>`;
-    const availableList = (tags || []).filter(t => !existing.has((t.name||t).toLowerCase()))
-        .map(t => `<option value="${t.name||t}">`).join('');
-	const normalized = toTagsArray(currentTags);
+	  openSheet(
+		'Edit tags',
+		`
+		  <div>
+			<div class="ml-hint">Current tags</div>
+			<div class="ml-chips" id="ml-tags">${(currentTags||[]).map(t => chipHtml(t.name||t)).join('') || '<span class="ml-hint">None yet</span>'}</div>
+		  </div>
+		  <div>
+			<div class="ml-hint">Add tag</div>
+			<input id="ml-tag-input" class="ml-input" list="ml-tag-datalist" placeholder="Type and press Enter">
+			<datalist id="ml-tag-datalist">${availableList}</datalist>
+		  </div>
+		`,
+		`
+		  <button class="ml-btn" id="ml-cancel">Cancel</button>
+		  <button class="ml-btn primary" id="ml-save">Save</button>
+		`
+	  );
 
-    openSheet(
-      'Edit tags',
-      `
-        <div>
-          <div class="ml-hint">Current tags</div>
-          <div class="ml-chips" id="ml-tags">${
-			  normalized.length
-				? normalized.map(t => chipHtml(t)).join('')
-				: '<span class="ml-hint">None yet</span>'
-			}</div>
-        </div>
-        <div>
-          <div class="ml-hint">Add tag</div>
-          <input id="ml-tag-input" class="ml-input" list="ml-tag-datalist" placeholder="Type and press Enter">
-          <datalist id="ml-tag-datalist">${availableList}</datalist>
-        </div>
-      `,
-      `
-        <button class="ml-btn" id="ml-cancel">Cancel</button>
-        <button class="ml-btn primary" id="ml-save">Save</button>
-      `
-    );
-	//const existing = new Set(normalized.map(t => t.toLowerCase()));
+	  const chipBox = sheet.querySelector('#ml-tags');
+	  const input   = sheet.querySelector('#ml-tag-input');
 
-    const chipBox = sheet.querySelector('#ml-tags');
-    const input   = sheet.querySelector('#ml-tag-input');
+	  chipBox.addEventListener('click', (e) => {
+		if (e.target.tagName === 'BUTTON') {
+		  e.target.closest('.ml-chip')?.remove();
+		}
+	  });
 
-    chipBox.addEventListener('click', (e) => {
-      if (e.target.tagName === 'BUTTON') {
-        e.target.closest('.ml-chip')?.remove();
-      }
-    });
+	  input.addEventListener('keydown', (e) => {
+		if (e.key === 'Enter') {
+		  e.preventDefault();
+		  const val = (input.value || '').trim();
+		  if (!val) return;
+		  // avoid duplicate
+		  const has = Array.from(chipBox.querySelectorAll('.ml-chip')).some(c => c.dataset.name.toLowerCase() === val.toLowerCase());
+		  if (!has) chipBox.insertAdjacentHTML('beforeend', chipHtml(val));
+		  input.value = '';
+		}
+	  });
 
-    input.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        const val = (input.value || '').trim();
-        if (!val) return;
-        const has = Array.from(chipBox.querySelectorAll('.ml-chip')).some(c => c.dataset.name.toLowerCase() === val.toLowerCase());
-        if (!has) chipBox.insertAdjacentHTML('beforeend', chipHtml(val));
-        input.value = '';
-      }
-    });
+	  sheet.querySelector('#ml-cancel').addEventListener('click', closeSheet);
+	  sheet.querySelector('#ml-save').addEventListener('click', async () => {
+		const final = Array.from(chipBox.querySelectorAll('.ml-chip')).map(c => c.dataset.name);
+		const fd = new FormData();
+		fd.append('tags', final.join(','));
+		await fetch(`/api/media/${mediaId}/tags`, { method:'POST', body:fd, credentials:'same-origin' });
+		closeSheet();
+		loadTags(apiBaseSlug()); // refresh cache
+		fetchList();
+	  });
+	}
 
-    sheet.querySelector('#ml-cancel').addEventListener('click', closeSheet);
-    sheet.querySelector('#ml-save').addEventListener('click', async () => {
-      const final = Array.from(chipBox.querySelectorAll('.ml-chip')).map(c => c.dataset.name);
-      const fd = new FormData();
-      fd.append('tags', final.join(','));
-      // B) FIX: use /api/media/{id}/tags
-      await fetch(`/api/media/${mediaId}/tags`, { method:'POST', body:fd, credentials:'same-origin' });
-      closeSheet();
-      loadTags();
-      fetchList();
-    });
-  }
-
+	
   const $ = (sel, el) => (el || document).querySelector(sel);
   const $$ = (sel, el) => Array.from((el || document).querySelectorAll(sel));
-  
-	 // Normalize "tags" from any backend shape into [{name:'tag'}...]
-	function normalizeTagsShape(val) {
-	  // Array already? allow ["a","b"] or [{name:"a"}]
-	  if (Array.isArray(val)) {
-		return val
-		  .map(t => (typeof t === 'string' ? { name: t.trim() } : t))
-		  .filter(t => t && typeof t.name === 'string' && t.name.trim() !== '');
-	  }
-	  // Comma-separated string (DB column)
-	  if (typeof val === 'string') {
-		return val
-		  .split(',')
-		  .map(s => ({ name: s.trim() }))
-		  .filter(t => t.name);
-	  }
-	  // Wrapped object shapes like { tags: ... } or { success:true, data: ... }
-	  if (val && typeof val === 'object') {
-		if ('tags' in val) return normalizeTagsShape(val.tags);
-		if ('data' in val) return normalizeTagsShape(val.data);
-	  }
-	  return [];
-	}
-
-	// Turn "tag1, tag2" or ["tag1","tag2"] or null into ["tag1","tag2"]
-	function toTagsArray(val) {
-	  if (!val) return [];
-	  if (Array.isArray(val)) return val.map(String).map(s => s.trim()).filter(Boolean);
-	  // string from DB column
-	  return String(val)
-		.split(',')
-		.map(s => s.trim())
-		.filter(Boolean);
-	}
-
 
   // Expect these data-* attributes somewhere on the page:
   // <div id="mood-lib-root" data-vision-slug="xxxxxx" data-board-slug="yyyyyy" data-board-id="123"></div>
@@ -285,26 +230,28 @@ window.DBL_thumbError = function(img) {
   const qInput   = $('#mediaSearch');
   const grid = document.getElementById('libraryGrid') || document.getElementById('mediaGrid');
   if (!grid) { console.warn('[MediaLibrary] grid container not found'); }
-
+	
   const tagFilterInput   = document.getElementById('tagFilterInput');
   const groupFilterSelect = document.getElementById('groupFilterSelect');
-  let tagsMode = 'or';
-
+  let tagsMode = 'or'; // keep simple; add toggle later
+	
   if (tagFilterInput) {
-    tagFilterInput.addEventListener('input', () => {
-      clearTimeout(tagFilterInput._t);
-      tagFilterInput._t = setTimeout(fetchList, 300);
-    });
-  }
+	  tagFilterInput.addEventListener('input', () => {
+		clearTimeout(tagFilterInput._t);
+		tagFilterInput._t = setTimeout(fetchList, 300);
+	  });
+	}
 
-  if (groupFilterSelect) {
-    groupFilterSelect.addEventListener('change', fetchList);
-  }
+	if (groupFilterSelect) {
+	  groupFilterSelect.addEventListener('change', fetchList);
+	}
 
-  let currentScope = 'board';
-  let items = [];
+  let currentScope = 'board'; // 'board' | 'vision'
+  let items = []; // current fetched items
 
   function apiBaseSlug() {
+    // For listing/uploading under a Vision context, we need a slug.
+    // If visionSlug is not available (standalone), the backend accepts the board slug in place.
     return visionSlug || boardSlug;
   }
 
@@ -322,6 +269,7 @@ window.DBL_thumbError = function(img) {
   }
 
   function bestThumb(m) {
+    // youtube
     if (m.provider === 'youtube') {
       const pid = m.provider_id || ytIdFromUrl( m.external_url);
       if (pid) return `https://img.youtube.com/vi/${pid}/hqdefault.jpg`;
@@ -350,27 +298,36 @@ window.DBL_thumbError = function(img) {
     return '';
   }
 
+  // Handles watch?v=, youtu.be/, /embed/, /shorts/, with extra params
   function youtubeIdFromUrl(url){
     if(!url) return null;
     try {
       const u = new URL(url);
       const host = u.hostname.replace(/^www\./,'');
+      // 1) youtu.be/<id>
       if (host === 'youtu.be') {
         const id = u.pathname.split('/').filter(Boolean)[0];
         return id || null;
       }
+      // 2) youtube.com/watch?v=<id>
       if (host.endsWith('youtube.com')) {
         if (u.searchParams.get('v')) return u.searchParams.get('v');
+        // 3) /embed/<id>
         const m1 = u.pathname.match(/\/embed\/([A-Za-z0-9_-]{6,})/);
         if (m1) return m1[1];
+        // 4) /shorts/<id>
         const m2 = u.pathname.match(/\/shorts\/([A-Za-z0-9_-]{6,})/);
         if (m2) return m2[1];
       }
     } catch(_) {}
+    // 5) last‑resort regex (if url wasn’t parseable by URL())
     const m = String(url).match(/(?:v=|youtu\.be\/|\/embed\/|\/shorts\/)([A-Za-z0-9_-]{6,})/);
     return m ? m[1] : null;
   }
 
+  /* =========================
+     NEW: chips render helpers
+     ========================= */
   function renderTagChips(m) {
     const tags = Array.isArray(m.tags) ? m.tags : [];
     if (!tags.length) return '';
@@ -390,10 +347,14 @@ window.DBL_thumbError = function(img) {
   }
 
   function templateCard(m){
+    // discover possible link fields the API might use
     const linkUrl = m.external_url || m.url || m.source_url || m.link_url || '';
+
+    // derive YT id even if provider/provider_id are missing
     const ytId = m.provider_id || youtubeIdFromUrl(linkUrl);
     const isYouTube = !!ytId;
 
+    // derive label
     let label = 'file';
     if (isYouTube || (m.mime_type && m.mime_type.startsWith('video/'))) label = 'video';
     else if (m.mime_type === 'image/gif') label = 'gif';
@@ -402,6 +363,7 @@ window.DBL_thumbError = function(img) {
 
     const name = m.file_name || m.title || '';
 
+    // pick best thumbnail (YT first if we can)
     const ytThumb = isYouTube
       ? `https://i.ytimg.com/vi/${ytId}/hqdefault.jpg`
       : '';
@@ -412,8 +374,8 @@ window.DBL_thumbError = function(img) {
       (m.uuid ? `/storage/thumbs/${m.uuid}_thumb.jpg` : '') ||
       m.large_url ||
       (m.uuid && m.file_name
-        ? `/storage/private/${m.uuid}.${(m.file_name.split('.').pop()||'jpg').toLowerCase()}`
-        : '');
+        ? `/storage/private/${m.uuid}.${(m.file_name.split('.').pop()||'jpg').toLowerCase()}` :
+        '');
 
     const srcset = [
       ytThumb && `https://i.ytimg.com/vi/${ytId}/maxresdefault.jpg 1280w`,
@@ -422,6 +384,7 @@ window.DBL_thumbError = function(img) {
 
     const sizes  = '(max-width: 700px) 48vw, (max-width: 1100px) 33vw, 260px';
 
+    /* NEW: chips HTML */
     const chipsHtml  = renderTagChips(m);
     const groupsHtml = renderGroupLine(m);
 
@@ -431,7 +394,7 @@ window.DBL_thumbError = function(img) {
         <div class="thumb">
           <img src="${thumb}" ${srcset ? `srcset="${srcset}" sizes="${sizes}"` : ''}
                alt="${name.replace(/"/g,'&quot;')}" loading="lazy" decoding="async"
-               onerror="this.onerror=null; this.src='${m.large_url || ''}'; if(!this.src) this.closest('.thumb').innerHTML='<div class=\\'thumb-fallback\\'>No preview</div>';"/>
+               onerror="this.onerror=null; this.src='${m.large_url || ''}'; if(!this.src) this.closest('.thumb').innerHTML='<div class=\\'thumb-fallback\\'>No preview</div>';">
           ${label === 'video' ? `<div class="play-badge">▶</div>` : ``}
         </div>
         <div class="meta">
@@ -441,14 +404,14 @@ window.DBL_thumbError = function(img) {
         ${chipsHtml}
         ${groupsHtml}
         <div class="card-menu">
-          <ul>
-            <li class="act-attach"  data-id="${m.id}">Attach to this board</li>
-            <li class="act-detach"  data-id="${m.id}">Remove from this board</li>
-            <li class="act-tags"    data-id="${m.id}">Edit tags</li>
-            <li class="act-groups"  data-id="${m.id}">Change group</li>
-            <li class="act-delete"  data-id="${m.id}">Delete</li>
-          </ul>
-        </div>
+		  <ul>
+			<li class="act-attach"  data-id="${m.id}">Attach to this board</li>
+			<li class="act-detach"  data-id="${m.id}">Remove from this board</li>
+			<li class="act-tags"    data-id="${m.id}">Edit tags</li>
+			<li class="act-groups"  data-id="${m.id}">Change group</li>
+			<li class="act-delete"  data-id="${m.id}">Delete</li>
+		  </ul>
+		</div>
       </div>
     `;
   }
@@ -464,33 +427,31 @@ window.DBL_thumbError = function(img) {
     grid.innerHTML = items.map(templateCard).join('');
     bindCardEvents?.();
   }
-
-  // prime group filter options once
+	
   loadGroups().then(gs => {
-    const sel = groupFilterSelect;
-    if (!sel || !gs) return;
-    gs.forEach(g => {
-      const opt = document.createElement('option');
-      opt.value = g.id;
-      opt.textContent = g.name;
-      sel.appendChild(opt);
-    });
-  });
-
-  function addListFilters(qs) {
-    if (tagFilterInput && tagFilterInput.value.trim()) {
-      qs.set('tags', tagFilterInput.value.trim());
-      qs.set('tags_mode', tagsMode);
-    }
-    if (groupFilterSelect && groupFilterSelect.value) {
-      qs.set('group_id', groupFilterSelect.value);
-    }
-  }
+	  if (!groupFilterSelect) return;
+	  gs.forEach(g => {
+		const opt = document.createElement('option');
+		opt.value = g.id;
+		opt.textContent = g.name;
+		groupFilterSelect.appendChild(opt);
+	  });
+	});
+	
+	function addListFilters(qs) {
+	  if (tagFilterInput && tagFilterInput.value.trim()) {
+		qs.set('tags', tagFilterInput.value.trim());
+		qs.set('tags_mode', tagsMode);
+	  }
+	  if (groupFilterSelect && groupFilterSelect.value) {
+		qs.set('group_id', groupFilterSelect.value);
+	  }
+	}
 
   function fetchList() {
     const qs = new URLSearchParams();
     qs.set('scope', currentScope);
-    addListFilters(qs);
+	addListFilters(qs);
     if (boardId) qs.set('board_id', String(boardId));
     if (typeSel?.value) qs.set('type', typeSel.value);
     if (sortSel?.value) qs.set('sort', sortSel.value);
@@ -540,14 +501,95 @@ window.DBL_thumbError = function(img) {
       .catch(e => alert(e.message || 'Delete failed'));
   }
 
-  // Keep your original prompt-based fallbacks wired to the new modals
-  function editTags(mediaId, current=[]) { return openTagsModal(mediaId, current); }
-  function editGroups(mediaId, current=[]) {
-    // use the first current group id if available
-    return openGroupModal(mediaId, (current && current[0] && current[0].id) || null);
-  }
+	// Simple prompt-based editors (can replace with a nicer popover later)
+	function editTags(mediaId, current=[]) {
+	  loadTags().then(tags=>{
+		const names = current.map(t=>t.name);
+		const input = prompt("Tags (comma separated). Existing: "+tags.map(t=>t.name).join(', '), names.join(', '));
+		if (input===null) return;
+		const want = Array.from(new Set(input.split(',').map(s=>s.trim()).filter(Boolean)));
+		// upsert any new names first
+		const ensureAll = want.map(n=>{
+		  const found = tags.find(t=>t.name.toLowerCase()===n.toLowerCase());
+		  return found ? Promise.resolve(found) :
+			fetch(`/api/visions/${encodeURIComponent(apiBaseSlug())}/groups:create`, {
+			  method:'POST', credentials:'same-origin',
+			  body: new URLSearchParams({ name: n })
+			})
+		});
+		Promise.all(ensureAll).then(final=>{
+		  const ids = final.map(t=>t.id);
+		  return fetch(`/api/media/${mediaId}/tags:set`, {method:'POST',credentials:'same-origin',
+				  body:new URLSearchParams({ 'tag_ids': ids.join(',') })});
+		}).then(()=>{ TAGS_CACHE=null; fetchList(); });
+	  });
+	}
 
+	function editGroups(mediaId, current=[]) {
+	  loadGroups().then(groups=>{
+		const names = current.map(g=>g.name);
+		const input = prompt("Groups (comma separated). Existing: "+groups.map(g=>g.name).join(', '), names.join(', '));
+		if (input===null) return;
+		const want = Array.from(new Set(input.split(',').map(s=>s.trim()).filter(Boolean)));
+		// create missing
+		const ensureAll = want.map(n=>{
+		  const found = groups.find(g=>g.name.toLowerCase()===n.toLowerCase());
+		  return found ? Promise.resolve(found) :
+			fetch(`/api/visions/${encodeURIComponent(apiBaseSlug())}/groups:create`, {
+			  method:'POST', credentials:'same-origin',
+			  body: new URLSearchParams({ name: n })
+			})
+		});
+		Promise.all(ensureAll).then(final=>{
+		  const ids = final.map(g=>g.id);
+		  return fetch(`/api/media/${mediaId}/groups:set`, {method:'POST',credentials:'same-origin',
+				  body:new URLSearchParams({ 'group_ids': ids.join(',') })});
+		}).then(()=>{ GROUPS_CACHE=null; fetchList(); });
+	  });
+	}
+
+// ---- Delegated menu behavior (works across re-renders) ----
+if (grid) {
+  // Open/close menu
+  grid.addEventListener('click', (e) => {
+    const btn = e.target.closest('.menu-toggle');
+    if (!btn) return;
+    e.stopPropagation();
+    const card = btn.closest('.media-card');
+    // close any other open menus
+    grid.querySelectorAll('.card-menu.open').forEach(m => m.classList.remove('open'));
+    const menu = card.querySelector('.card-menu');
+    menu.classList.toggle('open');
+  });
+
+  // Handle menu actions
+  grid.addEventListener('click', (e) => {
+    const act = e.target.closest('.card-menu li');
+    if (!act) return;
+    e.stopPropagation();
+    const id = parseInt(act.dataset.id, 10);
+    if (!id) return;
+
+    if (act.classList.contains('act-attach'))   { attach(id); }
+    else if (act.classList.contains('act-detach')) { detach(id); }
+    else if (act.classList.contains('act-delete')) { del(id); }
+    else if (act.classList.contains('act-tags'))   { openTagEditor(id); }
+    else if (act.classList.contains('act-groups')) { openGroupPicker(id); }
+
+    // close the menu after an action
+    act.closest('.card-menu')?.classList.remove('open');
+  });
+}
+
+// Click outside closes any open menu
+document.addEventListener('click', () => {
+  document.querySelectorAll('.media-card .card-menu.open')
+    .forEach(m => m.classList.remove('open'));
+});
+
+	
   function bindCardEvents() {
+    // open/close menus
     $$('.media-card .menu-toggle', grid).forEach(btn => {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -560,30 +602,105 @@ window.DBL_thumbError = function(img) {
       $$('.media-card .card-menu.open', grid).forEach(m => m.classList.remove('open'));
     });
 
+    // actions
     $$('.media-card .act-attach', grid).forEach(el => el.addEventListener('click', () => attach(el.dataset.id)));
     $$('.media-card .act-detach', grid).forEach(el => el.addEventListener('click', () => detach(el.dataset.id)));
     $$('.media-card .act-delete', grid).forEach(el => el.addEventListener('click', () => del(el.dataset.id)));
-    $$('.media-card .act-tags', grid).forEach(el => {
-      el.addEventListener('click', () => {
-        const m = items.find(x => String(x.id) === String(el.dataset.id));
-        editTags(el.dataset.id, m?.tags || []);
-      });
-    });
-    $$('.media-card .act-groups', grid).forEach(el => {
-      el.addEventListener('click', () => {
-        const m = items.find(x => String(x.id) === String(el.dataset.id));
-        editGroups(el.dataset.id, m?.groups || []);
-      });
-    });
 
+    // drag to canvas
     $$('.media-card', grid).forEach(card => {
       card.addEventListener('dragstart', (ev) => {
         ev.dataTransfer.setData('text/plain', card.dataset.id);
         ev.dataTransfer.effectAllowed = 'copy';
       });
     });
+	
+	$$('.media-card .act-edit-tags', grid).forEach(el=>{
+	  el.addEventListener('click',()=>{
+		const id = parseInt(el.dataset.id,10);
+		const m  = items.find(x=>Number(x.id)===id);
+		editTags(id, m?.tags||[]);
+	  });
+	});
+	$$('.media-card .act-edit-groups', grid).forEach(el=>{
+	  el.addEventListener('click',()=>{
+		const id = parseInt(el.dataset.id,10);
+		const m  = items.find(x=>Number(x.id)===id);
+		editGroups(id, m?.groups||[]);
+	  });
+	});
+				 
+	// Group assign
+	$$('.media-card .act-assign-group', grid).forEach(el => {
+	  el.addEventListener('click', async () => {
+		const id = el.dataset.id;
+		const groups = await loadGroups(); // you already have this now
+		// crude picker: show a prompt; replace with a proper dropdown later
+		const nameList = ['(none)'].concat(groups.map(g => g.name));
+		const pick = prompt('Type existing group name (or leave empty to clear):\n' + nameList.join('\n'));
+		if (pick === null) return;
+
+		let groupId = null;
+		if (pick && pick !== '(none)') {
+		  const found = groups.find(g => g.name.toLowerCase() === pick.toLowerCase());
+		  if (found) groupId = found.id;
+		  else {
+			// create new
+			const res = await fetch(`/api/visions/${encodeURIComponent(apiBaseSlug())}/groups:create`, {
+			  method: 'POST',
+			  credentials: 'same-origin',
+			  body: new URLSearchParams({ name: pick })
+			}).then(r => r.json());
+			if (res && res.success && res.group) groupId = res.group.id;
+		  }
+		}
+
+		await fetch(`/api/media/${id}/group`, {
+		  method: 'POST',
+		  credentials: 'same-origin',
+		  body: new URLSearchParams({ group_id: groupId ?? '' })
+		}).then(r => r.json());
+
+		fetchList(); // refresh grid
+	  });
+	});
+
+	// Tags edit
+	$$('.media-card .act-edit-tags', grid).forEach(el => {
+	  el.addEventListener('click', async () => {
+		const id = el.dataset.id;
+		const cur = prompt('Enter tags separated by commas (e.g. "blue, beach, film")');
+		if (cur === null) return;
+		await fetch(`/api/media/${id}/tags`, {
+		  method: 'POST',
+		  credentials: 'same-origin',
+		  body: new URLSearchParams({ tags_csv: cur })
+		}).then(r => r.json());
+
+		fetchList();
+	  });
+	});
+
+	// group / tags actions (expect menu items with .act-group / .act-tags)
+	$$('.media-card .act-group', grid).forEach(el => {
+	  el.addEventListener('click', () => {
+		const id = Number(el.dataset.id || el.closest('.media-card')?.dataset.id);
+		const m  = items.find(x => Number(x.id) === id) || {};
+		openGroupModal(id, m.group_id || null);
+	  });
+	});
+	$$('.media-card .act-tags', grid).forEach(el => {
+	  el.addEventListener('click', () => {
+		const id = Number(el.dataset.id || el.closest('.media-card')?.dataset.id);
+		const m  = items.find(x => Number(x.id) === id) || {};
+		openTagsModal(id, m.tags || []);
+	  });
+	});
+
+
   }
 
+  // Canvas drop binding (expects an element with id="canvasDropZone")
   const canvas = document.getElementById('canvasDropZone');
   if (canvas) {
     canvas.addEventListener('dragover', (e) => { e.preventDefault(); e.dataTransfer.dropEffect='copy'; });
@@ -592,23 +709,30 @@ window.DBL_thumbError = function(img) {
       const mediaId = parseInt(e.dataTransfer.getData('text/plain'), 10);
       if (!mediaId) return;
 
+      // Determine approximate drop coords relative to canvas
       const rect = canvas.getBoundingClientRect();
       const x = Math.max(0, Math.round(e.clientX - rect.left));
       const y = Math.max(0, Math.round(e.clientY - rect.top));
 
+      // Ensure it’s attached to the board’s library
       const present = items.find(m => Number(m.id) === mediaId && (currentScope==='board' || m.attached_to_board == 1));
       const doPlace = () => {
+        // Create a canvas item (your board items endpoint)
         const body = new FormData();
         body.append('media_id', String(mediaId));
         body.append('x', String(x));
         body.append('y', String(y));
+        // type can be inferred server-side from mime/provider
         fetch(`/api/moods/${encodeURIComponent(boardSlug)}/items`, { method:'POST', body, credentials:'same-origin' })
           .then(r => r.json())
-          .then(() => {});
+          .then(() => {
+            // Up to you: re-render canvas, or request board items again
+          });
       };
 
       if (present) return doPlace();
 
+      // Attach then place
       const fd = new FormData();
       fd.append('media_id[]', String(mediaId));
       fetch(`/api/moods/${encodeURIComponent(boardSlug)}/library:attach`, { method:'POST', body:fd, credentials:'same-origin' })
@@ -616,6 +740,7 @@ window.DBL_thumbError = function(img) {
     });
   }
 
+  // UI controls
   if (tabs.board) tabs.board.addEventListener('click', () => {
     currentScope = 'board';
     tabs.board.classList.add('active');
@@ -632,19 +757,32 @@ window.DBL_thumbError = function(img) {
   if (typeSel) typeSel.addEventListener('change', fetchList);
   if (sortSel) sortSel.addEventListener('change', fetchList);
   if (qInput)  qInput.addEventListener('input', () => {
+    // small debounce
     clearTimeout(qInput._t); qInput._t = setTimeout(fetchList, 250);
   });
 
-  // ===== Upload with per-file progress (kept) =====
+  // ===== Upload with per-file progress (XHR) =====
+  if (uploadBtn && uploadInput) {
+    uploadBtn.addEventListener('click', () => uploadInput.click());
+    uploadInput.addEventListener('change', () => {
+      if (!uploadInput.files || !uploadInput.files.length) return;
+      cancelledAll = false;
+      enqueueUploads(Array.from(uploadInput.files));
+      uploadInput.value = '';
+    });
+  }
+  // --- queue state (scoped to this IIFE) ---
   const MAX_PARALLEL = 3;
   const upQueue = [];
   let inFlight = 0;
   let cancelledAll = false;
 
+  //optional global pill
   const pill = document.getElementById('uploadQueuePill');
   pill?.querySelector('.upl-cancel')?.addEventListener('click', () => {
     cancelledAll = true;
     upQueue.length = 0;
+    // NOTE: running XHRs are not aborted here; add a reference store+abort if you need hard cancel
   });
 
   function enqueueUploads(files) {
@@ -679,12 +817,43 @@ window.DBL_thumbError = function(img) {
   }
 
   function replaceTempWithReal(tmpEl, mediaObj) {
+    // reuse your templateCard()
+    const html = templateCard(mediaObj);
     const wrap = document.createElement('div');
-    wrap.innerHTML = templateCard(mediaObj).trim();
+    wrap.innerHTML = html.trim();
     const real = wrap.firstElementChild;
     tmpEl.replaceWith(real);
-    bindCardEvents?.();
+    bindCardEvents?.(); // keep behaviors
   }
+	
+	function openTagEditor(mediaId){
+	  const current = (items.find(i => +i.id === +mediaId)?.tags || []).join(', ');
+	  const val = window.prompt('Enter tags (comma separated):', current);
+	  if (val == null) return;
+	  const tags = val.split(',').map(s => s.trim()).filter(Boolean);
+
+	  // TODO: Replace with your real endpoint
+	  fetch(`/api/media/${mediaId}/tags`, {
+		method:'POST',
+		headers:{ 'Content-Type':'application/json' },
+		credentials:'same-origin',
+		body: JSON.stringify({ tags })
+	  }).then(() => fetchList());
+	}
+
+	function openGroupPicker(mediaId){
+	  const name = window.prompt('Enter group name (new or existing):', '');
+	  if (name == null || !name.trim()) return;
+
+	  // TODO: Replace with your real endpoint
+	  fetch(`/api/media/${mediaId}/group`, {
+		method:'POST',
+		headers:{ 'Content-Type':'application/json' },
+		credentials:'same-origin',
+		body: JSON.stringify({ group: name.trim() })
+	  }).then(() => fetchList());
+	}
+
 
   function uploadOneFile(file) {
     inFlight++; pillUpdate();
@@ -694,6 +863,7 @@ window.DBL_thumbError = function(img) {
     const msg = tmpEl.querySelector('.upl-msg');
 
     const fd = new FormData();
+    // your endpoint accepts multiple: keep "file[]" but send one per XHR
     fd.append('file[]', file);
     if (boardId) fd.append('board_id', String(boardId));
 
@@ -720,16 +890,26 @@ window.DBL_thumbError = function(img) {
       try {
         if (xhr.status >= 200 && xhr.status < 300) {
           const res = JSON.parse(xhr.responseText || '{}');
+
+          // Your backend sometimes returns just success, sometimes media; handle both:
           let mediaObj = null;
+
+          // Case A: { success:true, media:[...] }
           if (res && res.success && Array.isArray(res.media) && res.media.length) {
             mediaObj = res.media[0];
-          } else if (res && res.id && (res.thumb_url || res.uuid)) {
+          }
+          // Case B: a direct media object (id/uuid/mime/thumb_url/large_url…)
+          else if (res && res.id && (res.thumb_url || res.uuid)) {
             mediaObj = res;
           }
+
           if (mediaObj) {
+            // if upload implicitly attaches when board_id is present, we’re done
             replaceTempWithReal(tmpEl, mediaObj);
+            // also update items in memory for fallback logic
             try { items.unshift(mediaObj); } catch(_) {}
           } else {
+            // fallback: just refresh list
             tmpEl.remove();
             fetchList();
           }
@@ -774,16 +954,6 @@ window.DBL_thumbError = function(img) {
     pill.querySelector('.upl-text').textContent = `Uploading ${inFlight}/${total}…`;
   }
 
-  if (uploadBtn && uploadInput) {
-    uploadBtn.addEventListener('click', () => uploadInput.click());
-    uploadInput.addEventListener('change', () => {
-      if (!uploadInput.files || !uploadInput.files.length) return;
-      cancelledAll = false;
-      enqueueUploads(Array.from(uploadInput.files));
-      uploadInput.value = '';
-    });
-  }
-
   if (linkBtn && linkWrap && linkUrl && linkSubmit) {
     linkBtn.addEventListener('click', () => {
       linkWrap.style.display = linkWrap.style.display === 'none' ? '' : 'none';
@@ -807,9 +977,11 @@ window.DBL_thumbError = function(img) {
     });
   }
 
+  // ensure grid has masonry class (one-time)
   document.addEventListener('DOMContentLoaded', () => {
     const grid = document.getElementById('libraryGrid') || document.getElementById('mediaGrid');
     if (!grid) { console.warn('[MediaLibrary] grid container not found'); }
+
     if (grid && !grid.classList.contains('masonry-cols')) {
       grid.classList.add('masonry-cols');
     }

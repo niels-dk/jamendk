@@ -57,6 +57,10 @@
   <div id="libraryStatus" class="hint"></div>
 </div>
 
+<!-- Media Library Modals -->
+<div id="ml-overlay" class="ml-overlay" hidden>
+  <div class="ml-sheet" role="dialog" aria-modal="true" aria-labelledby="ml-title"></div>
+</div>
 <!-- Canvas drop target somewhere in your editor -->
 <div id="canvasDropZone" class="canvas-area">
   <!-- Your canvas content goes here -->

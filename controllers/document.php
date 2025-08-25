@@ -171,40 +171,102 @@ class document_controller {
 
 	}
 	
-	// GET /api/visions/{slug}/groups  -> list groups for the vision
-public static function groups_list(string $slug): void {
-    header('Content-Type: application/json'); global $db;
-    require_once __DIR__ . '/../models/vision.php';
-    require_once __DIR__ . '/../models/document_group_model.php';
+	// GET /api/visions/{slug}/groups
+    public static function groups_list(string $slug): void
+	{
+		// Always start session for API reads so auth cookie is visible.
+		if (session_status() !== PHP_SESSION_ACTIVE) { @session_start(); }
 
-    $vision = vision_model::get($db, $slug);
-    if (!$vision) { http_response_code(404); echo json_encode(['error'=>'Vision not found']); return; }
+		header('Content-Type: application/json');
 
-    $groups = document_group_model::listForVision($db, (int)$vision['id']);
-    echo json_encode(['success'=>true, 'groups'=>$groups]);
-}
+		// If you have a helper like current_user_id(), prefer that.
+		$uid = $_SESSION['user_id'] ?? 0;
+		if (!$uid) {
+			http_response_code(401);
+			echo json_encode(['error' => 'Unauthorized']);
+			return;
+		}
 
-// POST /api/visions/{slug}/groups  body: name=Travel
-public static function groups_create(string $slug): void {
-    header('Content-Type: application/json'); global $db;
-    require_once __DIR__ . '/../models/vision.php';
-    require_once __DIR__ . '/../models/document_group_model.php';
+		global $db;
+		// Resolve slug to the owning Vision (supports calling from a mood slug too)
+		require_once __DIR__ . '/../models/vision.php';
+		require_once __DIR__ . '/../models/mood.php';
 
-    $name = trim($_POST['name'] ?? '');
-    if ($name === '') { http_response_code(422); echo json_encode(['error'=>'Name required']); return; }
+		$vision = vision_model::get($db, $slug);
+		if (!$vision) {
+			$mood = mood_model::get($db, $slug);
+			if ($mood && !empty($mood['vision_id'])) {
+				$vision = vision_model::findById($db, (int)$mood['vision_id']);
+			}
+		}
+		if (!$vision) {
+			http_response_code(404);
+			echo json_encode(['error' => 'Vision not found']);
+			return;
+		}
 
-    $vision = vision_model::get($db, $slug);
-    if (!$vision) { http_response_code(404); echo json_encode(['error'=>'Vision not found']); return; }
+		// Security: ensure this user owns/can view this vision.
+		// If you already have a permission helper, call it here instead.
+		if ((int)$vision['user_id'] !== (int)$uid) {
+			http_response_code(403);
+			echo json_encode(['error' => 'Forbidden']);
+			return;
+		}
 
-    try {
-        $id = document_group_model::create($db, (int)$vision['id'], $name);
-        echo json_encode(['success'=>true, 'group'=>['id'=>$id,'name'=>$name]]);
-    } catch (Throwable $e) {
-        // likely unique constraint
-        http_response_code(422);
-        echo json_encode(['error'=>'Group name already exists']);
+		// Fetch creator-scoped groups for this vision/creator.
+		// Use whatever table you created for collections/groups.
+		// Example schema: media_groups(id, user_id, vision_id nullable, name, slug, created_at)
+		$st = $db->prepare("
+			SELECT id, name, slug
+			FROM media_groups
+			WHERE user_id = ? AND (vision_id IS NULL OR vision_id = ?)
+			ORDER BY name ASC
+		");
+		$st->execute([(int)$uid, (int)$vision['id']]);
+		$groups = $st->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+		echo json_encode(['success' => true, 'groups' => $groups]);
+	}
+
+	// POST /api/visions/{slug}/groups:create  (body: name=...)
+    public static function groups_create(string $slug): void
+    {
+        header('Content-Type: application/json');
+        global $db;
+
+        if (session_status() !== PHP_SESSION_ACTIVE) { session_start(); }
+        $userId = $_SESSION['user_id'] ?? 0;
+        if (!$userId) { http_response_code(401); echo json_encode(['error'=>'Not authenticated']); return; }
+
+        $name = trim($_POST['name'] ?? '');
+        if ($name === '') { http_response_code(422); echo json_encode(['error'=>'Name required']); return; }
+
+        // Optional: still try to resolve slug, but do not require it to be a Vision.
+        // $vision = vision_model::get($db, $slug);
+        // $mood   = !$vision ? mood_model::get($db, $slug) : null;
+
+        $db->query("CREATE TABLE IF NOT EXISTS media_groups (
+            id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            user_id BIGINT UNSIGNED NOT NULL,
+            name VARCHAR(120) NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE KEY uniq_user_name (user_id, name)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        // Upsert per user
+        $st = $db->prepare("INSERT INTO media_groups (user_id, name) VALUES (?, ?)
+                            ON DUPLICATE KEY UPDATE name=VALUES(name)");
+        $st->execute([$userId, $name]);
+
+        $id = (int)$db->lastInsertId();
+        if ($id === 0) {
+            $q = $db->prepare("SELECT id FROM media_groups WHERE user_id=? AND name=?");
+            $q->execute([$userId, $name]);
+            $id = (int)($q->fetchColumn() ?: 0);
+        }
+
+        echo json_encode(['success'=>true, 'group'=>['id'=>$id, 'name'=>$name]]);
     }
-}
 
 	// POST /api/documents/{uuid}/group  body: group_id=123 (or empty to clear)
 	public static function update_group(string $uuid): void {

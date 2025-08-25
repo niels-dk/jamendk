@@ -32,77 +32,63 @@ function route(string $uri): void
         // Upload API (POST)
         '/api/visions/([A-Za-z0-9]{6,16})/documents'        => ['document','upload'],
 
-        '/api/documents/([a-f0-9]{32})/status'               => ['document','update_status'],
-        '/api/visions/([A-Za-z0-9]{6,16})/groups'            => ['document','groups_list'],   // GET
-        '/api/visions/([A-Za-z0-9]{6,16})/groups:create'     => ['document','groups_create'], // POST
-        '/api/documents/([a-f0-9]{32})/group'                => ['document','update_group'],  // POST
-		'/api/media/([0-9]+)/groups:set'                 	 => ['media','set_groups'],       // POST
+        '/api/documents/([a-f0-9]{32})/status' => ['document','update_status'],
+        '/api/visions/([A-Za-z0-9]{6,16})/groups' => ['document','groups_list'],   // GET
+        '/api/visions/([A-Za-z0-9]{6,16})/groups:create' => ['document','groups_create'], // POST
+        '/api/documents/([a-f0-9]{32})/group'     => ['document','update_group'],  // POST
+		
+		// Tags & Groups (global � not under /visions/{slug})
+		'/api/tags'                    => ['media','tags_list'],      // GET
+		//'/api/media/([0-9]+)/tags'     => ['media','update_tags'],    // POST
+		'/api/groups'                  => ['media','groups_list'],    // GET
+		//'/api/media/([0-9]+)/group'    => ['media','update_group'],   // POST
+		'/api/media/([0-9]+)/group'    => ['media','group'],   // POST
+
+		// Groups (creator/mood scoped)
+		'/api/moods/([A-Za-z0-9]{6,16})/groups' => ['media','groups_list'],
+
+		// Media tags (GET returns tags, POST saves tags)
+		'/api/media/([0-9]+)/tags' => ['media','tags'],
 
         // Budget endpoints
-        '/api/visions/([A-Za-z0-9]{6,16})/budget'            => ['vision','getBudget'],       // GET
-        '/api/visions/([A-Za-z0-9]{6,16})/budget/get'        => ['vision','getBudget'],       // GET prefill
-        '/api/visions/([A-Za-z0-9]{6,16})/budget'            => ['vision','saveBudget'],      // POST
+        '/api/visions/([A-Za-z0-9]{6,16})/budget' => ['vision','getBudget'],  // GET
+        '/api/visions/([A-Za-z0-9]{6,16})/budget/get' => ['vision','getBudget'],  // GET prefill
+        '/api/visions/([A-Za-z0-9]{6,16})/budget' => ['vision','saveBudget'], // POST
 
-        // Media library (existing)
-        '/api/visions/([A-Za-z0-9]{6,16})/media:upload'      => ['media','upload'],
-        '/api/visions/([A-Za-z0-9]{6,16})/media:link'        => ['media','link'],
-        '/api/visions/([A-Za-z0-9]{6,16})/media'             => ['media','list'],   // GET
-        '/api/visions/([A-Za-z0-9]{6,16})/media:delete'      => ['media','delete'],
-        '/api/moods/([A-Za-z0-9]{6,16})/library:attach'      => ['media','attach'],
-        '/api/moods/([A-Za-z0-9]{6,16})/library:detach'      => ['media','detach'],
+        // Media library endpoints
+        '/api/visions/([A-Za-z0-9]{6,16})/media:upload'   => ['media','upload'],
+        '/api/visions/([A-Za-z0-9]{6,16})/media:link'     => ['media','link'],
+        '/api/visions/([A-Za-z0-9]{6,16})/media'          => ['media','list'],   // GET
+        '/api/visions/([A-Za-z0-9]{6,16})/media:delete'   => ['media','delete'],
+        '/api/moods/([A-Za-z0-9]{6,16})/library:attach'   => ['media','attach'],
+        '/api/moods/([A-Za-z0-9]{6,16})/library:detach'   => ['media','detach'],
 
-        /* ────────────────────────────────────────────────────────────────────
-         * NEW: Creator‑scoped Tags & Collections (Groups) for the Media Library
-         * These are global per creator, reusable across mood boards.
-         * Controller: library_controller.php (you’ll add).
-         * --------------------------------------------------------------------
-         * Tags
-         */
-        '/api/library/tags'                                  => ['library','tags_list'],        // GET
-        '/api/library/tags:create'                           => ['library','tags_create'],      // POST (name)
-        '/api/library/tags/([0-9]+)/rename'                  => ['library','tags_rename'],      // POST (name)
-        '/api/library/tags/([0-9]+)/delete'                  => ['library','tags_delete'],      // POST
+        // 🔹 NEW: global tags list + set tags on a media
+        '/api/tags'                                => ['media','tags_list'],     // GET
+        //'/api/media/([0-9]+)/tags'                 => ['media','update_tags'],   // POST
 
-        // Attach complete tag set to a media item (replace or merge in controller)
-        '/api/media/([0-9]+)/tags'                           => ['library','media_set_tags'],   // POST tag_id[]
-
-        /* Collections (a.k.a. Groups) */
-        '/api/library/collections'                           => ['library','collections_list'],   // GET
-        '/api/library/collections:create'                    => ['library','collections_create'], // POST (name)
-        '/api/library/collections/([0-9]+)/rename'           => ['library','collections_rename'], // POST (name)
-        '/api/library/collections/([0-9]+)/delete'           => ['library','collections_delete'], // POST
-
-        // Collection membership + listing
-        '/api/library/collections/([0-9]+)/media'            => ['library','collection_media'],   // GET
-        '/api/media/([0-9]+)/collections:attach'             => ['library','collection_attach_media'], // POST (collection_id)
-        '/api/media/([0-9]+)/collections:detach'             => ['library','collection_detach_media'], // POST (collection_id)
-        /* ──────────────────────────────────────────────────────────────────── */
-
-        // ── General Dashboard ────────────────────────────────────────────────
+        // ── General Dashboard ─────────────────────────────────────────────────
         '/dashboard'          => ['home', 'dashboard'],
 
         // New structure: pluralized board dashboards under /dashboard/<type>
         '/dashboard/(dreams|visions|moods|trips)/(archived|trash)'
-                              => ['home', 'dashboard_type_filter'],
+                               => ['home', 'dashboard_type_filter'],
         '/dashboard/(dreams|visions|moods|trips)'
-                              => ['home', 'dashboard_type'],
+                               => ['home', 'dashboard_type'],
 
         // Keep global buckets (if used by UI)
         '/dashboard/archived' => ['home', 'archived'],
         '/dashboard/trash'    => ['home', 'trash'],
 
-        // Backward-compat (singular)
+        // Backward-compat: accept old singular paths
         '/dashboard/(dream|vision|mood|trip)/(archived|trash)'
-                              => ['home', 'dashboard_type_filter'],
+                               => ['home', 'dashboard_type_filter'],
         '/dashboard/(dream|vision|mood|trip)'
-                              => ['home', 'dashboard_type'],
+                               => ['home', 'dashboard_type'],
+        '/dashboard/([a-z]+)/([a-z]+)' => ['home', 'dashboard_type_filter'],
+        '/dashboard/([a-z]+)'          => ['home', 'dashboard_type'],
 
-        // Generic fallback
-        '/dashboard/([a-z]+)/([a-z]+)'
-                              => ['home', 'dashboard_type_filter'],
-        '/dashboard/([a-z]+)' => ['home', 'dashboard_type'],
-
-        // ── Dreams CRUD ─────────────────────────────────────────────────────
+        // ── Dreams CRUD ───────────────────────────────────────────────────────
         '/dreams/new'                              => ['dream', 'create'],
         '/dreams/store'                            => ['dream', 'store'],
         '/dreams/update'                           => ['dream', 'update'],
@@ -113,7 +99,7 @@ function route(string $uri): void
         '/dreams/([A-Za-z0-9]{6,16})/delete'       => ['dream', 'destroy'],
         '/dreams/([A-Za-z0-9]{6,16})/restore'      => ['dream', 'restore'],
 
-        // ── Visions CRUD ────────────────────────────────────────────────────
+        // ── Visions CRUD ──────────────────────────────────────────────────────
         '/visions/new'                             => ['vision', 'create'],
         '/visions/store'                           => ['vision', 'store'],
         '/visions/update'                          => ['vision', 'update'],
@@ -124,11 +110,13 @@ function route(string $uri): void
         '/visions/([A-Za-z0-9]{6,16})/delete'      => ['vision', 'destroy'],
         '/visions/([A-Za-z0-9]{6,16})/restore'     => ['vision', 'restore'],
 
-        // Documents
+        // Download endpoint (GET)
         '/documents/([a-f0-9]{32})/download'                => ['document','download'],
-        '/visions/([A-Za-z0-9]{6,16})/overlay/documents'    => ['document','overlay'],
 
-        // ── Mood Boards CRUD ────────────────────────────────────────────────
+        // Overlay view for documents
+        '/visions/([A-Za-z0-9]{6,16})/overlay/documents'   => ['document','overlay'],
+
+        // ── Mood Boards CRUD ─────────────────────────────────────────────────
         '/moods/new'                               => ['mood', 'create'],
         '/moods/update'                            => ['mood', 'update'],
         '/moods/([A-Za-z0-9]{6,16})'               => ['mood', 'show'],
@@ -138,15 +126,11 @@ function route(string $uri): void
         '/moods/([A-Za-z0-9]{6,16})/delete'        => ['mood', 'destroy'],
         '/moods/([A-Za-z0-9]{6,16})/restore'       => ['mood', 'restore'],
 
-        // ── Vision AJAX (kept as-is) ────────────────────────────────────────
+        // ── Vision AJAX (kept as-is) ──────────────────────────────────────────
         '/api/visions/([A-Za-z0-9]{6,16})/save'    => ['vision', 'ajax_save'],
         '/api/visions/update-basics'               => ['vision', 'updateBasics'],
-
-        // Overlay: return HTML partial for section
         '/visions/([A-Za-z0-9]{6,16})/overlay/([a-z]+)'
                                                    => ['vision', 'overlay'],
-
-        // AJAX save for overlay sections (e.g. basics, relations, goals…)
         '/api/visions/([A-Za-z0-9]{6,16})/([a-z]+)'
                                                    => ['vision', 'saveSection'],
     ];

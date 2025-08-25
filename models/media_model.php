@@ -112,4 +112,73 @@ class media_model
         $st->execute($bind);
         return $st->fetchAll(PDO::FETCH_ASSOC);
     }
+	
+	public static function setMediaGroup(PDO $db, int $mediaId, ?int $groupId): void {
+		$db->prepare("UPDATE vision_media SET group_id = ? WHERE id = ?")->execute([$groupId, $mediaId]);
+	}
+	
+	public static function ensureGroup(PDO $db, int $userId, string $name): int {
+		$name = trim($name);
+		if ($name === '') return 0;
+		$st = $db->prepare("SELECT id FROM media_groups WHERE user_id=? AND name=? LIMIT 1");
+		$st->execute([$userId, $name]);
+		$id = $st->fetchColumn();
+		if (!$id) {
+			$ins = $db->prepare("INSERT INTO media_groups(user_id,name) VALUES(?,?)");
+			$ins->execute([$userId, $name]);
+			$id = (int)$db->lastInsertId();
+		}
+		return (int)$id;
+	}
+	
+	public static function listUserGroups(PDO $db, int $userId): array {
+		$st = $db->prepare("SELECT id, name FROM media_groups WHERE user_id = ? ORDER BY name ASC");
+		$st->execute([$userId]);
+		return $st->fetchAll(PDO::FETCH_ASSOC) ?: [];
+	}
+	
+	/** Fetch tags for a media (for future use / debugging) */
+	public static function tagsForMedia(PDO $db, int $mediaId): array {
+		$sql = "SELECT t.id, t.name
+				FROM media_tags mt
+				JOIN tags t ON t.id = mt.tag_id
+				WHERE mt.media_id = ?
+				ORDER BY t.name ASC";
+		$st = $db->prepare($sql);
+		$st->execute([$mediaId]);
+		return $st->fetchAll(PDO::FETCH_ASSOC) ?: [];
+	}
+	
+	/** Replace a media's tag set with $tagIds */
+	public static function setMediaTags(PDO $db, int $mediaId, array $tagIds): void {
+		$db->prepare("DELETE FROM media_tags WHERE media_id=?")->execute([$mediaId]);
+		if (!$tagIds) return;
+		$ins = $db->prepare("INSERT IGNORE INTO media_tags(media_id, tag_id) VALUES(?,?)");
+		foreach ($tagIds as $tid) $ins->execute([$mediaId, (int)$tid]);
+	}
+	
+	public static function ensureTags(PDO $db, int $userId, array $names): array {
+		$ids = [];
+		foreach ($names as $name) {
+			$name = trim($name);
+			if ($name === '') continue;
+			$st = $db->prepare("SELECT id FROM tags WHERE user_id=? AND name=? LIMIT 1");
+			$st->execute([$userId, $name]);
+			$id = $st->fetchColumn();
+			if (!$id) {
+				$ins = $db->prepare("INSERT INTO tags(user_id,name) VALUES(?,?)");
+				$ins->execute([$userId, $name]);
+				$id = $db->lastInsertId();
+			}
+			$ids[] = (int)$id;
+		}
+		return array_values(array_unique($ids));
+	}
+	
+	public static function listUserTags(PDO $db, int $userId): array {
+		$st = $db->prepare("SELECT id, name FROM tags WHERE user_id = ? ORDER BY name ASC");
+		$st->execute([$userId]);
+		return $st->fetchAll(PDO::FETCH_ASSOC) ?: [];
+	}
+	
 }

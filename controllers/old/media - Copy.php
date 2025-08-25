@@ -5,6 +5,8 @@ require_once __DIR__ . '/../models/vision.php';
 require_once __DIR__ . '/../models/mood.php';
 require_once __DIR__ . '/../models/media_model.php';
 
+@include_once __DIR__ . '/../models/media_meta.php';
+
 class media_controller
 {
     // POST /api/visions/{slug}/media:upload
@@ -303,8 +305,77 @@ class media_controller
                 $rows = media_model::allForVisionFiltered($db, $visionId, $boardId, $q, $type, $sort);
             }
         }
+
+		// Graceful enrichment (only if helper + tables exist)
+		$hasMeta = class_exists('media_meta') && method_exists('media_meta', 'is_ready') && media_meta::is_ready($db);
+		if ($hasMeta) {
+			foreach ($rows as &$row) {
+				try {
+					$row['tags']   = media_meta::tags_for_media($db, (int)$row['id']);
+					$row['groups'] = media_meta::groups_for_media($db, (int)$row['id']);
+				} catch (Throwable $e) {
+					// Never let JSON break because of meta lookups
+					$row['tags'] = $row['groups'] = [];
+				}
+			}
+			unset($row);
+		}
+
         echo json_encode(['success'=>true,'media'=>$rows]);
     }
+	
+	// POST /api/media/{id}/groups:set   (group_ids="1,2,3")
+	public static function set_groups(string $mediaId): void
+	{
+		header('Content-Type: application/json');
+		global $db;
+
+		$mid = (int)$mediaId;
+		if ($mid <= 0) { http_response_code(400); echo json_encode(['error'=>'Invalid media id']); return; }
+
+		session_start();
+		$userId = $_SESSION['user_id'] ?? 0;
+		if (!$userId) { http_response_code(401); echo json_encode(['error'=>'Not authenticated']); return; }
+
+		// Ensure media exists and belongs to a vision the user can see (light check)
+		$media = $db->prepare("SELECT id FROM vision_media WHERE id=?");
+		$media->execute([$mid]);
+		if (!$media->fetchColumn()) { http_response_code(404); echo json_encode(['error'=>'Media not found']); return; }
+
+		// Ensure link table exists
+		// media_group_links (media_id, group_id) PK(media_id, group_id)
+		$db->query("CREATE TABLE IF NOT EXISTS media_group_links (
+			media_id BIGINT UNSIGNED NOT NULL,
+			group_id BIGINT UNSIGNED NOT NULL,
+			PRIMARY KEY (media_id, group_id),
+			CONSTRAINT fk_mgl_media FOREIGN KEY (media_id) REFERENCES vision_media(id) ON DELETE CASCADE,
+			CONSTRAINT fk_mgl_group FOREIGN KEY (group_id) REFERENCES media_groups(id) ON DELETE CASCADE
+		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+		// Parse posted ids
+		$raw = trim($_POST['group_ids'] ?? '');
+		$ids = array_values(array_unique(array_filter(array_map('intval', explode(',', $raw)), fn($v)=>$v>0)));
+
+		// Reset links for this media
+		$stDel = $db->prepare("DELETE FROM media_group_links WHERE media_id=?");
+		$stDel->execute([$mid]);
+
+		if ($ids) {
+			$values = [];
+			$params = [];
+			foreach ($ids as $gid) {
+				$values[] = "(?, ?)";
+				$params[] = $mid;
+				$params[] = $gid;
+			}
+			$sql = "INSERT INTO media_group_links (media_id, group_id) VALUES " . implode(',', $values);
+			$ins = $db->prepare($sql);
+			$ins->execute($params);
+		}
+
+		echo json_encode(['success'=>true, 'media_id'=>$mid, 'group_ids'=>$ids]);
+	}
+
 
     // POST /api/moods/{slug}/library:attach  (media_id[]=...)
     public static function attach(string $slug): void
@@ -380,230 +451,269 @@ class media_controller
 
         echo json_encode(['success'=>true]);
     }
+	
+	// ─────────────────────────────────────────────────────────────
+	// TAGS: list/create under a vision (creator scoped)
+	// GET  /api/visions/{slug}/tags
+	public static function tags_list(string $slug): void {
+		if (session_status() !== PHP_SESSION_ACTIVE) @session_start();
+		header('Content-Type: application/json');
+		global $db;
+		$uid = $_SESSION['user_id'] ?? 0;
+		if (!$uid) { http_response_code(401); echo json_encode(['error'=>'Unauthorized']); return; }
 
-    /* ----------------------------------------------------------------
-     * NEW: Tags & Groups minimal endpoints
-     * These are safe and won't create/alter tables silently.
-     * They try common patterns and fail gracefully with success:false.
-     * ---------------------------------------------------------------- */
+		require_once __DIR__ . '/../models/vision.php';
+		require_once __DIR__ . '/../models/mood.php';
+		$vision = vision_model::get($db, $slug);
+		if (!$vision) {
+			$mood = mood_model::get($db, $slug);
+			if ($mood && $mood['vision_id']) $vision = vision_model::findById($db, (int)$mood['vision_id']);
+		}
+		if (!$vision || (int)$vision['user_id'] !== (int)$uid) { http_response_code(403); echo json_encode(['error'=>'Forbidden']); return; }
 
-    // GET /api/tags
-    public static function tags_list(): void
-    {
-        header('Content-Type: application/json');
-        global $db;
+		$st = $db->prepare("SELECT id, name FROM media_tags WHERE user_id=? AND (vision_id IS NULL OR vision_id=?) ORDER BY name ASC");
+		$st->execute([(int)$uid, (int)$vision['id']]);
+		echo json_encode(['success'=>true, 'tags'=>$st->fetchAll(PDO::FETCH_ASSOC)]);
+	}
 
-        $out = [];
+	// POST /api/visions/{slug}/tags:create (name)
+	public static function tags_create(string $slug): void {
+		if (session_status() !== PHP_SESSION_ACTIVE) @session_start();
+		header('Content-Type: application/json');
+		global $db;
+		$uid = $_SESSION['user_id'] ?? 0;
+		if (!$uid) { http_response_code(401); echo json_encode(['error'=>'Unauthorized']); return; }
 
-        // 1) If there's a dedicated `tags` table
-        try {
-            $rows = $db->query("SHOW TABLES LIKE 'tags'")->fetchAll(PDO::FETCH_NUM);
-            if ($rows) {
-                $q = $db->query("SELECT name FROM tags ORDER BY name ASC");
-                foreach ($q as $r) $out[] = $r['name'];
-            }
-        } catch (Throwable $e) {}
+		$name = trim($_POST['name'] ?? '');
+		if ($name === '') { http_response_code(422); echo json_encode(['error'=>'Name required']); return; }
 
-        // 2) Also collect distinct tags from a `vision_media.tags` column if it exists
-        try {
-            $chk = $db->query("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_NAME='vision_media' AND COLUMN_NAME='tags'")->fetchColumn();
-            if ($chk) {
-                foreach ($db->query("SELECT tags FROM vision_media WHERE tags IS NOT NULL AND tags<>''") as $r) {
-                    foreach (explode(',', $r['tags']) as $t) {
-                        $t = trim($t);
-                        if ($t !== '' && !in_array($t, $out, true)) $out[] = $t;
-                    }
-                }
-                sort($out, SORT_NATURAL | SORT_FLAG_CASE);
-            }
-        } catch (Throwable $e) {}
+		require_once __DIR__ . '/../models/vision.php';
+		$vision = vision_model::get($db, $slug);
+		$visionId = $vision ? (int)$vision['id'] : null;
 
-        echo json_encode(['success'=>true, 'tags'=>$out]);
-    }
+		$st = $db->prepare("INSERT INTO media_tags(user_id, vision_id, name) VALUES (?,?,?)");
+		$ok = $st->execute([(int)$uid, $visionId, $name]);
+		if (!$ok) { http_response_code(500); echo json_encode(['error'=>'Create failed']); return; }
 
-    // GET/POST /api/media/{id}/tags
-    // GET  -> { success:true, tags:["...","..."] }
-    // POST -> body: tags=comma,sep or tags[]=a&tags[]=b   => { success:true, tags:[...] }
-    public static function tags(string $mediaId): void
-    {
-        header('Content-Type: application/json');
-        global $db;
+		echo json_encode(['success'=>true, 'tag'=>['id'=>(int)$db->lastInsertId(),'name'=>$name]]);
+	}
 
-        $mid = (int)$mediaId;
-        if ($mid <= 0) { http_response_code(400); echo json_encode(['error'=>'Invalid media id']); return; }
+	// ─────────────────────────────────────────────────────────────
+	// GROUP: assign (one or many; we will store single selection for now)
+	// POST /api/media/{id}/group  (group_id or null)
+	public static function update_group(int $mediaId): void {
+		if (session_status() !== PHP_SESSION_ACTIVE) @session_start();
+		header('Content-Type: application/json');
+		global $db;
+		$uid = $_SESSION['user_id'] ?? 0;
+		if (!$uid) { http_response_code(401); echo json_encode(['error'=>'Unauthorized']); return; }
 
-        // Ensure media exists
-        $media = media_model::findById($db, $mid);
-        if (!$media) { http_response_code(404); echo json_encode(['error'=>'Media not found']); return; }
+		$groupId = $_POST['group_id'] ?? '';
+		$groupId = ($groupId === '' || $groupId === null) ? null : (int)$groupId;
 
-        // We support two storage backings:
-        //  A) normalized tables: tags(id,name,user_id), media_tags(media_id,tag_id)
-        //  B) a 'tags' TEXT column on vision_media (CSV) if those tables don�t exist
-        $hasTagsTables = false;
-        try {
-            $chkA = $db->query("SHOW TABLES LIKE 'tags'")->fetchColumn();
-            $chkB = $db->query("SHOW TABLES LIKE 'media_tags'")->fetchColumn();
-            $hasTagsTables = (bool)($chkA && $chkB);
-        } catch (Throwable $e) {
-            $hasTagsTables = false;
-        }
+		// ownership check: ensure media belongs to this creator (via vision)
+		$row = $db->prepare("
+			SELECT vm.id, v.user_id
+			  FROM vision_media vm
+			  LEFT JOIN visions v ON vm.vision_id = v.id
+			 WHERE vm.id = ?
+			 LIMIT 1
+		");
+		$row->execute([(int)$mediaId]);
+		$own = $row->fetch(PDO::FETCH_ASSOC);
+		if (!$own || (int)$own['user_id'] !== (int)$uid) { http_response_code(403); echo json_encode(['error'=>'Forbidden']); return; }
 
-        $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
-        if ($method === 'POST') {
-            // Gather tags from request
-            $tags = [];
-            if (isset($_POST['tags'])) {
-                if (is_array($_POST['tags'])) { $tags = $_POST['tags']; }
-                else { $tags = array_filter(array_map('trim', explode(',', (string)$_POST['tags']))); }
-            }
-            $tags = array_values(array_unique(array_filter($tags, fn($t)=>$t !== '')));
+		// clear any old mapping (single-group behavior)
+		$db->prepare("DELETE FROM media_group_map WHERE media_id=?")->execute([(int)$mediaId]);
 
-            if ($hasTagsTables) {
-                // Upsert into tags + map in media_tags
-                try {
-                    $db->beginTransaction();
+		if ($groupId) {
+			$db->prepare("INSERT IGNORE INTO media_group_map(media_id, group_id) VALUES (?,?)")
+			   ->execute([(int)$mediaId, $groupId]);
+		}
+		echo json_encode(['success'=>true]);
+	}
 
-                    // Current user (owner of tag vocabulary)
-                    $userId = $_SESSION['user_id'] ?? 1;
+	// ─────────────────────────────────────────────────────────────
+	// TAGS: add/remove set for a media
+	// POST /api/media/{id}/tags  (tags[]=.. OR tags_csv="a,b,c")
+	public static function update_tags(int $mediaId): void {
+		if (session_status() !== PHP_SESSION_ACTIVE) @session_start();
+		header('Content-Type: application/json');
+		global $db;
+		$uid = $_SESSION['user_id'] ?? 0;
+		if (!$uid) { http_response_code(401); echo json_encode(['error'=>'Unauthorized']); return; }
 
-                    // Fetch existing tag ids for names
-                    $tagIds = [];
-                    if ($tags) {
-                        // Insert any missing
-                        $ins = $db->prepare("INSERT INTO tags (name, user_id) VALUES (?, ?) ON DUPLICATE KEY UPDATE name = VALUES(name)");
-                        foreach ($tags as $t) {
-                            $ins->execute([$t, $userId]);
-                        }
-                        // Read ids
-                        $inQ = implode(',', array_fill(0, count($tags), '?'));
-                        $sel = $db->prepare("SELECT id, name FROM tags WHERE user_id=? AND name IN ($inQ)");
-                        $sel->execute(array_merge([$userId], $tags));
-                        while ($r = $sel->fetch(PDO::FETCH_ASSOC)) {
-                            $tagIds[$r['name']] = (int)$r['id'];
-                        }
-                    }
+		$tags = $_POST['tags'] ?? [];
+		if (!is_array($tags)) {
+			$csv = trim($_POST['tags_csv'] ?? '');
+			$tags = $csv ? array_filter(array_map('trim', explode(',', $csv))) : [];
+		}
 
-                    // Clear existing mappings
-                    $db->prepare("DELETE FROM media_tags WHERE media_id=?")->execute([$mid]);
+		// ensure ownership as above
+		$row = $db->prepare("
+			SELECT vm.id, v.user_id
+			  FROM vision_media vm
+			  LEFT JOIN visions v ON vm.vision_id = v.id
+			 WHERE vm.id = ?
+			 LIMIT 1
+		");
+		$row->execute([(int)$mediaId]);
+		$own = $row->fetch(PDO::FETCH_ASSOC);
+		if (!$own || (int)$own['user_id'] !== (int)$uid) { http_response_code(403); echo json_encode(['error'=>'Forbidden']); return; }
 
-                    // Insert new mappings
-                    if ($tagIds) {
-                        $ins2 = $db->prepare("INSERT INTO media_tags (media_id, tag_id) VALUES (?, ?)");
-                        foreach ($tagIds as $tid) { $ins2->execute([$mid, $tid]); }
-                    }
+		// resolve tag names -> ids (create as needed)
+		$resolved = [];
+		foreach ($tags as $t) {
+			$name = trim($t);
+			if ($name === '') continue;
+			$get = $db->prepare("SELECT id FROM media_tags WHERE user_id=? AND name=? LIMIT 1");
+			$get->execute([(int)$uid, $name]);
+			$id = (int)$get->fetchColumn();
+			if (!$id) {
+				$ins = $db->prepare("INSERT INTO media_tags(user_id, name) VALUES (?,?)");
+				$ins->execute([(int)$uid, $name]);
+				$id = (int)$db->lastInsertId();
+			}
+			$resolved[] = $id;
+		}
 
-                    $db->commit();
-                    echo json_encode(['success'=>true, 'tags'=>$tags]); return;
-                } catch (Throwable $e) {
-                    if ($db->inTransaction()) $db->rollBack();
-                    // Fall through to CSV column as a safety net
-                    $hasTagsTables = false;
-                }
-            }
+		// replace mapping
+		$db->prepare("DELETE FROM media_tag_map WHERE media_id=?")->execute([(int)$mediaId]);
+		if ($resolved) {
+			$ins = $db->prepare("INSERT INTO media_tag_map(media_id, tag_id) VALUES (?,?)");
+			foreach ($resolved as $tid) { $ins->execute([(int)$mediaId, (int)$tid]); }
+		}
 
-            // Fallback: store CSV in vision_media.tags (if column exists)
-            try {
-                $col = $db->query("SHOW COLUMNS FROM vision_media LIKE 'tags'")->fetch(PDO::FETCH_ASSOC);
-                if ($col) {
-                    $csv = implode(',', $tags);
-                    $upd = $db->prepare("UPDATE vision_media SET tags=? WHERE id=?");
-                    $upd->execute([$csv, $mid]);
-                    echo json_encode(['success'=>true, 'tags'=>$tags]); return;
-                }
-            } catch (Throwable $e) {}
+		echo json_encode(['success'=>true, 'tag_ids'=>$resolved]);
+	}
+	
+	// models/media_model.php (append inside media_model class)
+	public static function listCreatorTags(PDO $db, int $userId): array {
+		$st = $db->prepare("SELECT id, name FROM tags WHERE user_id = ? ORDER BY name ASC");
+		$st->execute([$userId]);
+		return $st->fetchAll(PDO::FETCH_ASSOC) ?: [];
+	}
 
-            // If neither backend exists, just report success with no persistence to avoid 500s
-            echo json_encode(['success'=>true, 'tags'=>$tags, 'warning'=>'Tag storage not available (no tags/media_tags tables or vision_media.tags column)']);
-            return;
-        }
+	/**
+	 * Ensure tags exist (create if missing) and return their IDs.
+	 * $names: array of strings (raw user inputs).
+	 */
+	public static function upsertTags(PDO $db, int $userId, array $names): array {
+		$ids = [];
+		$db->beginTransaction();
+		try {
+			$ins = $db->prepare("INSERT INTO tags (user_id, name) VALUES (?, ?) ON DUPLICATE KEY UPDATE name = VALUES(name)");
+			$sel = $db->prepare("SELECT id FROM tags WHERE user_id=? AND name=?");
+			foreach ($names as $n) {
+				$n = trim($n);
+				if ($n === '') continue;
+				$ins->execute([$userId, $n]);
+				$sel->execute([$userId, $n]);
+				if ($row = $sel->fetch(PDO::FETCH_ASSOC)) $ids[] = (int)$row['id'];
+			}
+			$db->commit();
+		} catch (Throwable $e) {
+			$db->rollBack();
+		}
+		return array_values(array_unique($ids));
+	}
+			
+	/**
+	 * POST /api/media/{id}/tags
+	 * Body: JSON { "tags": ["foo","bar"] }  or form "tags" = "foo,bar"
+	 * Replaces the media's tag set with the provided names (auto-creates if missing).
+	 */
+	public static function tags_update(string $mediaId): void
+	{
+		header('Content-Type: application/json');
+		global $db;
 
-        // GET
-        if ($hasTagsTables) {
-            try {
-                $q = $db->prepare("
-                    SELECT t.name
-                    FROM media_tags mt
-                    JOIN tags t ON t.id = mt.tag_id
-                    WHERE mt.media_id=? 
-                    ORDER BY t.name ASC
-                ");
-                $q->execute([$mid]);
-                $names = array_map(fn($r)=>$r['name'], $q->fetchAll(PDO::FETCH_ASSOC) ?: []);
-                echo json_encode(['success'=>true, 'tags'=>$names]); return;
-            } catch (Throwable $e) {
-                // Fall through
-            }
-        }
-        // Fallback: CSV column
-        try {
-            $col = $db->query("SHOW COLUMNS FROM vision_media LIKE 'tags'")->fetch(PDO::FETCH_ASSOC);
-            if ($col) {
-                $q = $db->prepare("SELECT tags FROM vision_media WHERE id=?");
-                $q->execute([$mid]);
-                $csv = (string)($q->fetchColumn() ?: '');
-                $names = array_values(array_filter(array_map('trim', explode(',', $csv))));
-                echo json_encode(['success'=>true, 'tags'=>$names]); return;
-            }
-        } catch (Throwable $e) {}
+		$userId  = isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : 0;
+		if ($userId <= 0) { http_response_code(401); echo json_encode(['error'=>'Unauthorized']); return; }
 
-        echo json_encode(['success'=>true, 'tags'=>[]]);
-    }
+		$mid = (int)$mediaId;
+		if ($mid <= 0) { http_response_code(400); echo json_encode(['error'=>'Invalid media id']); return; }
 
-    // GET /api/moods/{slug}/groups
-    // Returns creator-scoped groups usable in the Mood media library
-    public static function groups_list(string $slug): void
-    {
-        header('Content-Type: application/json');
-        global $db;
+		// Optional: Ownership/permission check (relaxed version)
+		// If you track uploader or vision owner, enforce it here. For now, ensure it exists.
+		$m = media_model::findById($db, $mid);
+		if (!$m) { http_response_code(404); echo json_encode(['error'=>'Media not found']); return; }
 
-        // Resolve board and creator
-        $board = mood_model::get($db, $slug);
-        if (!$board) { http_response_code(404); echo json_encode(['error'=>'Board not found']); return; }
+		// Parse JSON or form
+		$raw = file_get_contents('php://input');
+		$names = [];
+		if ($raw) {
+			$j = json_decode($raw, true);
+			if (is_array($j) && isset($j['tags']) && is_array($j['tags'])) {
+				$names = $j['tags'];
+			}
+		}
+		if (!$names && isset($_POST['tags'])) {
+			$names = array_map('trim', explode(',', (string)$_POST['tags']));
+		}
 
-        // Current user id (adjust if you use a different auth helper)
-        $userId = $_SESSION['user_id'] ?? 1; // fallback to 1 if your app currently runs as user 1
-        if (!$userId) { http_response_code(401); echo json_encode(['error'=>'Unauthorized']); return; }
+		// Clean + limit
+		$names = array_values(array_filter(array_map(function($s){
+			$s = trim((string)$s);
+			$s = preg_replace('/\s+/', ' ', $s);
+			return mb_substr($s, 0, 80);
+		}, $names), fn($s) => $s !== ''));
 
-        // We�ll try a dedicated groups table first; if it doesn�t exist, return an empty set gracefully.
-        try {
-            // media_groups: id, user_id, name, created_at
-            $st = $db->query("SHOW TABLES LIKE 'media_groups'");
-            if (!$st->fetchColumn()) {
-                echo json_encode(['success'=>true, 'groups'=>[]]); return;
-            }
-            $st = $db->prepare("SELECT id, name FROM media_groups WHERE user_id=? ORDER BY name ASC");
-            $st->execute([$userId]);
-            $rows = $st->fetchAll(PDO::FETCH_ASSOC) ?: [];
-            echo json_encode(['success'=>true, 'groups'=>$rows]);
-        } catch (Throwable $e) {
-            // Never blow up the UI � just return empty so the client can continue
-            echo json_encode(['success'=>true, 'groups'=>[]]);
-        }
-    }
+		// Upsert tags for this creator, then set mapping
+		$tagIds = media_model::upsertTags($db, $userId, $names);
+		media_model::setMediaTags($db, $mid, $tagIds);
 
-    // POST /api/media/{id}/group  (group_id=�)
-    public static function update_group(int $mediaId): void
-    {
-        header('Content-Type: application/json');
-        global $db;
+		echo json_encode(['success'=>true, 'tags'=>media_model::tagsForMedia($db, $mid)]);
+	}
+	
+	// GET /api/tags
+	public static function tags_index(): void {
+		header('Content-Type: application/json');
+		global $db;
+		$userId = (int)($_SESSION['user']['id'] ?? 0);
+		if (!$userId) { http_response_code(401); echo json_encode(['error'=>'Unauthorized']); return; }
 
-        $gid = isset($_POST['group_id']) ? (int)$_POST['group_id'] : 0;
+		$tags = media_model::listUserTags($db, $userId);
+		echo json_encode(['success'=>true, 'tags'=>$tags]);
+	}
+	
+	// GET /api/visions/{slug}/groups
+	public static function groups_index(string $slug): void {
+		header('Content-Type: application/json');
+		global $db;
 
-        // If you have a vision_media.group_id column, use it
-        try {
-            $hasCol = (int)$db->query("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_NAME='vision_media' AND COLUMN_NAME='group_id'")->fetchColumn();
-            if ($hasCol) {
-                $st = $db->prepare("UPDATE vision_media SET group_id=? WHERE id=? LIMIT 1");
-                $st->execute([$gid ?: null, $mediaId]);
-                echo json_encode(['success'=>true]); return;
-            }
-        } catch (Throwable $e) {}
+		// We don’t actually need the slug for listing creator-wide groups,
+		// but we validate access via the slug to match your auth flow.
+		$userId = (int)($_SESSION['user']['id'] ?? 0);
+		if (!$userId) { http_response_code(401); echo json_encode(['error'=>'Unauthorized']); return; }
 
-        // If you have a media_groups join, you could add handling here similarly.
+		$groups = media_model::listUserGroups($db, $userId);
+		echo json_encode(['success'=>true, 'groups'=>$groups]);
+	}
+		
+	// POST /api/media/{id}/group  body: group_id OR group_name
+	public static function group_update(int $mediaId): void {
+		header('Content-Type: application/json');
+		global $db;
 
-        echo json_encode([
-            'success'=>false,
-            'error'=>'No place to store group. Add `vision_media.group_id` (INT) or a proper groups schema.'
-        ]);
-    }
+		$userId = (int)($_SESSION['user']['id'] ?? 0);
+		if (!$userId) { http_response_code(401); echo json_encode(['error'=>'Unauthorized']); return; }
+
+		$groupId = (int)($_POST['group_id'] ?? 0);
+		$groupName = trim($_POST['group_name'] ?? '');
+
+		if (!$groupId && $groupName !== '') {
+			$groupId = media_model::ensureGroup($db, $userId, $groupName);
+		}
+
+		if ($groupId <= 0) {
+			// Clear group
+			media_model::setMediaGroup($db, (int)$mediaId, null);
+			echo json_encode(['success'=>true, 'group'=>null]); return;
+		}
+
+		media_model::setMediaGroup($db, (int)$mediaId, $groupId);
+		echo json_encode(['success'=>true, 'group'=>['id'=>$groupId]]);
+	}
+
 }

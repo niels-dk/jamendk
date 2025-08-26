@@ -277,6 +277,7 @@ class media_controller
         $q     = trim($_GET['q'] ?? '');
         $type  = $_GET['type'] ?? '';
         $sort  = $_GET['sort'] ?? 'date';
+		$groupId = isset($_GET['group_id']) ? (int)$_GET['group_id'] : null;
         $boardParam = isset($_GET['board_id']) ? (int)$_GET['board_id'] : null;
 
         $vision = vision_model::get($db, $slug);
@@ -294,16 +295,209 @@ class media_controller
         if ($scope === 'board') {
             if (!$boardId) { http_response_code(400); echo json_encode(['error'=>'board_id required']); return; }
             $rows = media_model::allForBoardFiltered($db, $boardId, $q, $type, $sort);
+			// NEW: optional filters (group + tags + group_query)
+		$groupId    = isset($_GET['group_id']) ? (int)$_GET['group_id'] : null;
+		$groupQuery = trim($_GET['group_query'] ?? '');
+		$tagFilter  = trim($_GET['tags'] ?? '');
+
+		// filter by exact group id if provided
+		if ($groupId) {
+			$rows = array_values(array_filter($rows, function($r) use ($groupId) {
+				return (int)($r['group_id'] ?? 0) === $groupId;
+			}));
+		}
+
+		// filter by group name search (maps names -> ids and filters)
+		// only run if no exact group_id but a query string is provided
+		if ($groupQuery !== '' && !$groupId) {
+			try {
+				$uid = $_SESSION['user_id'] ?? 0; // or your current-user resolver
+				$st = $db->prepare("SELECT id FROM media_groups WHERE user_id = ? AND name LIKE ?");
+				$st->execute([$uid, '%'.$groupQuery.'%']);
+				$ids = array_map('intval', $st->fetchAll(PDO::FETCH_COLUMN));
+				if ($ids) {
+					$rows = array_values(array_filter($rows, function($r) use ($ids) {
+						return in_array((int)($r['group_id'] ?? 0), $ids, true);
+					}));
+				} else {
+					$rows = [];
+				}
+			} catch (Throwable $e) {
+				// if groups table not present or error, just ignore name filter
+			}
+		}
+			// --- TAGS filter (comma/space separated query) ---------------------------
+			$tagsParam = trim($_GET['tags'] ?? '');
+			if ($tagsParam !== '') {
+				// split "red, blue summer" ? ["red","blue","summer"]
+				$need = preg_split('/[,\s]+/', $tagsParam, -1, PREG_SPLIT_NO_EMPTY);
+				$need = array_map('mb_strtolower', array_map('trim', $need));
+
+				$rows = array_values(array_filter($rows, function ($r) use ($need) {
+					$csv = strtolower((string)($r['tags'] ?? ''));
+					if ($csv === '') return false;
+					$have = array_values(array_filter(array_map('trim', explode(',', $csv))));
+
+					// ANY match: a row passes if ANY requested term matches
+					// (exact token match OR substring inside a token, case-insensitive)
+					foreach ($need as $needle) {
+						foreach ($have as $tag) {
+							if ($tag === $needle || strpos($tag, $needle) !== false) {
+								return true;
+							}
+						}
+					}
+					return false;
+				}));
+			}
+			// ------------------------------------------------------------------------
+
         } else {
             if ($visionId === null) {
                 // Standalone board without vision: treat as board scope
                 if (!$boardId) { http_response_code(400); echo json_encode(['error'=>'board_id required']); return; }
                 $rows = media_model::allForBoardFiltered($db, $boardId, $q, $type, $sort);
+				// NEW: optional filters (group + tags + group_query)
+		$groupId    = isset($_GET['group_id']) ? (int)$_GET['group_id'] : null;
+		$groupQuery = trim($_GET['group_query'] ?? '');
+		$tagFilter  = trim($_GET['tags'] ?? '');
+
+		// filter by exact group id if provided
+		if ($groupId) {
+			$rows = array_values(array_filter($rows, function($r) use ($groupId) {
+				return (int)($r['group_id'] ?? 0) === $groupId;
+			}));
+		}
+
+		// filter by group name search (maps names -> ids and filters)
+		// only run if no exact group_id but a query string is provided
+		if ($groupQuery !== '' && !$groupId) {
+			try {
+				$uid = $_SESSION['user_id'] ?? 0; // or your current-user resolver
+				$st = $db->prepare("SELECT id FROM media_groups WHERE user_id = ? AND name LIKE ?");
+				$st->execute([$uid, '%'.$groupQuery.'%']);
+				$ids = array_map('intval', $st->fetchAll(PDO::FETCH_COLUMN));
+				if ($ids) {
+					$rows = array_values(array_filter($rows, function($r) use ($ids) {
+						return in_array((int)($r['group_id'] ?? 0), $ids, true);
+					}));
+				} else {
+					$rows = [];
+				}
+			} catch (Throwable $e) {
+				// if groups table not present or error, just ignore name filter
+			}
+		}
+				// --- TAGS filter (comma/space separated query) ---------------------------
+				$tagsParam = trim($_GET['tags'] ?? '');
+				if ($tagsParam !== '') {
+					// split "red, blue summer" ? ["red","blue","summer"]
+					$need = preg_split('/[,\s]+/', $tagsParam, -1, PREG_SPLIT_NO_EMPTY);
+					$need = array_map('mb_strtolower', array_map('trim', $need));
+
+					$rows = array_values(array_filter($rows, function ($r) use ($need) {
+						$csv = strtolower((string)($r['tags'] ?? ''));
+						if ($csv === '') return false;
+						$have = array_values(array_filter(array_map('trim', explode(',', $csv))));
+
+						// ANY match: a row passes if ANY requested term matches
+						// (exact token match OR substring inside a token, case-insensitive)
+						foreach ($need as $needle) {
+							foreach ($have as $tag) {
+								if ($tag === $needle || strpos($tag, $needle) !== false) {
+									return true;
+								}
+							}
+						}
+						return false;
+					}));
+				}
+				// ------------------------------------------------------------------------
+
             } else {
                 $rows = media_model::allForVisionFiltered($db, $visionId, $boardId, $q, $type, $sort);
+				// NEW: optional filters (group + tags + group_query)
+		$groupId    = isset($_GET['group_id']) ? (int)$_GET['group_id'] : null;
+		$groupQuery = trim($_GET['group_query'] ?? '');
+		$tagFilter  = trim($_GET['tags'] ?? '');
+
+		// filter by exact group id if provided
+		if ($groupId) {
+			$rows = array_values(array_filter($rows, function($r) use ($groupId) {
+				return (int)($r['group_id'] ?? 0) === $groupId;
+			}));
+		}
+
+		// filter by group name search (maps names -> ids and filters)
+		// only run if no exact group_id but a query string is provided
+		if ($groupQuery !== '' && !$groupId) {
+			try {
+				$uid = $_SESSION['user_id'] ?? 0; // or your current-user resolver
+				$st = $db->prepare("SELECT id FROM media_groups WHERE user_id = ? AND name LIKE ?");
+				$st->execute([$uid, '%'.$groupQuery.'%']);
+				$ids = array_map('intval', $st->fetchAll(PDO::FETCH_COLUMN));
+				if ($ids) {
+					$rows = array_values(array_filter($rows, function($r) use ($ids) {
+						return in_array((int)($r['group_id'] ?? 0), $ids, true);
+					}));
+				} else {
+					$rows = [];
+				}
+			} catch (Throwable $e) {
+				// if groups table not present or error, just ignore name filter
+			}
+		}
+				// --- TAGS filter (comma/space separated query) ---------------------------
+				$tagsParam = trim($_GET['tags'] ?? '');
+				if ($tagsParam !== '') {
+					// split "red, blue summer" ? ["red","blue","summer"]
+					$need = preg_split('/[,\s]+/', $tagsParam, -1, PREG_SPLIT_NO_EMPTY);
+					$need = array_map('mb_strtolower', array_map('trim', $need));
+
+					$rows = array_values(array_filter($rows, function ($r) use ($need) {
+						$csv = strtolower((string)($r['tags'] ?? ''));
+						if ($csv === '') return false;
+						$have = array_values(array_filter(array_map('trim', explode(',', $csv))));
+
+						// ANY match: a row passes if ANY requested term matches
+						// (exact token match OR substring inside a token, case-insensitive)
+						foreach ($need as $needle) {
+							foreach ($have as $tag) {
+								if ($tag === $needle || strpos($tag, $needle) !== false) {
+									return true;
+								}
+							}
+						}
+						return false;
+					}));
+				}
+				// ------------------------------------------------------------------------
+
             }
         }
         echo json_encode(['success'=>true,'media'=>$rows]);
+		
+
+		// filter by tags (comma/space separated). Row must contain ALL requested tags.
+		if ($tagFilter !== '') {
+			$need = array_values(array_filter(array_map('strtolower',
+				array_map('trim', preg_split('/[,\s]+/', $tagFilter))
+			)));
+			if ($need) {
+				$rows = array_values(array_filter($rows, function($r) use ($need) {
+					$have = strtolower((string)($r['tags'] ?? ''));
+					// normalize stored "a,b,c" to array
+					$arr = array_values(array_filter(array_map('trim', explode(',', $have))));
+					// require all requested tags to be present
+					foreach ($need as $t) {
+						if ($t === '') continue;
+						if (!in_array($t, $arr, true)) return false;
+					}
+					return true;
+				}));
+			}
+		}
+
     }
 
     // POST /api/moods/{slug}/library:attach  (media_id[]=...)
@@ -550,60 +744,135 @@ class media_controller
     }
 
     // GET /api/moods/{slug}/groups
-    // Returns creator-scoped groups usable in the Mood media library
-    public static function groups_list(string $slug): void
-    {
-        header('Content-Type: application/json');
-        global $db;
+	public static function groups_list(string $slug): void
+	{
+		header('Content-Type: application/json');
+		global $db;
 
-        // Resolve board and creator
-        $board = mood_model::get($db, $slug);
-        if (!$board) { http_response_code(404); echo json_encode(['error'=>'Board not found']); return; }
+		// Resolve mood board ? get user + (optional) vision
+		$board = mood_model::get($db, $slug);
+		if (!$board) { http_response_code(404); echo json_encode(['error'=>'Board not found']); return; }
 
-        // Current user id (adjust if you use a different auth helper)
-        $userId = $_SESSION['user_id'] ?? 1; // fallback to 1 if your app currently runs as user 1
-        if (!$userId) { http_response_code(401); echo json_encode(['error'=>'Unauthorized']); return; }
+		// Current user (prefer session), else board owner
+		$userId = !empty($_SESSION['user']['id']) ? (int)$_SESSION['user']['id'] : (int)($board['user_id'] ?? 0);
+		if ($userId <= 0) { http_response_code(401); echo json_encode(['error'=>'Unauthorized']); return; }
 
-        // We’ll try a dedicated groups table first; if it doesn’t exist, return an empty set gracefully.
-        try {
-            // media_groups: id, user_id, name, created_at
-            $st = $db->query("SHOW TABLES LIKE 'media_groups'");
-            if (!$st->fetchColumn()) {
-                echo json_encode(['success'=>true, 'groups'=>[]]); return;
-            }
-            $st = $db->prepare("SELECT id, name FROM media_groups WHERE user_id=? ORDER BY name ASC");
-            $st->execute([$userId]);
-            $rows = $st->fetchAll(PDO::FETCH_ASSOC) ?: [];
-            echo json_encode(['success'=>true, 'groups'=>$rows]);
-        } catch (Throwable $e) {
-            // Never blow up the UI – just return empty so the client can continue
-            echo json_encode(['success'=>true, 'groups'=>[]]);
-        }
-    }
+		$visionId = !empty($board['vision_id']) ? (int)$board['vision_id'] : null;
 
-    // POST /api/media/{id}/group  (group_id=…)
-    public static function update_group(int $mediaId): void
-    {
-        header('Content-Type: application/json');
-        global $db;
+		// If your groups are scoped by (user_id, vision_id), keep that filter; otherwise ignore vision_id.
+		if ($visionId) {
+			$st = $db->prepare("SELECT id, name, slug FROM media_groups WHERE user_id=? AND vision_id=? ORDER BY name ASC");
+			$st->execute([$userId, $visionId]);
+		} else {
+			$st = $db->prepare("SELECT id, name, slug FROM media_groups WHERE user_id=? ORDER BY name ASC");
+			$st->execute([$userId]);
+		}
 
-        $gid = isset($_POST['group_id']) ? (int)$_POST['group_id'] : 0;
+		$rows = $st->fetchAll(PDO::FETCH_ASSOC);
+		echo json_encode(['groups' => $rows ?: []]);
+	}
 
-        // If you have a vision_media.group_id column, use it
-        try {
-            $hasCol = (int)$db->query("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_NAME='vision_media' AND COLUMN_NAME='group_id'")->fetchColumn();
-            if ($hasCol) {
-                $st = $db->prepare("UPDATE vision_media SET group_id=? WHERE id=? LIMIT 1");
-                $st->execute([$gid ?: null, $mediaId]);
-                echo json_encode(['success'=>true]); return;
-            }
-        } catch (Throwable $e) {}
+    // controllers/media.php  — replace the whole group() method with this
+	public static function group(string $mediaId): void
+	{
+		header('Content-Type: application/json');
+		global $db;
 
-        // If you have a media_groups join, you could add handling here similarly.
+		$mid     = (int)$mediaId;
+		$boardId = isset($_POST['board_id']) ? (int)$_POST['board_id'] : 0;
+		$groupId = isset($_POST['group_id']) ? (int)$_POST['group_id'] : 0;
+		$nameRaw = trim($_POST['group_name'] ?? '');
 
-        echo json_encode([
-            'success'=>false,
-            'error'=>'No place to store group. Add `vision_media.group_id` (INT) or a proper groups schema.'
-        ]);
-    }
+		if ($mid <= 0) { http_response_code(400); echo json_encode(['error' => 'Invalid media id']); return; }
+
+		// 0) Media exists?
+		$media = media_model::findById($db, $mid);
+		if (!$media) { http_response_code(404); echo json_encode(['error'=>'Media not found']); return; }
+
+		// 1) Resolve owner (user_id) and scope (vision_id) — from the board you posted
+		//    (this fixes the earlier crash that queried a non-existent `moods` table)
+		$userId   = null;
+		$visionId = null;
+
+		if ($boardId > 0) {
+			$st = $db->prepare("SELECT user_id, vision_id FROM mood_boards WHERE id = ? LIMIT 1");
+			$st->execute([$boardId]);
+			if ($row = $st->fetch(PDO::FETCH_ASSOC)) {
+				$userId   = (int)$row['user_id'];
+				$visionId = $row['vision_id'] !== null ? (int)$row['vision_id'] : null;
+			}
+		}
+
+		// As a fallback, if media already carries a vision_id, use it as the scope
+		if ($visionId === null && isset($media['vision_id']) && $media['vision_id'] !== null) {
+			$visionId = (int)$media['vision_id'];
+		}
+
+		if (!$userId && isset($_SESSION['user']['id'])) {
+			// Last resort: current session user
+			$userId = (int)$_SESSION['user']['id'];
+		}
+
+		if (!$userId) { http_response_code(401); echo json_encode(['error'=>'Could not resolve owner for this media (no vision/user).']); return; }
+
+		// 2) Ensure we have a target group id (either provided or created by name)
+		if ($groupId <= 0) {
+			if ($nameRaw === '') { http_response_code(422); echo json_encode(['error'=>'group_id or group_name required']); return; }
+
+			$slug = self::slugify($nameRaw);
+
+			// Try to find an existing group for this user+vision (vision can be NULL for global-per-user)
+			$st = $db->prepare("SELECT id FROM media_groups WHERE user_id = ? AND ".($visionId===null ? "vision_id IS NULL" : "vision_id = ?")." AND slug = ? LIMIT 1");
+			$visionParam = ($visionId===null) ? [] : [$visionId];
+			$st->execute(array_merge([$userId], $visionParam, [$slug]));
+			$gid = (int)$st->fetchColumn();
+
+			if ($gid <= 0) {
+				// Create it
+				$ins = $db->prepare("INSERT INTO media_groups (user_id, vision_id, name, slug, created_at) VALUES (?, ?, ?, ?, NOW())");
+				$ins->execute([$userId, $visionId, $nameRaw, $slug]);
+				$gid = (int)$db->lastInsertId();
+			}
+			$groupId = $gid;
+		}
+
+		// 3) Persist the relationship
+		//    3a) Global: save on vision_media.group_id (if that column exists)
+		try {
+			// Will throw if column doesn't exist
+			$db->prepare("UPDATE vision_media SET group_id = ? WHERE id = ?")->execute([$groupId, $mid]);
+		} catch (Throwable $e) {
+			// ignore silently if your schema doesn't have this column
+		}
+
+		//    3b) Optional per-board: mood_board_media.group_id (only if board_id provided)
+		if ($boardId > 0) {
+			try {
+				$db->prepare("UPDATE mood_board_media SET group_id = ? WHERE board_id = ? AND media_id = ?")
+				   ->execute([$groupId, $boardId, $mid]);
+			} catch (Throwable $e) {
+				// ignore if column doesn't exist
+			}
+		}
+
+		// 4) Return success
+		echo json_encode([
+			'success'   => true,
+			'media_id'  => $mid,
+			'group_id'  => $groupId,
+			'board_id'  => $boardId ?: null
+		]);
+	}
+	
+	// Add this helper inside the class (or reuse your existing slug helper)
+	private static function slugify(string $s): string
+	{
+		$s = iconv('UTF-8','ASCII//TRANSLIT',$s);
+		$s = preg_replace('~[^A-Za-z0-9]+~', '-', $s);
+		$s = trim($s, '-');
+		$s = strtolower($s);
+		return $s ?: 'group';
+	}
+
+
 }

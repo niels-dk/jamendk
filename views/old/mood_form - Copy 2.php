@@ -4,21 +4,20 @@
      data-board-slug="<?= htmlspecialchars($board['slug']) ?>"
      data-board-id="<?= (int)$board['id'] ?>">
 
-	<!-- wrap the two existing blocks in a single container -->
-	<div class="library-bar">
-	  <div class="library-tabs">
-		<button class="tab-btn" data-scope="board">Board Files</button>
-		<button class="tab-btn active" data-scope="vision">All Vision Files</button>
-	  </div>
+  <div class="library-tabs">
+    <button class="tab-btn active" data-scope="board">Board Files</button>
+    <button class="tab-btn" data-scope="vision">All Vision Files</button>
+  </div>
 
-	  <div class="library-actions">
-		<button id="uploadBtn" type="button">Upload</button>
-		<input id="mediaUploadInput" type="file" name="file[]" multiple style="display:none">
-		<button id="linkBtn" type="button">Add Link</button>
-	  </div>
-	</div>
-
-
+  <div class="library-actions">
+    <button id="uploadBtn" type="button">Upload</button>
+    <input id="mediaUploadInput" type="file" name="file[]" multiple style="display:none">
+    <button id="linkBtn" type="button">Add Link</button>
+    <div id="linkWrap" style="display:none;margin-top:8px;">
+      <input id="linkUrl" type="url" placeholder="Paste YouTube URL…" style="width:100%">
+      <button id="linkSubmit" type="button" style="margin-top:6px;">Add</button>
+    </div>
+  </div>
 	
 	<input id="tagFilterInput" placeholder="Filter by tags (comma)…" />
 	<select id="groupFilterSelect"><option value="">All groups</option></select>
@@ -58,12 +57,6 @@
   <div id="libraryStatus" class="hint"></div>
 </div>
 
-<!-- Media Library modal host -->
-<div id="ml-overlay"  hidden>
-  <div class="ml-sheet"></div>
-</div>
-
-
 <!-- Media Library Modals -->
 <div id="ml-overlay" class="ml-overlay" hidden>
   <div class="ml-sheet" role="dialog" aria-modal="true" aria-labelledby="ml-title"></div>
@@ -72,5 +65,3 @@
 <div id="canvasDropZone" class="canvas-area">
   <!-- Your canvas content goes here -->
 </div>
-
-

@@ -97,21 +97,33 @@ class media_model
         return $st->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public static function allForBoardFiltered(PDO $db, int $boardId, string $q, string $type, string $sort): array
-    {
-        [$where, $params] = self::filterWhere('m', $q, $type);
-        $order = self::orderBy('m', $sort);
+    public static function allForBoardFiltered(PDO $db, int $boardId, string $q, string $type, string $sort, ?int $groupId = null)
+	{
+		$sql = "SELECT vm.* FROM vision_media vm
+				JOIN mood_board_media mbm ON vm.id = mbm.media_id
+				WHERE mbm.board_id=?";
+		$params = [$boardId];
 
-        $sql = "SELECT m.* 
-                FROM vision_media m 
-                JOIN mood_board_media mb ON mb.media_id = m.id
-                WHERE mb.board_id=:bid {$where}
-                ORDER BY {$order}";
-        $st = $db->prepare($sql);
-        $bind = [':bid'=>$boardId] + $params;
-        $st->execute($bind);
-        return $st->fetchAll(PDO::FETCH_ASSOC);
-    }
+		if ($q !== '') {
+			$sql .= " AND (vm.file_name LIKE ? OR vm.mime_type LIKE ?)";
+			$params[] = "%$q%";
+			$params[] = "%$q%";
+		}
+		if ($type !== '') {
+			$sql .= " AND vm.mime_type LIKE ?";
+			$params[] = "$type%";
+		}
+		if ($groupId) {
+			$sql .= " AND vm.group_id=?";
+			$params[] = $groupId;
+		}
+
+		$sql .= " ORDER BY vm.created_at " . ($sort === 'name' ? 'ASC' : 'DESC');
+		$st = $db->prepare($sql);
+		$st->execute($params);
+		return $st->fetchAll(PDO::FETCH_ASSOC);
+	}
+
 	
 	public static function setMediaGroup(PDO $db, int $mediaId, ?int $groupId): void {
 		$db->prepare("UPDATE vision_media SET group_id = ? WHERE id = ?")->execute([$groupId, $mediaId]);

@@ -43,7 +43,7 @@ window.DBL_thumbError = function(img) {
       .catch(() => (TAGS_CACHE = []));
   }
 
-  function loadGroups() {
+  function loadGroups_OLD() {
     if (GROUPS_CACHE) return Promise.resolve(GROUPS_CACHE);
     // A) FIX: use moods/{boardSlug}/groups
     const base = `/api/moods/${encodeURIComponent(boardSlug)}/groups`;
@@ -73,8 +73,39 @@ window.DBL_thumbError = function(img) {
     document.addEventListener('keydown', escCloseOnce, { once:true });
     return true;
   }
+ 
   function escCloseOnce(e){ if (e.key === 'Escape') closeSheet(); }
   function closeSheet(){ if (overlay) overlay.hidden = true; }
+
+//	let GROUPS_CACHE = null;
+
+	async function loadGroups() {
+	  if (GROUPS_CACHE) return GROUPS_CACHE;
+	  try {
+		// If you already fetch groups elsewhere, keep that. This endpoint is the one you said works.
+		const base = `/api/moods/${encodeURIComponent(boardSlug)}/groups`;
+		const res  = await fetch(base, { credentials: 'same-origin' });
+		if (!res.ok) throw new Error('Groups failed');
+		const json = await res.json();
+		GROUPS_CACHE = (json.groups || []).map(g => ({
+		  id: String(g.id),
+		  name: g.name,
+		  slug: g.slug || ''
+		}));
+		// Fill the <select> if present
+		if (groupSel) {
+		  const cur = groupSel.value;
+		  groupSel.innerHTML = `<option value="">All groups</option>`
+			+ GROUPS_CACHE.map(g => `<option value="${g.id}">${g.name}</option>`).join('');
+		  if (cur && GROUPS_CACHE.some(g => g.id === cur)) groupSel.value = cur;
+		}
+		return GROUPS_CACHE;
+	  } catch {
+		GROUPS_CACHE = [];
+		return GROUPS_CACHE;
+	  }
+	}
+
 
   // ===== GROUP MODAL (unchanged UI; posts to /api/media/{id}/group) =====
   async function openGroupModal(mediaId, currentGroupId=null) {
@@ -83,8 +114,16 @@ window.DBL_thumbError = function(img) {
       if (!name) return;
       const fd = new FormData();
       fd.append('group_name', name);
+	  fd.append('board_id', String(boardId)); // <— ensure server can resolve owner
       await fetch(`/api/media/${mediaId}/group`, { method:'POST', body:fd, credentials:'same-origin' });
       loadGroups(); fetchList();
+	// After successful POST /api/media/:id/group …
+	const one = items.find(x => Number(x.id) === Number(mediaId));
+	if (one) {
+	  one.group_id   = String(savedGroup.id || newGroupId || groupId || '');
+	  one.group_name = savedGroup.name || newGroupName || one.group_name || '';
+	  render(); // reapply filters
+	}
       return;
     }
 	  // after a successful POST:
@@ -124,6 +163,7 @@ window.DBL_thumbError = function(img) {
       } else {
         fd.append('group_id', sel || '');
       }
+	  fd.append('board_id', String(boardId)); // <— ensure server can resolve owner
       await fetch(`/api/media/${mediaId}/group`, { method:'POST', body:fd, credentials:'same-origin' });
       closeSheet();
       loadGroups();  // refresh cache
@@ -286,16 +326,28 @@ window.DBL_thumbError = function(img) {
   const grid = document.getElementById('libraryGrid') || document.getElementById('mediaGrid');
   if (!grid) { console.warn('[MediaLibrary] grid container not found'); }
 
-  const tagFilterInput   = document.getElementById('tagFilterInput');
-  const groupFilterSelect = document.getElementById('groupFilterSelect');
-  let tagsMode = 'or';
+  // NEW: group + tags filters
+  const groupSel = document.getElementById('groupFilterSelect')
+               || document.getElementById('mediaGroupFilter')
+               || null;
+  const tagsFilter = document.getElementById('tagFilterInput')
+                 || document.getElementById('mediaTagFilter')
+                 || null;
+  const groupSearch = document.getElementById('groupSearch')
+                  || document.getElementById('mediaGroupSearch')
+                  || null;
+  //const tagsInput   = document.getElementById('tagFilter');     // <input> "Filter by tags (comma)..."
 
-  if (tagFilterInput) {
-    tagFilterInput.addEventListener('input', () => {
-      clearTimeout(tagFilterInput._t);
-      tagFilterInput._t = setTimeout(fetchList, 300);
-    });
-  }
+  //const tagFilterInput   = document.getElementById('tagFilterInput');
+  //const groupFilterSelect = document.getElementById('groupFilterSelect');
+  //let tagsMode = 'or';
+
+  //if (tagFilterInput) {
+    //tagFilterInput.addEventListener('input', () => {
+      //clearTimeout(tagFilterInput._t);
+      //tagFilterInput._t = setTimeout(fetchList, 300);
+    //});
+  //}
 
   if (groupFilterSelect) {
     groupFilterSelect.addEventListener('change', fetchList);
@@ -464,6 +516,24 @@ window.DBL_thumbError = function(img) {
     grid.innerHTML = items.map(templateCard).join('');
     bindCardEvents?.();
   }
+	
+	function applyGroupFilters(list) {
+	  let out = list;
+
+	  // If the API supports group_id, we also set it in fetchList() (below). This
+	  // client‑side filter is a safe fallback for older responses.
+	  const gid = (groupSel && groupSel.value) ? String(groupSel.value) : '';
+	  const gq  = (groupFind && groupFind.value.trim().toLowerCase()) || '';
+
+	  if (gid) {
+		out = out.filter(m => String(m.group_id || '') === gid);
+	  }
+	  if (gq) {
+		out = out.filter(m => (m.group_name || '').toLowerCase().includes(gq));
+	  }
+	  return out;
+	}
+
 
   // prime group filter options once
   loadGroups().then(gs => {
@@ -488,25 +558,51 @@ window.DBL_thumbError = function(img) {
   }
 
   function fetchList() {
-    const qs = new URLSearchParams();
-    qs.set('scope', currentScope);
-    addListFilters(qs);
-    if (boardId) qs.set('board_id', String(boardId));
-    if (typeSel?.value) qs.set('type', typeSel.value);
-    if (sortSel?.value) qs.set('sort', sortSel.value);
-    if (qInput && qInput.value.trim()) qs.set('q', qInput.value.trim());
+	  const qs = new URLSearchParams();
 
-    setStatus('Loading…');
-    fetch(`/api/visions/${encodeURIComponent(apiBaseSlug())}/media?` + qs.toString(), { credentials: 'same-origin' })
-      .then(r => r.json())
-      .then(j => {
-        if (!j.success) throw new Error(j.error || 'Failed');
-        items = j.media || [];
-        render();
-        setStatus('');
-      })
-      .catch(e => setStatus(e.message || 'Load failed', true));
-  }
+	  // Scope
+	  qs.set('scope', currentScope || 'board');
+
+	  // Always include board_id for board scope
+	  if ((currentScope || 'board') === 'board' && boardId) {
+		qs.set('board_id', String(boardId));
+	  }
+
+	  // Existing filters
+	  if (typeSel && typeSel.value)        qs.set('type', typeSel.value);
+	  if (sortSel && sortSel.value)        qs.set('sort', sortSel.value);
+	  if (qInput && qInput.value.trim())   qs.set('q', qInput.value.trim());
+
+	  // NEW: group + tags filters
+	  if (groupSel && groupSel.value && groupSel.value !== 'all') {
+		qs.set('group_id', groupSel.value);
+	  }
+	  if (groupSearch && groupSearch.value.trim()) {
+		// Optional: name search for group (backend may or may not support)
+		qs.set('group_query', groupSearch.value.trim());
+	  }
+	  if (tagsFilter && tagsFilter.value.trim()) {
+		// Comma/space list; backend can split
+		qs.set('tags', tagsFilter.value.trim());
+	  }
+
+	  const url = `/api/visions/${encodeURIComponent(apiBaseSlug())}/media?${qs.toString()}`;
+	  console.debug('[MediaLibrary] fetchList →', url); // <-- so we can verify in the console
+
+	  setStatus('Loading…');
+	  fetch(url, { credentials: 'same-origin' })
+		.then(r => r.json())
+		.then(j => {
+		  if (!j.success) throw new Error(j.error || 'Failed');
+		  items = j.media || [];
+		  render();
+		  setStatus('');
+		})
+		.catch(e => setStatus(e.message || 'Load failed', true));
+	}
+
+
+
 
   function attach(mediaId) {
     const fd = new FormData();
@@ -549,32 +645,47 @@ window.DBL_thumbError = function(img) {
 
   function bindCardEvents() {
     $$('.media-card .menu-toggle', grid).forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const card = btn.closest('.media-card');
-        $$('.media-card .card-menu.open', grid).forEach(m => m.classList.remove('open'));
-        $('.card-menu', card).classList.toggle('open');
-      });
-    });
+	  btn.addEventListener('click', (e) => {
+		e.stopPropagation();
+		const card = btn.closest('.media-card');
+		$$('.media-card .card-menu.open', grid).forEach(m => m.classList.remove('open'));
+		$('.card-menu', card).classList.toggle('open');
+	  });
+	});
     document.addEventListener('click', () => {
-      $$('.media-card .card-menu.open', grid).forEach(m => m.classList.remove('open'));
-    });
+	  $$('.media-card .card-menu.open', grid).forEach(m => m.classList.remove('open'));
+	});
 
-    $$('.media-card .act-attach', grid).forEach(el => el.addEventListener('click', () => attach(el.dataset.id)));
-    $$('.media-card .act-detach', grid).forEach(el => el.addEventListener('click', () => detach(el.dataset.id)));
-    $$('.media-card .act-delete', grid).forEach(el => el.addEventListener('click', () => del(el.dataset.id)));
-    $$('.media-card .act-tags', grid).forEach(el => {
-      el.addEventListener('click', () => {
-        const m = items.find(x => String(x.id) === String(el.dataset.id));
-        editTags(el.dataset.id, m?.tags || []);
-      });
-    });
-    $$('.media-card .act-groups', grid).forEach(el => {
-      el.addEventListener('click', () => {
-        const m = items.find(x => String(x.id) === String(el.dataset.id));
-        editGroups(el.dataset.id, m?.groups || []);
-      });
-    });
+	$$('.media-card .act-attach', grid).forEach(el =>
+	  el.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); attach(el.dataset.id); })
+	);
+	$$('.media-card .act-detach', grid).forEach(el =>
+	  el.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); detach(el.dataset.id); })
+	);
+    $$('.media-card .act-delete', grid).forEach(el =>
+	  el.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); del(el.dataset.id); })
+	);
+	  
+    $$('.media-card .act-tags', grid).forEach(el =>
+	  el.addEventListener('click', async (e) => {
+		e.preventDefault(); e.stopPropagation();
+		const id = Number(el.dataset.id);
+		if (!id) return;
+		// close any open menu before opening the modal
+		$$('.media-card .card-menu.open', grid).forEach(m => m.classList.remove('open'));
+		await editTags(id); // your existing function that calls openTagsModal(...)
+	  })
+	);
+	  
+    $$('.media-card .act-groups', grid).forEach(el =>
+	  el.addEventListener('click', (e) => {
+		e.preventDefault(); e.stopPropagation();
+		const id = Number(el.dataset.id);
+		if (!id) return;
+		$$('.media-card .card-menu.open', grid).forEach(m => m.classList.remove('open'));
+		openGroupModal?.(id); // if you already have it; otherwise leave as-is
+	  })
+	);
 
     $$('.media-card', grid).forEach(card => {
       card.addEventListener('dragstart', (ev) => {
@@ -635,6 +746,27 @@ window.DBL_thumbError = function(img) {
     clearTimeout(qInput._t); qInput._t = setTimeout(fetchList, 250);
   });
 
+  // Group dropdown
+	if (groupSel) {
+	  groupSel.addEventListener('change', fetchList);
+	}
+
+	// Group text search (debounced)
+	if (groupSearch) {
+	  groupSearch.addEventListener('input', () => {
+		clearTimeout(groupSearch._t);
+		groupSearch._t = setTimeout(fetchList, 250);
+	  });
+	}
+				
+	// Debounce helper
+	const debounce = (fn, ms=250) => { let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), ms); }; };
+
+	// Re-fetch when filters change
+	if (groupSel)    groupSel.addEventListener('change', fetchList);
+	if (groupSearch) groupSearch.addEventListener('input', debounce(fetchList, 300));
+	if (tagsFilter)  tagsFilter.addEventListener('input',  debounce(fetchList, 300));
+
   // ===== Upload with per-file progress (kept) =====
   const MAX_PARALLEL = 3;
   const upQueue = [];
@@ -680,7 +812,19 @@ window.DBL_thumbError = function(img) {
 
   function replaceTempWithReal(tmpEl, mediaObj) {
     const wrap = document.createElement('div');
-    wrap.innerHTML = templateCard(mediaObj).trim();
+	console.log("ffff");
+    //wrap.innerHTML = templateCard(mediaObj).trim();
+	wrap.className = 'ml-modal-backdrop';   // keep your existing class name
+	wrap.innerHTML = modalHtml;             // your existing markup build
+
+	// Always append at the very end of <body> so it layers above the grid
+	document.body.appendChild(wrap);
+
+	// (optional but robust) ensure highest stacking context
+	wrap.style.position = 'fixed';
+	wrap.style.inset = '0';        // top:0;right:0;bottom:0;left:0
+	wrap.style.zIndex = '9999';    // higher than cards/menus
+
     const real = wrap.firstElementChild;
     tmpEl.replaceWith(real);
     bindCardEvents?.();
@@ -806,6 +950,93 @@ window.DBL_thumbError = function(img) {
         .catch(e => alert(e.message || 'Add link failed'));
     });
   }
+											  
+	// === Add Link modal (overlay) ===
+	// Call this from the existing linkBtn click. It uses your existing apiBaseSlug(), boardId and fetchList().
+
+	function openLinkModal() {
+	  const modal = document.createElement('div');
+	  modal.className = 'ml-modal';
+	  modal.innerHTML = `
+		<div class="ml-dialog" role="dialog" aria-modal="true" aria-label="Add link">
+		  <div class="ml-head">
+			<div class="ml-title">Add link</div>
+			<button class="ml-close" aria-label="Close">✕</button>
+		  </div>
+		  <div class="ml-body">
+			<label class="ml-label" for="ml-link-url">Paste YouTube URL</label>
+			<input id="ml-link-url" type="url" placeholder="https://www.youtube.com/watch?v=…" class="ml-input" />
+			<div class="ml-hint">Only YouTube links are supported in v1.</div>
+			<div class="ml-error" style="display:none"></div>
+		  </div>
+		  <div class="ml-foot">
+			<button class="ml-btn ghost ml-cancel">Cancel</button>
+			<button class="ml-btn primary ml-save">Add</button>
+		  </div>
+		</div>
+	  `;
+	  document.body.appendChild(modal);
+
+	  const close = () => modal.remove();
+	  modal.querySelector('.ml-close').onclick = close;
+	  modal.querySelector('.ml-cancel').onclick = close;
+
+	  const urlInput = modal.querySelector('#ml-link-url');
+	  const errBox   = modal.querySelector('.ml-error');
+	  urlInput.focus();
+
+	  async function doSubmit() {
+		const url = urlInput.value.trim();
+		if (!url) { errBox.textContent = 'Please paste a YouTube URL.'; errBox.style.display='block'; return; }
+
+		const fd = new FormData();
+		fd.append('url', url);
+		if (typeof boardId !== 'undefined' && boardId) fd.append('board_id', String(boardId));
+
+		try {
+		  const res = await fetch(`/api/visions/${encodeURIComponent(apiBaseSlug())}/media:link`, {
+			method: 'POST',
+			body: fd,
+			credentials: 'same-origin'
+		  });
+		  const j = await res.json();
+		  if (!res.ok || j.error) throw new Error(j.error || 'Failed adding link');
+		  close();
+		  fetchList?.();
+		} catch (e) {
+		  errBox.textContent = e.message || 'Failed adding link';
+		  errBox.style.display = 'block';
+		}
+	  }
+
+	  modal.querySelector('.ml-save').onclick = doSubmit;
+	  urlInput.addEventListener('keydown', e => {
+		if (e.key === 'Enter') { e.preventDefault(); doSubmit(); }
+	  });
+
+	  // close on background click
+	  modal.addEventListener('click', (e) => {
+		if (e.target === modal) close();
+	  });
+	}
+
+	// hook it up – replace your old linkWrap toggle
+	//const linkBtn = document.getElementById('linkBtn');
+	if (linkBtn) linkBtn.addEventListener('click', openLinkModal);
+
+ function trySyncGroupSelectFromText() {
+	  if (!groupSel || !groupSearch || !Array.isArray(window.GROUPS_CACHE)) return;
+	  const t = groupSearch.value.trim().toLowerCase();
+	  if (!t) return;
+	  const hit = window.GROUPS_CACHE.find(g => (g.name || '').toLowerCase() === t);
+	  if (hit) groupSel.value = String(hit.id);
+	}
+
+	if (groupSearch) {
+	  groupSearch.addEventListener('blur', () => {
+		trySyncGroupSelectFromText();
+	  });
+	}
 
   document.addEventListener('DOMContentLoaded', () => {
     const grid = document.getElementById('libraryGrid') || document.getElementById('mediaGrid');
@@ -817,4 +1048,7 @@ window.DBL_thumbError = function(img) {
 
   // Initial load
   fetchList();
+
+  loadGroups(); // fire & forget; select will be filled when ready
+
 })();

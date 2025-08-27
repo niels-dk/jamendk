@@ -203,9 +203,18 @@ html, body { overflow-x: hidden; }
   position:absolute;right:6px;top:6px;background:transparent;border:0;
   color:#9db0d7;font-size:18px;cursor:pointer;z-index:10;padding:5px;background-color: black;
 }
-.media-card .card-menu{
-  display:none;position:absolute;right:8px;top:32px;background:#0e1320;
-  border:1px solid #263149;border-radius:8px;z-index:5
+/* Kebab menu: allow tall lists with scroll and safe viewport padding */
+.media-card .card-menu {
+  position: fixed;            /* we’ll set top/left via JS on open */
+  inset: auto auto auto auto; /* reset */
+  z-index: 9999;
+  max-height: calc(100vh - 24px);
+  overflow-y: auto;
+  will-change: transform;
+}
+/* subtle shadow & rounding already set — keep it */
+.media-card .card-menu.drop-up {
+  /* no special styles needed; class is just a flag if you want an arrow later */
 }
 .media-card .card-menu ul{list-style:none;margin:0;padding:6px}
 .media-card .card-menu li{padding:6px 10px;cursor:pointer;color:#c9d2ea}
@@ -332,4 +341,116 @@ html, body { overflow-x: hidden; }
   .hero-offset{margin-top:32px}
   .home-actions .btn{width:auto}
   .cta .btn{width:100%;justify-content:center}
+}
+
+.media-card.uploading .thumb {
+  position: relative;
+  display: grid;
+  place-items: center;
+  background: #f5f5f5;
+  aspect-ratio: 16 / 9;
+  border-radius: 10px 10px 0 0;
+}
+.media-card.uploading .thumb .thumb-fallback {
+  opacity: .8;
+  font-size: 14px;
+}
+.media-card.uploading .progress {
+  position: absolute;
+  left: 8px; right: 8px; bottom: 8px;
+  height: 6px; border-radius: 999px;
+  background: #e5e7eb; overflow: hidden;
+}
+.media-card.uploading .progress .bar {
+  height: 100%;
+  width: 0%;
+  background: #4f46e5; /* your accent color */
+  transition: width .15s linear;
+}
+
+.media-card.uploading .thumb {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #2a2f3a;
+  border-radius: 10px 10px 0 0;
+  overflow: hidden;
+}
+.media-card.uploading .thumb img {
+  width: 100%; height: 100%; object-fit: cover;
+  filter: saturate(0.95);
+}
+.media-card.uploading .overlay {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(0,0,0,0.35);
+}
+.media-card.uploading .progress {
+  width: 70%; height: 8px; border-radius: 999px;
+  background: rgba(255,255,255,0.35);
+  overflow: hidden;
+}
+.media-card.uploading .progress .bar {
+  height: 100%; width: 0%;
+  background: #8b5cf6;            /* accent */
+  transition: width .12s linear;
+}
+.media-card.uploading.done .overlay { background: rgba(0,0,0,0.25); }
+
+/* --- Consistent button style across library bar --- */
+.library-bar,
+.library-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;        /* still wraps on small screens */
+  margin: 9px 0 10px 0;
+}
+
+.library-bar button,
+.library-actions button {
+  appearance: none;
+  border: 1px solid var(--ui-border, #3b3f4c);
+  background: var(--ui-bg, #1e2230);
+  color: var(--ui-fg, #f1f5f9);
+  padding: 6px 14px;
+  border-radius: 6px;
+  font: 500 14px/1.4 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  cursor: pointer;
+  transition: background .15s, border-color .15s, color .15s;
+}
+
+.library-bar button:hover,
+.library-actions button:hover {
+  background: var(--ui-accent-bg, #374151);
+  border-color: var(--ui-accent, #6366f1);
+}
+
+.library-bar button.active,
+.library-actions button.active {
+  background: var(--primary);
+  border-color: var(--ui-accent, #6366f1);
+  color: #fff;
+}
+
+/* Ensure cards don't clip their menus */
+.media-card { position: relative; z-index: 0; overflow: visible; }
+
+/* When a menu is open, float this card above its neighbors */
+.media-card.menu-open { z-index: 10000; }
+
+/* Menu should sit above anything inside the card */
+.media-card .card-menu {
+  position: absolute;          /* keep using absolute to the card */
+  top: 8px;                    /* adjust as you like */
+  right: 8px;
+  z-index: 10001;
+}
+
+/* Just in case a parent created a clipping context */
+.masonry-cols,
+#libraryGrid,
+#mediaGrid {
+  overflow: visible;
+  position: relative; /* harmless, but gives a stacking context baseline */
 }

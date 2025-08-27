@@ -454,3 +454,85 @@ html, body { overflow-x: hidden; }
   overflow: visible;
   position: relative; /* harmless, but gives a stacking context baseline */
 }
+
+/* Toolbar container */
+.filter-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 8px 0;
+}
+
+/* Pill base */
+.pill {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  border-radius: 999px;
+  background: #1a202b;
+  color: #e6e8eb;
+  border: 1px solid rgba(255,255,255,0.08);
+  padding: 0 14px;
+}
+.pill:hover {
+  border-color: rgba(255,255,255,0.14);
+}
+.pill:focus-within {
+  box-shadow: 0 0 0 3px rgba(10,90,238,0.35);
+}
+
+/* Inputs/selects inside pills */
+.pill input,
+.pill select {
+  background: transparent;
+  border: none;
+  color: inherit;
+  font: inherit;
+  width: 100%;
+  padding: 0;
+  outline: none;
+}
+.pill select {
+  appearance: none;
+  padding-right: 26px; /* room for chevron */
+}
+
+/* Custom chevron for selects */
+.pill select::after {
+  content: '';
+}
+.pill select + :after,
+.pill::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid #9aa4b2;
+  border-bottom: 2px solid #9aa4b2;
+  transform: translateY(-50%) rotate(45deg);
+  pointer-events: none;
+}
+
+/* Icons for Search/Tags */
+.pill-icon {
+  width: 16px;
+  height: 16px;
+  margin-right: 8px;
+  color: #9aa4b2;
+  flex-shrink: 0;
+}
+
+/* Keep icon spacing consistent */
+.search-pill input,
+.tag-pill input {
+  padding-left: 0;
+}
+
+/* Responsive shrink on small screens */
+@media (max-width: 640px) {
+  .filter-toolbar { gap: 8px; }
+  .pill { flex: 1 1 140px; }
+}

@@ -25,45 +25,27 @@
     </div>
   </div>
 
- <!-- Toolbar wrapper -->
-	<div class="filter-toolbar">
-	  <!-- Search input – note: id remains mediaSearch -->
-	  <label class="pill search-pill" for="mediaSearch">
-		<svg class="pill-icon" aria-hidden="true" viewBox="0 0 20 20">
-		  <path fill="currentColor"
-			d="M19.5 18.1l-4.6-4.6a7.5 7.5 0 10-1.4 1.4l4.6 4.6a1 1 0 001.4-1.4zM8.5 14a5.5 5.5 0 110-11 5.5 5.5 0 010 11z">
-		  </path>
-		</svg>
-		<input id="mediaSearch" type="search" placeholder="Search files…" aria-label="Search files">
-	  </label>
+  <!-- Filters -->
+  <div class="library-filters">
+    <input type="text" id="mediaSearch" placeholder="Search…">
+    <select id="mediaTypeFilter">
+      <option value="">All Types</option>
+      <option value="image">Images</option>
+      <option value="gif">GIFs</option>
+      <option value="video">Videos</option>
+      <option value="doc">Docs</option>
+    </select>
+    <select id="mediaSort">
+      <option value="date">Newest</option>
+      <option value="name">Name</option>
+      <option value="type">Type</option>
+      <option value="size">Size</option>
+    </select>
 
-	  <!-- Type select -->
-	  <label class="pill" for="mediaTypeFilter">
-		<select id="mediaTypeFilter" aria-label="Type"></select>
-	  </label>
-
-	  <!-- Groups select -->
-	  <label class="pill" for="groupFilterSelect">
-		<select id="groupFilterSelect" aria-label="Groups"></select>
-	  </label>
-
-	  <!-- Tags input -->
-	  <label class="pill tag-pill" for="tagFilterInput">
-		<svg class="pill-icon" aria-hidden="true" viewBox="0 0 20 20">
-		  <path fill="currentColor"
-			d="M10 2a8 8 0 11-5.657 13.657A8 8 0 0110 2zm1.828 7.828l-3.535 3.536a1 1 0 01-1.414 0l-1.414-1.414a1 1 0 010-1.414l3.536-3.536a1 1 0 011.414 0l1.414 1.414a1 1 0 010 1.414z">
-		  </path>
-		</svg>
-		<input id="tagFilterInput" type="text" placeholder="Filter by tags" aria-label="Filter by tags">
-	  </label>
-
-	  <!-- Sort select -->
-	  <label class="pill" for="mediaSort">
-		<select id="mediaSort" aria-label="Sort"></select>
-	  </label>
-	</div>
-
-
+    <input id="tagFilterInput" placeholder="Filter by tags (comma)…" />
+    <select id="groupFilterSelect">
+      <option value="">All groups</option>
+    </select>
 
     <!-- Global upload pill -->
     <div id="uploadQueuePill" class="upl-pill" hidden>

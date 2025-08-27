@@ -12,7 +12,7 @@
   <div class="library-bar">
     <div class="library-tabs">
       <button class="tab-btn active" data-scope="board" type="button">Board Files</button>
-      <button class="tab-btn" data-scope="vision" type="button">All Vision Files</button>
+      <button class="tab-btn" data-scope="vision" type="button">All Media Files</button>
     </div>
 
     <div class="library-actions">

@@ -40,12 +40,20 @@ function route(string $uri): void
 		// Tags & Groups (global – not under /visions/{slug})
 		'/api/tags'                    => ['media','tags_list'],      // GET
 		//'/api/media/([0-9]+)/tags'     => ['media','update_tags'],    // POST
-		'/api/groups'                  => ['media','groups_list'],    // GET
+		//'/api/groups'                  => ['media','groups_list'],    // GET
 		//'/api/media/([0-9]+)/group'    => ['media','update_group'],   // POST
-		'/api/media/([0-9]+)/group'    => ['media','group'],   // POST
+		//'/api/media/([0-9]+)/group'    => ['media','group'],   // POST
 
 		// Groups (creator/mood scoped)
 		'/api/moods/([A-Za-z0-9]{6,16})/groups' => ['media','groups_list'],
+		
+		// Global groups list/create
+		'/api/groups'            => ['group', 'list'],      // GET
+		'/api/groups/create'     => ['group', 'create'],    // POST
+
+		// Assign or create group for a media item
+		'/api/media/([0-9]+)/group' => ['media', 'setGroup'], // POST
+
 
 		// Media tags (GET returns tags, POST saves tags)
 		'/api/media/([0-9]+)/tags' => ['media','tags'],

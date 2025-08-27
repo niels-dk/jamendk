@@ -94,7 +94,6 @@ class media_model
 		?int $groupId = null,
 		string $tags = ''
 	): array {
-		// We list media for a vision, optionally annotating if attached to a board via LEFT JOIN.
 		$sql = "
 			SELECT
 				vm.id, vm.vision_id, vm.uuid, vm.file_name, vm.mime_type,
@@ -108,14 +107,15 @@ class media_model
 		";
 
 		$params = [':vision_id' => $visionId];
-		if ($boardId) {
-			$params[':board_id'] = $boardId;
-		}
+		if ($boardId) $params[':board_id'] = $boardId;
 
-		// Search
+		// Search (unique placeholders)
 		if ($q !== '') {
-			$sql .= " AND (vm.file_name LIKE :q OR vm.mime_type LIKE :q OR vm.provider_url LIKE :q)";
-			$params[':q'] = '%' . $q . '%';
+			$like = '%' . $q . '%';
+			$sql .= " AND (vm.file_name LIKE :q1 OR vm.mime_type LIKE :q2 OR vm.provider_url LIKE :q3)";
+			$params[':q1'] = $like;
+			$params[':q2'] = $like;
+			$params[':q3'] = $like;
 		}
 
 		// Type filter
@@ -131,7 +131,7 @@ class media_model
 					$sql .= " AND (vm.mime_type LIKE 'video/%' OR vm.provider = 'youtube')";
 					break;
 				case 'doc':
-					$sql .= " AND vm.mime_type = 'application/pdf'";
+					$sql .= " AND (vm.mime_type = 'application/pdf')";
 					break;
 			}
 		}
@@ -144,11 +144,19 @@ class media_model
 
 		// Sort
 		switch ($sort) {
-			case 'name': $sql .= " ORDER BY vm.file_name ASC"; break;
-			case 'type': $sql .= " ORDER BY vm.mime_type ASC, vm.file_name ASC"; break;
-			case 'size': $sql .= " ORDER BY vm.file_size DESC, vm.file_name ASC"; break;
+			case 'name':
+				$sql .= " ORDER BY vm.file_name ASC";
+				break;
+			case 'type':
+				$sql .= " ORDER BY vm.mime_type ASC, vm.file_name ASC";
+				break;
+			case 'size':
+				$sql .= " ORDER BY vm.file_size DESC, vm.file_name ASC";
+				break;
 			case 'date':
-			default:     $sql .= " ORDER BY vm.created_at DESC"; break;
+			default:
+				$sql .= " ORDER BY vm.created_at DESC";
+				break;
 		}
 
 		$st = $db->prepare($sql);
@@ -177,6 +185,7 @@ class media_model
 
 		return $rows;
 	}
+
 
 
     /* ---------------------------------------------------------
@@ -205,10 +214,13 @@ class media_model
 
 		$params = [':board_id' => $boardId];
 
-		// Search
+		// Search (use unique placeholders to avoid HY093)
 		if ($q !== '') {
-			$sql .= " AND (vm.file_name LIKE :q OR vm.mime_type LIKE :q OR vm.provider_url LIKE :q)";
-			$params[':q'] = '%' . $q . '%';
+			$like = '%' . $q . '%';
+			$sql .= " AND (vm.file_name LIKE :q1 OR vm.mime_type LIKE :q2 OR vm.provider_url LIKE :q3)";
+			$params[':q1'] = $like;
+			$params[':q2'] = $like;
+			$params[':q3'] = $like;
 		}
 
 		// Type filter
@@ -224,7 +236,7 @@ class media_model
 					$sql .= " AND (vm.mime_type LIKE 'video/%' OR vm.provider = 'youtube')";
 					break;
 				case 'doc':
-					$sql .= " AND vm.mime_type = 'application/pdf'";
+					$sql .= " AND (vm.mime_type = 'application/pdf')";
 					break;
 			}
 		}
@@ -235,13 +247,21 @@ class media_model
 			$params[':group_id'] = $groupId;
 		}
 
-		// Sort
+		// Sort (use vm.* only)
 		switch ($sort) {
-			case 'name': $sql .= " ORDER BY vm.file_name ASC"; break;
-			case 'type': $sql .= " ORDER BY vm.mime_type ASC, vm.file_name ASC"; break;
-			case 'size': $sql .= " ORDER BY vm.file_size DESC, vm.file_name ASC"; break;
+			case 'name':
+				$sql .= " ORDER BY vm.file_name ASC";
+				break;
+			case 'type':
+				$sql .= " ORDER BY vm.mime_type ASC, vm.file_name ASC";
+				break;
+			case 'size':
+				$sql .= " ORDER BY vm.file_size DESC, vm.file_name ASC";
+				break;
 			case 'date':
-			default:     $sql .= " ORDER BY vm.created_at DESC"; break;
+			default:
+				$sql .= " ORDER BY vm.created_at DESC";
+				break;
 		}
 
 		$st = $db->prepare($sql);
@@ -260,7 +280,7 @@ class media_model
 				foreach ($need as $needle) {
 					foreach ($have as $tag) {
 						if ($tag === $needle || strpos($tag, $needle) !== false) {
-							return true;
+							return true; // ANY match
 						}
 					}
 				}
@@ -270,6 +290,8 @@ class media_model
 
 		return $rows;
 	}
+
+
 
 
     public static function setMediaGroup(PDO $db, int $mediaId, ?int $groupId): void {

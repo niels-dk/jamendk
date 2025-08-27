@@ -20,48 +20,64 @@
       <input id="mediaUploadInput" type="file" name="file[]" multiple style="display:none">
       <button id="linkBtn" type="button" class="lib-btn">Add Link</button>
       <!-- Optional extra actions; keep for layout parity (can hide via CSS if not needed) -->
-      <button id="addNoteBtn" type="button" class="lib-btn ghost" title="Add a sticky note to the canvas">Add Note</button>
-      <button id="addConnectorBtn" type="button" class="lib-btn ghost" title="Add a connector/arrow">Add Connector</button>
+      <!--button id="addNoteBtn" type="button" class="lib-btn ghost" title="Add a sticky note to the canvas">Add Note</button-->
+      <!--button id="addConnectorBtn" type="button" class="lib-btn ghost" title="Add a connector/arrow">Add Connector</button-->
     </div>
   </div>
 
- <!-- Toolbar wrapper -->
+ 	<!-- Filter toolbar -->
 	<div class="filter-toolbar">
-	  <!-- Search input – note: id remains mediaSearch -->
-	  <label class="pill search-pill" for="mediaSearch">
+	  <!-- Search + Type combined pill -->
+	  <label class="pill search-pill">
+		<!-- Magnifier icon -->
 		<svg class="pill-icon" aria-hidden="true" viewBox="0 0 20 20">
 		  <path fill="currentColor"
-			d="M19.5 18.1l-4.6-4.6a7.5 7.5 0 10-1.4 1.4l4.6 4.6a1 1 0 001.4-1.4zM8.5 14a5.5 5.5 0 110-11 5.5 5.5 0 010 11z">
-		  </path>
+			d="M19.5 18.1l-4.6-4.6a7.5 7.5 0 10-1.4 1.4l4.6 4.6a1 1 0 001.4-1.4zM8.5 14a5.5 5.5 0 110-11 5.5 5.5 0 010 11z"></path>
 		</svg>
+		<!-- Search input (id unchanged) -->
 		<input id="mediaSearch" type="search" placeholder="Search files…" aria-label="Search files">
+		<!-- Type select (id unchanged) -->
+		<select id="mediaTypeFilter" aria-label="Type">
+		  <option value="">All Types</option>
+		  <option value="image">Images</option>
+		  <option value="gif">GIFs</option>
+		  <option value="video">Videos</option>
+		  <option value="doc">Docs</option>
+		</select>
 	  </label>
 
-	  <!-- Type select -->
-	  <label class="pill" for="mediaTypeFilter">
-		<select id="mediaTypeFilter" aria-label="Type"></select>
+	  <!-- Groups searchable dropdown (keeps existing ID) -->
+	  <label class="pill group-pill">
+		<!--svg class="pill-icon" aria-hidden="true" viewBox="0 0 20 20">
+		  <path fill="currentColor"
+			d="M12 14a5 5 0 11-10 0 5 5 0 0110 0zm7-5.5V16a4 4 0 01-4 4h-3v-2h3a2 2 0 002-2V8.5h2z"></path>
+		</svg-->
+		<select id="groupFilterSelect" aria-label="Groups">
+		  <option value="">All groups</option>
+		  <!-- existing group options will populate here via PHP -->
+		</select>
 	  </label>
 
-	  <!-- Groups select -->
-	  <label class="pill" for="groupFilterSelect">
-		<select id="groupFilterSelect" aria-label="Groups"></select>
-	  </label>
-
-	  <!-- Tags input -->
-	  <label class="pill tag-pill" for="tagFilterInput">
+	  <!-- Filter by tags (no chevron) -->
+	  <label class="pill tag-pill">
 		<svg class="pill-icon" aria-hidden="true" viewBox="0 0 20 20">
 		  <path fill="currentColor"
-			d="M10 2a8 8 0 11-5.657 13.657A8 8 0 0110 2zm1.828 7.828l-3.535 3.536a1 1 0 01-1.414 0l-1.414-1.414a1 1 0 010-1.414l3.536-3.536a1 1 0 011.414 0l1.414 1.414a1 1 0 010 1.414z">
-		  </path>
+			d="M19.5 18.1l-4.6-4.6a7.5 7.5 0 10-1.4 1.4l4.6 4.6a1 1 0 001.4-1.4zM8.5 14a5.5 5.5 0 110-11 5.5 5.5 0 010 11z"></path>
 		</svg>
 		<input id="tagFilterInput" type="text" placeholder="Filter by tags" aria-label="Filter by tags">
 	  </label>
 
-	  <!-- Sort select -->
-	  <label class="pill" for="mediaSort">
-		<select id="mediaSort" aria-label="Sort"></select>
+	  <!-- Sort (View) select -->
+	  <label class="pill" for="mediaSort">View sort:
+		<select id="mediaSort" aria-label="Sort">
+		  <option value="date">Newest</option>
+		  <option value="name">Name</option>
+		  <option value="type">Type</option>
+		  <option value="size">Size</option>
+		</select>
 	  </label>
 	</div>
+
 
 
 

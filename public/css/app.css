@@ -463,7 +463,7 @@ html, body { overflow-x: hidden; }
   padding: 8px 0;
 }
 
-/* Pill base */
+/* Base pill styles */
 .pill {
   position: relative;
   display: flex;
@@ -482,27 +482,25 @@ html, body { overflow-x: hidden; }
   box-shadow: 0 0 0 3px rgba(10,90,238,0.35);
 }
 
-/* Inputs/selects inside pills */
+/* Inputs and selects inside pills */
 .pill input,
 .pill select {
-  background: transparent;
+  background: #1a202b;
   border: none;
   color: inherit;
   font: inherit;
-  width: 100%;
-  padding: 0;
+  width: auto;
+  flex: 1;
+  padding: 4px;
   outline: none;
+  margin: 0px 0px 0px 11px;
 }
 .pill select {
   appearance: none;
-  padding-right: 26px; /* room for chevron */
+  padding-right: 26px; /* space for chevron */
 }
 
-/* Custom chevron for selects */
-.pill select::after {
-  content: '';
-}
-.pill select + :after,
+/* Custom chevron */
 .pill::after {
   content: '';
   position: absolute;
@@ -515,8 +513,13 @@ html, body { overflow-x: hidden; }
   transform: translateY(-50%) rotate(45deg);
   pointer-events: none;
 }
+.tag-pill::after,
+.search-pill select::after {
+  /* Hide chevron on tag input; show only on selects */
+  display: none;
+}
 
-/* Icons for Search/Tags */
+/* Icons */
 .pill-icon {
   width: 16px;
   height: 16px;
@@ -525,14 +528,12 @@ html, body { overflow-x: hidden; }
   flex-shrink: 0;
 }
 
-/* Keep icon spacing consistent */
-.search-pill input,
-.tag-pill input {
-  padding-left: 0;
-}
-
-/* Responsive shrink on small screens */
+/* Responsive wrap */
 @media (max-width: 640px) {
-  .filter-toolbar { gap: 8px; }
-  .pill { flex: 1 1 140px; }
+  .filter-toolbar {
+    gap: 8px;
+  }
+  .pill {
+    flex: 1 1 140px;
+  }
 }

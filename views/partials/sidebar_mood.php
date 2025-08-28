@@ -1,10 +1,10 @@
 <?php
 // Context menu for Mood boards
+$slug = htmlspecialchars($board['slug'] ?? '');
 ?>
 <nav class="board-nav">
-  <a href="#info">Info</a>
-  <a href="#media">Media</a>
-  <a href="#colours">Colours</a>
-  <a href="#references">References</a>
-  <a href="#selected-settings" class="js-open-settings">Selected Item Settings</a>
+  <a href="/moods/<?= $slug ?>">Info</a>
+  <a href="/moods/<?= $slug ?>/media">Media</a>
+  <a href="/moods/<?= $slug ?>/canvas">Canvas</a>
+  <a href="/moods/<?= $slug ?>/settings" class="js-open-settings">Settings</a>
 </nav>

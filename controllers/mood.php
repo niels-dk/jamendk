@@ -32,9 +32,8 @@ class mood_controller
     {
         global $db, $user;
         $draft = mood_model::createDraft($db, (int)$user['id']);
-        // redirect to edit form for the new board
-        header('Location: /moods/' . $draft['slug'] . '/edit');
-        exit;
+			header('Location: /moods/' . $draft['slug'] . '/media'); // previously '/edit'
+		exit;
     }
 
     /** GET /moods/{slug} – display a mood board. */

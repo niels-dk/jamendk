@@ -57,6 +57,14 @@ function route(string $uri): void
 
 		// Media tags (GET returns tags, POST saves tags)
 		'/api/media/([0-9]+)/tags' => ['media','tags'],
+		
+		// Canvas API endpoints (list, create, update, delete and bulk update)
+		// These endpoints manage items on the canvas associated with a mood board.
+		'/api/moods/([A-Za-z0-9]{6,16})/canvas/items'                 => ['canvas','listItems'],
+		'/api/moods/([A-Za-z0-9]{6,16})/canvas/items/create'          => ['canvas','createItem'],
+		'/api/moods/([A-Za-z0-9]{6,16})/canvas/items/([0-9]+)'        => ['canvas','updateItem'],
+		'/api/moods/([A-Za-z0-9]{6,16})/canvas/items/([0-9]+)/delete' => ['canvas','deleteItem'],
+		'/api/moods/([A-Za-z0-9]{6,16})/canvas/items/bulk'            => ['canvas','bulkUpdate'],
 
         // Budget endpoints
         '/api/visions/([A-Za-z0-9]{6,16})/budget' => ['vision','getBudget'],  // GET
@@ -129,12 +137,14 @@ function route(string $uri): void
         '/moods/update'                            => ['mood', 'update'],
         '/moods/([A-Za-z0-9]{6,16})'               => ['mood', 'show'],
 		
+		'/moods/([A-Za-z0-9]{6,16})/canvas'        => ['mood', 'canvas'],
 		'/moods/([A-Za-z0-9]{6,16})/media'         => ['mood', 'edit'],
         '/moods/([A-Za-z0-9]{6,16})/edit'          => ['mood', 'edit'],
         '/moods/([A-Za-z0-9]{6,16})/archive'       => ['mood', 'archive'],
         '/moods/([A-Za-z0-9]{6,16})/unarchive'     => ['mood', 'unarchive'],
         '/moods/([A-Za-z0-9]{6,16})/delete'        => ['mood', 'destroy'],
         '/moods/([A-Za-z0-9]{6,16})/restore'       => ['mood', 'restore'],
+		
 		/*
         '/moods/([A-Za-z0-9]{6,16})/edit'          => ['mood', 'edit'],
         '/moods/([A-Za-z0-9]{6,16})/archive'       => ['mood', 'archive'],

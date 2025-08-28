@@ -127,4 +127,24 @@ class mood_controller
         header('Location: /dashboard/moods/trash');
         exit;
     }
+	
+	/** 
+	 * GET /moods/{slug}/canvas – display the interactive canvas for a mood board.
+	 * Loads the board and renders the canvas view. Returns 404 if not found.
+	 * The view will pull in a JavaScript file to power the editor.
+	 */
+	public static function canvas(string $slug): void
+	{
+		global $db;
+		$board = mood_model::get($db, $slug);
+		if (!$board) { http_response_code(404); echo 'Mood board not found'; return; }
+		$boardType = 'mood';
+		// Append “Canvas” to the page title
+		$pageTitle = htmlspecialchars(($board['title'] ?? '') . ' Canvas');
+		ob_start();
+		include __DIR__ . '/../views/mood_canvas.php';
+		$content = ob_get_clean();
+		include __DIR__ . '/../views/layout.php';
+	}
+
 }

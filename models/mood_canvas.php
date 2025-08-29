@@ -101,10 +101,31 @@ class mood_canvas_model
 		return ['id'=>$id] + $data;
 	}
 
-	public function deleteArrow($id) {
-		$stmt = $this->db->prepare("DELETE FROM mood_board_arrows WHERE id=?");
-		$stmt->execute([$id]);
-	}
+	public static function deleteArrow(PDO $db, int $arrowId): void
+    {
+        $db->prepare("DELETE FROM mood_board_arrows WHERE id=?")->execute([$arrowId]);
+    }
+	
+	public static function createArrow(PDO $db, int $boardId, int $fromItem, int $toItem, string $style = 'solid'): array
+    {
+        $stmt = $db->prepare("INSERT INTO mood_board_arrows 
+            (board_id, from_item_id, to_item_id, style, created_at, updated_at) 
+            VALUES (:board_id, :from_item_id, :to_item_id, :style, NOW(), NOW())");
+        $stmt->execute([
+            ':board_id'     => $boardId,
+            ':from_item_id' => $fromItem,
+            ':to_item_id'   => $toItem,
+            ':style'        => $style,
+        ]);
+        $id = (int)$db->lastInsertId();
+        return [
+            'id'            => $id,
+            'board_id'      => $boardId,
+            'from_item_id'  => $fromItem,
+            'to_item_id'    => $toItem,
+            'style'         => $style,
+        ];
+    }
 
 	
 	public function deleteItemById(int $id): void {

@@ -80,14 +80,12 @@
   window.addEventListener('resize', ensureOverlaySizing);
 
   function applyTransforms() {
-    // Move/scale HTML items
-    content.style.transform = `translate(${stageOffset.x}px, ${stageOffset.y}px) scale(${stageScale})`;
-    content.style.transformOrigin = '0 0';
-    // Move/scale SVG groups (both back & front) so lines/ghost follow perfectly
-    const tf = `translate(${stageOffset.x}, ${stageOffset.y}) scale(${stageScale})`;
-    svgBack.setAttribute('transform', tf);
-    svgFront.setAttribute('transform', tf);
-  }
+	  content.style.transform = `translate(${stageOffset.x}px, ${stageOffset.y}px) scale(${stageScale})`;
+	  content.style.transformOrigin = '0 0';
+	  const tf = `translate(${stageOffset.x}, ${stageOffset.y}) scale(${stageScale})`;
+	  svgBack.setAttribute('transform', tf);
+	  svgFront.setAttribute('transform', tf);
+	}
 
   function centerFromData(d) {
     const cx = (Number(d.x)||0) + (Number(d.w)||0)/2;
@@ -123,26 +121,25 @@
 	  else stage.style.cursor = 'default';
 	}, true);
 
-	 // Click: delete line in Delete tool, else select it for feedback
-	svgEl.addEventListener('click', (e) => {
-	  const line = e.target.closest && e.target.closest('line');
-	  if (!line) return;
-	  const id = Number(line.dataset.id);
+	 // Click handler on lines
+		svgEl.addEventListener('click', (e) => {
+		  const line = e.target.closest && e.target.closest('line');
+		  if (!line) return;
+		  const id = Number(line.dataset.id);
 
-	  if (currentTool === 'delete') {
-		e.stopPropagation();
-		deleteConnector(id);   // uses smart bulk delete below
-		return;
-	  }
-	  // select feedback (blue)
-	  if (selectedConnectorId && linesById[selectedConnectorId]) {
-		linesById[selectedConnectorId].classList.remove('connector-selected');
-	  }
-	  selectedConnectorId = id;
-	  line.classList.add('connector-selected');
-	}, true); 
+		  if (currentTool === 'delete') {
+			e.stopPropagation();
+			deleteConnector(id);
+			return;
+		  }
 
-
+		  // Otherwise select the connector visually
+		  if (selectedConnectorId && linesById[selectedConnectorId]) {
+			linesById[selectedConnectorId].classList.remove('connector-selected');
+		  }
+		  selectedConnectorId = id;
+		  line.classList.add('connector-selected');
+		}, true);
 
   // ---------- API helper ----------
   async function api(method, url, body) {
@@ -335,13 +332,17 @@
     renderItem(item); setSingleSelection(item.id);
   }
   async function createConnectorBetween(aId, bId) {
-	  const r = await apiPOST(`/api/moods/${slug}/arrows`, {
+	  if (!aId || !bId || aId === bId) return;
+	  const res = await apiPOST(`/api/moods/${slug}/arrows`, {
 		from_item_id: Number(aId),
-		to_item_id: Number(bId),
-		style: 'solid'
+		to_item_id:   Number(bId),
+		style:        'solid'
 	  });
-	  const conn = r.data && r.data.id ? r.data : {
-		id: Date.now(), from_item_id:aId, to_item_id:bId, style:'solid'
+	  const conn = res && res.id ? res : {
+		id: Date.now(),
+		from_item_id: aId,
+		to_item_id:   bId,
+		style:        'solid'
 	  };
 	  renderConnector(conn);
 	}
@@ -564,15 +565,14 @@
 
   async function deleteConnector(id) {
 	  const line = linesById[id];
-
-	  const res = await deleteItemSmart(id);
-	  if (!res.ok) { console.warn('[canvas] delete failed for connector', id, res.status, res.data); return; }
-
-	  if (line?.parentNode) line.parentNode.removeChild(line);
-	  delete linesById[id];
-	  Object.keys(connectorsByItem).forEach(k => connectorsByItem[k]?.delete(id));
-	  delete itemsById[id];
-	  if (selectedConnectorId === id) selectedConnectorId = null;
+	  const res = await apiPOST(`/api/moods/${slug}/arrows/${id}:delete`);
+	  if (res && res.ok) {
+		if (line && line.parentNode) line.parentNode.removeChild(line);
+		delete linesById[id];
+		Object.keys(connectorsByItem).forEach(k => connectorsByItem[k]?.delete(id));
+		delete itemsById[id];
+		if (selectedConnectorId === id) selectedConnectorId = null;
+	  }
 	}
 
 
@@ -655,7 +655,7 @@
     }
   }
 
-  //stage.addEventListener('mousedown', handleDown);
+  stage.addEventListener('mousedown', handleDown);
 
   document.addEventListener('mousemove', (e) => {
     if (isPanning) {

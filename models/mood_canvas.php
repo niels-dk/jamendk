@@ -84,4 +84,72 @@ class mood_canvas_model
             self::updateItem($db, $id, $fields);
         }
     }
+	
+	public function saveArrow($slug, $data) {
+		$stmt = $this->db->prepare("INSERT INTO mood_board_arrows 
+			(board_id, from_item_id, to_item_id, style, color, label, created_at, updated_at) 
+			VALUES ((SELECT id FROM mood_boards WHERE slug=?),?,?,?,?,?,NOW(),NOW())");
+		$stmt->execute([
+			$slug,
+			$data['from_item_id'] ?? null,
+			$data['to_item_id'] ?? null,
+			$data['style'] ?? 'solid',
+			$data['color'] ?? null,
+			$data['label'] ?? null,
+		]);
+		$id = $this->db->lastInsertId();
+		return ['id'=>$id] + $data;
+	}
+
+	public function deleteArrow($id) {
+		$stmt = $this->db->prepare("DELETE FROM mood_board_arrows WHERE id=?");
+		$stmt->execute([$id]);
+	}
+
+	
+	public function deleteItemById(int $id): void {
+    // Look up the item to know its kind and payload
+		$stmt = $this->db->prepare("SELECT id, kind, payload FROM mood_board_items WHERE id=? LIMIT 1");
+		$stmt->execute([$id]);
+		$row = $stmt->fetch(PDO::FETCH_ASSOC);
+		if (!$row) return;
+
+		$kind = $row['kind'];
+
+		if ($kind === 'connector') {
+			// Remove ONLY the connector
+			$del = $this->db->prepare("DELETE FROM mood_board_items WHERE id=?");
+			$del->execute([$id]);
+			return;
+		}
+
+		// Non-connector (text, frame, etc.): delete the item…
+		$delItem = $this->db->prepare("DELETE FROM mood_board_items WHERE id=?");
+		$delItem->execute([$id]);
+
+		// …and cascade: remove any connectors referencing it (payload->a.item or payload->b.item)
+		// JSON_EXTRACT works on MySQL 5.7+ / MariaDB 10.2+. If older, decode in PHP and loop.
+		$delCon = $this->db->prepare("
+			DELETE FROM mood_board_items
+			WHERE kind='connector'
+			  AND (
+				JSON_EXTRACT(payload, '$.a.item') = ?
+				OR JSON_EXTRACT(payload, '$.b.item') = ?
+			  )
+		");
+		try {
+			$delCon->execute([$id, $id]);
+		} catch (\Throwable $e) {
+			// Fallback for DBs without JSON_EXTRACT: do a PHP-side cleanup
+			$sel = $this->db->query("SELECT id, payload FROM mood_board_items WHERE kind='connector'");
+			while ($c = $sel->fetch(PDO::FETCH_ASSOC)) {
+				$p = json_decode($c['payload'], true) ?: [];
+				$a = $p['a']['item'] ?? null; $b = $p['b']['item'] ?? null;
+				if ($a == $id || $b == $id) {
+					$this->db->prepare("DELETE FROM mood_board_items WHERE id=?")->execute([$c['id']]);
+				}
+			}
+		}
+	}
+
 }

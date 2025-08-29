@@ -97,19 +97,15 @@ class canvas_controller
      * cannot be found a 404 is returned.  Deletion is permanent and
      * cannot be undone through this endpoint.
      */
-    public static function deleteItem(string $slug, int $itemId): void
-    {
-        global $db;
-        $board = mood_model::get($db, $slug);
-        if (!$board) {
-            http_response_code(404);
-            echo json_encode(['error' => 'Board not found']);
-            return;
-        }
-        mood_canvas_model::deleteItem($db, $itemId);
-        header('Content-Type: application/json');
-        echo json_encode(['success' => true]);
-    }
+    // controllers/canvas.php
+	public function deleteItem($slug, $id)
+	{
+		require_once __DIR__ . '/../models/mood_canvas.php';
+		$m = new MoodCanvas();
+		$m->deleteItemById((int)$id);
+		echo json_encode(['ok' => true]);
+	}
+
 
     /**
      * PATCH /api/moods/{slug}/canvas/items/bulk
@@ -134,4 +130,20 @@ class canvas_controller
         header('Content-Type: application/json');
         echo json_encode(['success' => true]);
     }
+	
+	public function saveArrow($slug) {
+		require_once __DIR__ . '/../models/mood_canvas.php';
+		$m = new MoodCanvas();
+		$data = json_decode(file_get_contents("php://input"), true) ?: [];
+		$arrow = $m->saveArrow($slug, $data);
+		echo json_encode($arrow);
+	}
+
+	public function deleteArrow($slug, $id) {
+		require_once __DIR__ . '/../models/mood_canvas.php';
+		$m = new MoodCanvas();
+		$m->deleteArrow((int)$id);
+		echo json_encode(['ok'=>true]);
+	}
+
 }

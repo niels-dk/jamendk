@@ -5,8 +5,6 @@
  * Encapsulates CRUD operations for the `canvas_items` table.
  */
 class MoodCanvas {
-	private static function db() { return db(); } // your existing helper
-	
     public static function deleteItem($slug, $id) {
         $db = db();
         return $db->prepare("DELETE FROM mood_board_items WHERE id=? AND board_id=(SELECT id FROM mood_boards WHERE slug=?)")
@@ -22,111 +20,84 @@ class MoodCanvas {
 
 class mood_canvas_model
 {
-    // Return all visible items for a board
-	  public static function listItems($slug) {
-		$sql = "SELECT i.* FROM mood_board_items i
-				JOIN mood_boards b ON b.id = i.board_id
-				WHERE b.slug = ? AND COALESCE(i.hidden,0) = 0
-				ORDER BY i.z ASC, i.id ASC";
-		$stm = self::db()->prepare($sql);
-		$stm->execute([$slug]);
-		return $stm->fetchAll(PDO::FETCH_ASSOC);
-	  }
+    public static function listItems(PDO $db, int $boardId): array {
+        $st = $db->prepare("SELECT id, kind, x, y, w, h, z, rotation, locked, hidden, payload_json
+                            FROM canvas_items WHERE board_id=? ORDER BY z ASC, id ASC");
+        $st->execute([$boardId]);
+        $rows = $st->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($rows as &$row) {
+            $row['payload'] = $row['payload_json'] ? json_decode($row['payload_json'], true) : null;
+            unset($row['payload_json']);
+        }
+        return $rows;
+    }
 
-    public static function createItem($slug, array $data) {
-		$db = self::db();
-		$db->beginTransaction();
-		try {
-		  $boardId = self::boardId($slug);
-		  $sql = "INSERT INTO mood_board_items
-					(board_id, kind, x, y, w, h, z, rotation, locked, hidden, payload)
-				  VALUES (?,?,?,?,?,?,?,?,?,?,?)";
-		  $stm = $db->prepare($sql);
-		  $stm->execute([
-			$boardId,
-			$data['kind'] ?? 'note',
-			(int)($data['x'] ?? 0), (int)($data['y'] ?? 0),
-			(int)($data['w'] ?? 0), (int)($data['h'] ?? 0),
-			(int)($data['z'] ?? 0),
-			(int)($data['rotation'] ?? 0),
-			(int)($data['locked'] ?? 0),
-			(int)($data['hidden'] ?? 0),
-			json_encode($data['payload'] ?? (object)[])
-		  ]);
-		  $id = (int)$db->lastInsertId();
-		  $db->commit();
-		  return self::getItem($boardId, $id);
-		} catch(\Throwable $e) { $db->rollBack(); throw $e; }
-	  }
+    public static function createItem(PDO $db, int $boardId, string $kind, int $x, int $y, int $w, int $h, $payload): array {
+        $payloadJson = $payload !== null ? json_encode($payload) : null;
+        $sql = "INSERT INTO canvas_items (board_id, kind, x, y, w, h, z, rotation, locked, hidden, payload_json, created_at, updated_at)
+                VALUES (:board_id, :kind, :x, :y, :w, :h, 0, 0, 0, 0, :payload_json, NOW(), NOW())";
+        $st  = $db->prepare($sql);
+        $st->execute([
+            ':board_id'     => $boardId,
+            ':kind'         => $kind,
+            ':x'            => $x,
+            ':y'            => $y,
+            ':w'            => $w,
+            ':h'            => $h,
+            ':payload_json' => $payloadJson,
+        ]);
+        $id = (int)$db->lastInsertId();
+        return [
+            'id'       => $id,
+            'kind'     => $kind,
+            'x'        => $x,
+            'y'        => $y,
+            'w'        => $w,
+            'h'        => $h,
+            'z'        => 0,
+            'rotation' => 0,
+            'locked'   => 0,
+            'hidden'   => 0,
+            'payload'  => $payload,
+        ];
+    }
 
-    public static function updateItem($slug, int $id, array $data)
-	{
-		$boardId = self::boardId($slug);
-		// allow x,y,w,h, z, rotation, locked, hidden, payload
-		$fields = [];
-		$args   = [];
-		foreach (['x','y','w','h','z','rotation','locked','hidden'] as $k) {
-		  if (array_key_exists($k, $data)) { $fields[] = "$k=?"; $args[] = (int)$data[$k]; }
-		}
-		if (array_key_exists('payload', $data)) { $fields[] = "payload=?"; $args[] = json_encode($data['payload']); }
-		if (!$fields) return true;
-		$args[] = $boardId; $args[] = $id;
-		$sql = "UPDATE mood_board_items SET ".implode(',', $fields)." WHERE board_id=? AND id=?";
-		return self::db()->prepare($sql)->execute($args);
-	  }
-	
-	public static function deleteHardOrSoft($slug, int $id, bool $hardDelete=false) {
-		$boardId = self::boardId($slug);
-		if ($hardDelete) {
-		  $sql = "DELETE FROM mood_board_items WHERE board_id=? AND id=?";
-		  return self::db()->prepare($sql)->execute([$boardId, $id]);
-		}
-		// soft: hidden=1
-		$sql = "UPDATE mood_board_items SET hidden=1 WHERE board_id=? AND id=?";
-		return self::db()->prepare($sql)->execute([$boardId, $id]);
-	  }
+    public static function updateItem(PDO $db, int $itemId, array $fields): void {
+        if (!$fields) return;
+        $allowed = ['x','y','w','h','z','rotation','locked','hidden','payload_json'];
+        $set     = [];
+        $vals    = [];
+        foreach ($fields as $k => $v) {
+            if (!in_array($k, $allowed, true)) {
+                if ($k === 'payload') {
+                    $set[]       = 'payload_json = :payload_json';
+                    $vals[':payload_json'] = is_array($v) ? json_encode($v) : $v;
+                }
+                continue;
+            }
+            $set[]       = "$k = :$k";
+            $vals[":$k"] = $v;
+        }
+        if (!$set) return;
+        $sql  = "UPDATE canvas_items SET " . implode(',', $set) . ", updated_at = NOW() WHERE id = :id";
+        $vals[':id'] = $itemId;
+        $st   = $db->prepare($sql);
+        $st->execute($vals);
+    }
 
     public static function deleteItem(PDO $db, int $itemId): void {
         $db->prepare("DELETE FROM canvas_items WHERE id=?")->execute([$itemId]);
     }
 
-    public static function bulkUpdate($slug, array $body) {
-		$ops = $body['ops'] ?? [];
-		$boardId = self::boardId($slug);
-		$db = self::db(); $db->beginTransaction();
-		try {
-		  foreach ($ops as $op) {
-			$type = $op['op'] ?? '';
-			$id   = isset($op['id']) ? (int)$op['id'] : 0;
-			if ($type === 'delete' && $id) {
-			  // soft delete so the frontend won’t see it on next listItems()
-			  $db->prepare("UPDATE mood_board_items SET hidden=1 WHERE board_id=? AND id=?")->execute([$boardId,$id]);
-			} elseif ($type === 'update' && $id) {
-			  // allow position/size updates
-			  $x = (int)($op['x'] ?? 0); $y = (int)($op['y'] ?? 0);
-			  $w = (int)($op['w'] ?? 0); $h = (int)($op['h'] ?? 0);
-			  $db->prepare("UPDATE mood_board_items SET x=?,y=?,w=?,h=? WHERE board_id=? AND id=?")->execute([$x,$y,$w,$h,$boardId,$id]);
-			}
-		  }
-		  $db->commit();
-		  return true;
-		} catch(\Throwable $e) { $db->rollBack(); return false; }
-	  }
-	
-	 // helpers
-  private static function boardId($slug) {
-    $stm = self::db()->prepare("SELECT id FROM mood_boards WHERE slug=?");
-    $stm->execute([$slug]);
-    $id = (int)$stm->fetchColumn();
-    if (!$id) throw new RuntimeException('Board not found');
-    return $id;
-  }
-
-  private static function getItem($boardId, $id) {
-    $stm = self::db()->prepare("SELECT * FROM mood_board_items WHERE board_id=? AND id=?");
-    $stm->execute([$boardId, $id]);
-    return $stm->fetch(PDO::FETCH_ASSOC);
-  }
+    public static function bulkUpdate(PDO $db, int $boardId, array $moves): void {
+        foreach ($moves as $move) {
+            if (!is_array($move) || !isset($move['id'])) continue;
+            $id = (int)$move['id'];
+            $fields = $move;
+            unset($fields['id']);
+            self::updateItem($db, $id, $fields);
+        }
+    }
 	
 	public function saveArrow($slug, $data) {
 		$stmt = $this->db->prepare("INSERT INTO mood_board_arrows 

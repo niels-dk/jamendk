@@ -10,9 +10,7 @@
   const toolPill= document.getElementById('tool-pill');
 
   const slug    = window.boardSlug || '';
-  //const apiBase = `/api/moods/${slug}/canvas/items`;
-  // We’ll resolve this at runtime before doing anything.
-  let apiBase = null;
+  const apiBase = `/api/moods/${slug}/canvas/items`;
 
   if (!stage || !content || !svgEl) {
     console.error('[canvas] missing DOM nodes'); return;
@@ -39,7 +37,7 @@
   let panStart    = { x: 0, y: 0 };
 
   let selectedIds = new Set();
-  let selectedConnectorId = null;
+  let selectedConnectorId = null; // single declaration
 
   // maps
   const itemsById   = Object.create(null); // id -> {data, el}
@@ -56,6 +54,7 @@
     const r = stage.getBoundingClientRect();
     return { x:(cx - r.left - stageOffset.x)/stageScale, y:(cy - r.top - stageOffset.y)/stageScale };
   }
+	
   function ensureOverlaySizing() {
     const w = stage.clientWidth || 1200, h = stage.clientHeight || 800;
     svgEl.setAttribute('width',  String(w));
@@ -74,6 +73,7 @@
     const tfSvg = `translate(${stageOffset.x}, ${stageOffset.y}) scale(${stageScale})`;
     svgBack.setAttribute('transform', tfSvg);
     svgFront.setAttribute('transform', tfSvg);
+    // expose scale for helpers that read it
     window.stageScale = stageScale;
   }
 
@@ -81,70 +81,92 @@
     currentTool = t;
     toolbar?.querySelectorAll('[data-action]').forEach(b => b.classList.toggle('active', b.dataset.action === t));
     if (toolPill) toolPill.textContent = `Tool: ${t}${snapOn?' • Snap':''}`;
+    // 4-arrow cursor when pan is active
     stage.style.cursor = (t === 'pan') ? 'move' : '';
   }
-  window.moodCanvas = Object.assign(window.moodCanvas || {}, { setTool:setActiveTool });
+  //window.moodCanvas = Object.assign(window.moodCanvas || {}, { setTool:setActiveTool });
+	window.moodCanvas = Object.assign(window.moodCanvas || {}, {
+	  setTool: setActiveTool,
+	  debugDelete: (id) => deleteItemSmart(Number(id))
+	});
 
-  // ---------- API with deep logs ----------
+  // ---------- API ----------
   async function api(method, url, body) {
-    const t0 = performance.now();
-    console.groupCollapsed(`%c[canvas→API] ${method} ${url}`, 'color:#6b7280');
-    if (body !== undefined) console.debug('payload →', body);
-    try {
-      const res = await fetch(url, {
-        method,
-        headers: { 'Accept':'application/json', ...(body ? {'Content-Type':'application/json'} : {}) },
-        body: body ? JSON.stringify(body) : undefined
-      });
-      const ms = (performance.now() - t0).toFixed(1);
-      let data = null; try { data = await res.json(); } catch {}
-      console.debug('status  ←', res.status, res.ok ? '(OK)' : '(NON-OK)', `${ms}ms`);
-      console.debug('response ←', data);
-      if (!res.ok) console.warn('[canvas] API non-OK:', method, url, res.status, data);
-      console.groupEnd();
-      return { ok: res.ok, status: res.status, data };
-    } catch (e) {
-      console.error(`[canvas→API] network error`, e);
-      console.groupEnd();
-      return { ok:false, status:0, data:null };
-    }
-  }
+	  const t0 = performance.now();
+	  const pretty = (v) => { try { return JSON.stringify(v); } catch { return String(v); } };
+
+	  console.groupCollapsed(`%c[canvas→API] ${method} ${url}`, 'color:#6b7280');
+	  if (body !== undefined) console.debug('payload →', body);
+
+	  try {
+		const res = await fetch(url, {
+		  method,
+		  headers: { 'Accept':'application/json', ...(body ? {'Content-Type':'application/json'} : {}) },
+		  body: body ? JSON.stringify(body) : undefined
+		});
+		const ms = (performance.now() - t0).toFixed(1);
+		let data = null;
+		try { data = await res.json(); } catch { /* non-JSON or empty */ }
+
+		console.debug('status  ←', res.status, res.ok ? '(OK)' : '(NON-OK)');
+		if (data !== null) console.debug('response ←', data);
+		else               console.debug('response ← (no JSON)');
+
+		if (!res.ok) console.warn('[canvas] API non-OK:', method, url, res.status, data);
+		console.groupEnd();
+
+		return { ok: res.ok, status: res.status, data };
+	  } catch (e) {
+		const ms = (performance.now() - t0).toFixed(1);
+		console.error(`%c[canvas→API] network error after ${ms}ms`, 'color:#ef4444', e);
+		console.groupEnd();
+		return { ok:false, status:0, data:null };
+	  }
+	}
+
   const apiGET   = (u)=> api('GET', u);
   const apiPOST  = (u,b)=> api('POST', u, b);
   const apiPATCH = (u,b)=> api('POST', u, b); // router maps POST to update endpoint
 
-  // ---------- Delete with 3-step fallback + logs ----------
-  async function deleteItemSmart(id) {
+ 	// Delete: try BULK first (guaranteed route), then /:id/delete, then soft-delete (hidden:1)
+	async function deleteItemSmart(id) {
+	  
 	  console.groupCollapsed(`%c[deleteItemSmart] id=${id}`, 'color:#0ea5e9');
 
 	  // 1) BULK
 	  const bulkPayload = { ops: [{ op:'delete', id:Number(id) }] };
-	  console.debug('try BULK →', bulkPayload);
+	  console.debug('bulk →', bulkPayload);
 	  const bulk = await api('POST', `${apiBase}/bulk`, bulkPayload);
 	  if (bulk.ok && (bulk.data?.success === true || bulk.status === 200)) {
-		console.info('BULK reported success');
-		console.groupEnd(); return bulk;
+		console.info('[deleteItemSmart] bulk reported success');
+		console.groupEnd();
+		return bulk;
 	  }
-	  console.warn('BULK not effective', bulk.status, bulk.data);
+	  console.warn('[deleteItemSmart] bulk failed or not effective', bulk.status, bulk.data);
 
 	  // 2) direct /:id/delete
 	  const direct = await api('POST', `${apiBase}/${id}/delete`);
 	  if (direct.ok && (direct.data?.success === true || direct.status === 200)) {
-		console.info('DIRECT reported success');
-		console.groupEnd(); return direct;
+		console.info('[deleteItemSmart] direct /id/delete reported success');
+		console.groupEnd();
+		return direct;
 	  }
-	  console.warn('DIRECT delete failed', direct.status, direct.data);
+	  console.warn('[deleteItemSmart] direct delete failed', direct.status, direct.data);
 
 	  // 3) soft-delete fallback (hidden:1)
 	  const soft = await api('POST', `${apiBase}/${id}`, { hidden: 1 });
 	  if (soft.ok && (soft.data?.success === true || soft.status === 200)) {
-		console.info('SOFT delete (hidden:1) reported success');
+		console.info('[deleteItemSmart] soft delete (hidden:1) reported success');
 	  } else {
-		console.error('SOFT delete failed', soft.status, soft.data);
+		console.error('[deleteItemSmart] soft delete failed too', soft.status, soft.data);
 	  }
 	  console.groupEnd();
+					  return await api('POST', `/api/moods/${slug}/items/${id}:delete`);
 	  return soft;
 	}
+
+
+
 
 
   // ---------- renderers ----------
@@ -186,37 +208,43 @@
 
   // render connector EXPECTING payload.a.item + payload.b.item
   function renderConnector(item) {
-	  if (item.hidden) return;
+    if (item.hidden) return;
+    // item.payload: { a:{item:idA}, b:{item:idB}, style:'straight' }
+    const aId = item.payload?.a?.item, bId = item.payload?.b?.item;
 
-	  const vis = document.createElementNS('http://www.w3.org/2000/svg','line');
-	  vis.dataset.id = String(item.id);
-	  vis._payload   = item.payload;
-	  vis.classList.add('connector-line');
-	  vis.setAttribute('stroke', '#888');
-	  vis.setAttribute('stroke-width', '2');
-	  vis.setAttribute('stroke-linecap', 'round');
-	  vis.setAttribute('pointer-events', 'stroke');
+    // Visible line
+    const vis = document.createElementNS('http://www.w3.org/2000/svg','line');
+    vis.dataset.id = String(item.id);
+    vis._payload   = item.payload;                 // keep payload reference for updates
+    vis.classList.add('connector-line');           // CSS hover/selected uses this
+    vis.setAttribute('stroke', '#888');
+    vis.setAttribute('stroke-width', '2');
+    vis.setAttribute('stroke-linecap', 'round');
+    vis.setAttribute('pointer-events', 'stroke');  // click/hover directly on visible line
 
-	  const hit = document.createElementNS('http://www.w3.org/2000/svg','line');
-	  hit.dataset.id = String(item.id);
-	  hit.classList.add('connector-hit');
-	  hit.setAttribute('stroke', '#000');
-	  hit.setAttribute('stroke-opacity', '0');
-	  hit.setAttribute('stroke-width', '16');
-	  hit.setAttribute('pointer-events', 'stroke');
+    // Wide invisible hit line (easier clicking)
+    const hit = document.createElementNS('http://www.w3.org/2000/svg','line');
+    hit.dataset.id = String(item.id);
+    hit.classList.add('connector-hit');
+    hit.setAttribute('stroke', '#000');
+    hit.setAttribute('stroke-opacity', '0');
+    hit.setAttribute('stroke-width', '12');
+    hit.setAttribute('pointer-events', 'stroke');
 
-	  hit.addEventListener('mouseenter', () => vis.classList.add('connector-hover'));
-	  hit.addEventListener('mouseleave', () => vis.classList.remove('connector-hover'));
+    // Append to back layer (under items visually; still clickable)
+    // Order: hit first, then visible—so CSS like ".connector-hit:hover + .connector-line" could work.
+    svgBack.appendChild(hit);
+    svgBack.appendChild(vis);
 
-	  svgBack.appendChild(hit);
-	  svgBack.appendChild(vis);
+    linesById[item.id]    = vis;
+    lineHitsById[item.id] = hit;
 
-	  linesById[item.id]    = vis;
-	  lineHitsById[item.id] = hit;
+    // reverse index: which connectors touch an item
+    if (aId) (connectorsByItem[aId] ||= new Set()).add(item.id);
+    if (bId) (connectorsByItem[bId] ||= new Set()).add(item.id);
 
-	  updateConnectorLine(item.id);
-	}
-
+    updateConnectorLine(item.id);
+  }
 
   function updateConnectorLine(connId) {
     const line = linesById[connId]; if (!line) return;
@@ -262,73 +290,69 @@
     const body = { kind:'connector', x:0,y:0,w:0,h:0, payload:{ a:{item:Number(aId)}, b:{item:Number(bId)}, style:'straight' } };
     const r = await apiPOST(`${apiBase}/create`, body);
     const conn = r.data && r.data.id ? r.data : Object.assign({ id: Date.now() }, body);
-    itemsById[conn.id] = { data: conn };
+    itemsById[conn.id] = { data: conn }; // keep data map
     renderConnector(conn);
   }
 
   // ---------- delete helpers ----------
   async function deleteItem(id) {
-    console.groupCollapsed(`%c[deleteItem] id=${id}`, 'color:#10b981');
-    const entry = itemsById[id];
-    if (!entry) { console.warn('no entry found'); console.groupEnd(); return; }
+	  console.groupCollapsed(`%c[deleteItem] id=${id}`, 'color:#10b981');
+	  const entry = itemsById[id];
+	  if (!entry) { console.warn('no entry found in itemsById'); console.groupEnd(); return; }
 
-    const r = await deleteItemSmart(id);
-    console.debug('server result →', r);
+	  const r = await deleteItemSmart(id);
+	  console.debug('server result →', r);
 
-    if (!r.ok) { console.warn('server did not OK delete; abort DOM removal'); console.groupEnd(); return; }
+	  if (!r.ok) { console.warn('server did not OK delete; aborting DOM removal'); console.groupEnd(); return; }
 
-    if (entry.el?.parentNode) { entry.el.parentNode.removeChild(entry.el); console.debug('removed DOM'); }
-    delete itemsById[id];
-
-    const set = connectorsByItem[id];
-    if (set) {
-      set.forEach(cid => {
-        const L = linesById[cid]; if (L?.parentNode) L.parentNode.removeChild(L);
-        const H = lineHitsById[cid]; if (H?.parentNode) H.parentNode.removeChild(H);
-        delete linesById[cid]; delete lineHitsById[cid];
-        Object.keys(connectorsByItem).forEach(k => connectorsByItem[k]?.delete(cid));
-        console.debug('removed connector', cid, 'linked to', id);
-      });
-      delete connectorsByItem[id];
-    }
-    console.groupEnd();
-  }
-
-  // Try candidates in order and pick the first that works.
-	async function resolveApiBase() {
-	  const bases = [
-		`/api/moods/${slug}/canvas/items`,
-		`/api/moods/${slug}/items`
-	  ];
-	  for (const base of bases) {
-		const probe = await api('GET', base);
-		if (probe.ok && (Array.isArray(probe.data) || probe.data === null || probe.status === 200)) {
-		  console.info('[canvas] using API base:', base);
-		  return base;
-		}
-		console.warn('[canvas] base probe failed:', base, probe.status, probe.data);
+	  // Remove DOM node
+	  if (entry.el?.parentNode) {
+		entry.el.parentNode.removeChild(entry.el);
+		console.debug('removed element from DOM');
 	  }
-	  throw new Error('No items API found for this board');
+	  delete itemsById[id];
+
+	  // Remove any connected lines
+	  const set = connectorsByItem[id];
+	  if (set) {
+		set.forEach(cid => {
+		  const L = linesById[cid]; if (L?.parentNode) L.parentNode.removeChild(L);
+		  const H = lineHitsById?.[cid]; if (H?.parentNode) H.parentNode.removeChild(H);
+		  delete linesById[cid];
+		  if (lineHitsById) delete lineHitsById[cid];
+		  Object.keys(connectorsByItem).forEach(k => connectorsByItem[k]?.delete(cid));
+		  console.debug('removed connector', cid, 'linked to', id);
+		});
+		delete connectorsByItem[id];
+	  }
+	  console.groupEnd();
 	}
+
+
   async function deleteConnector(id) {
-    console.groupCollapsed(`%c[deleteConnector] id=${id}`, 'color:#f59e0b');
-    const line = linesById[id]; if (!line) { console.warn('no <line> for id', id); console.groupEnd(); return; }
+	  console.groupCollapsed(`%c[deleteConnector] id=${id}`, 'color:#f59e0b');
+	  const line = linesById[id];
+	  if (!line) { console.warn('no <line> found for id', id); console.groupEnd(); return; }
 
-    const res = await deleteItemSmart(id);
-    console.debug('server result →', res);
-    if (!res?.ok) { console.warn('server did not OK delete; abort DOM removal'); console.groupEnd(); return; }
+	  const res = await deleteItemSmart(id);
+	  console.debug('server result →', res);
 
-    const hit = lineHitsById[id];
-    if (hit?.parentNode) hit.parentNode.removeChild(hit);
-    if (line.parentNode) line.parentNode.removeChild(line);
-    delete lineHitsById[id]; delete linesById[id];
-    Object.keys(connectorsByItem).forEach(k => connectorsByItem[k]?.delete(id));
-    delete itemsById[id];
-    if (selectedConnectorId === id) selectedConnectorId = null;
+	  if (!res?.ok) { console.warn('server did not OK delete; aborting DOM removal'); console.groupEnd(); return; }
 
-    console.info('connector removed from DOM and maps');
-    console.groupEnd();
-  }
+	  const hit = lineHitsById?.[id];
+	  if (hit?.parentNode) hit.parentNode.removeChild(hit);
+	  if (line.parentNode) line.parentNode.removeChild(line);
+	  if (lineHitsById) delete lineHitsById[id];
+	  delete linesById[id];
+	  Object.keys(connectorsByItem).forEach(k => connectorsByItem[k]?.delete(id));
+	  delete itemsById[id]; // harmless if not present
+	  if (selectedConnectorId === id) selectedConnectorId = null;
+
+	  console.info('connector removed from DOM and maps');
+	  console.groupEnd();
+		return await api('POST', `/api/moods/${slug}/arrows/${id}:delete`);
+	}
+
 
   // ---------- pointer + tools ----------
   stage.addEventListener('mousedown', onDown);
@@ -338,12 +362,15 @@
     const empty  = (tgt === stage || tgt === content || tgt === svgEl || tgt === svgBack || tgt === svgFront);
 
     if (currentTool === 'pan') {
-      isPanning = true; panStart.x = e.clientX; panStart.y = e.clientY; stage.style.cursor = 'grabbing'; return;
+      isPanning = true; panStart.x = e.clientX; panStart.y = e.clientY;
+      stage.style.cursor = 'grabbing';
+      return;
     }
 
     if (currentTool === 'delete') {
       if (itemEl) return void deleteItem(Number(itemEl.dataset.id));
-      return; // (lines handled via svgBack click)
+      // lines handled by svgBack click listener
+      return;
     }
 
     if (currentTool === 'select') {
@@ -352,31 +379,47 @@
       return;
     }
 
-    if (currentTool === 'text' && empty)  { const p = logicalFromClient(e.clientX, e.clientY); return void createNoteAt(p.x, p.y); }
-    if (currentTool === 'frame' && empty) { const p = logicalFromClient(e.clientX, e.clientY); return void createFrameAt(p.x, p.y); }
+    if (currentTool === 'text' && empty) {
+      const p = logicalFromClient(e.clientX, e.clientY);
+      return void createNoteAt(p.x, p.y);
+    }
+    if (currentTool === 'frame' && empty) {
+      const p = logicalFromClient(e.clientX, e.clientY);
+      return void createFrameAt(p.x, p.y);
+    }
 
-    if (currentTool === 'resize' && itemEl) { beginResizeItem(Number(itemEl.dataset.id), e.clientX, e.clientY); return; }
-    if (currentTool === 'connector' && itemEl) { beginConnectDrag(Number(itemEl.dataset.id), e.clientX, e.clientY); return; }
+    if (currentTool === 'resize' && itemEl) {
+      beginResizeItem(Number(itemEl.dataset.id), e.clientX, e.clientY);
+      return;
+    }
+
+    // ✅ Connector tool: start drag from an item
+    if (currentTool === 'connector' && itemEl) {
+      beginConnectDrag(Number(itemEl.dataset.id), e.clientX, e.clientY);
+      return;
+    }
   }
-
-  // Click on a connector (hit or visible): delete (if Delete tool) or select
+		
+  // Click on a connector (hit or visible line): delete (if Delete tool) or select (feedback)
   svgBack.addEventListener('click', (e) => {
-	  const L = (e.target.closest && e.target.closest('line')) || null;
-	  if (!L) return;
-	  const id = Number(L.dataset.id);
+    const lineEl = (e.target.closest && e.target.closest('line')) || null;
+    if (!lineEl) return;
+    const id = Number(lineEl.dataset.id);
 
-	  if (currentTool === 'delete') {
-		e.stopPropagation();
-		deleteConnector(id);
-		return;
-	  }
+    if (currentTool === 'delete') {
+      e.stopPropagation();
+      deleteConnector(id);
+      return;
+    }
 
-	  if (selectedConnectorId && linesById[selectedConnectorId]) {
-		linesById[selectedConnectorId].classList.remove('connector-selected');
-	  }
-	  selectedConnectorId = id;
-	  linesById[id]?.classList.add('connector-selected');
-	}, true);
+    // selection feedback on visible line
+    if (selectedConnectorId && linesById[selectedConnectorId]) {
+      linesById[selectedConnectorId].classList.remove('connector-selected');
+    }
+    selectedConnectorId = id;
+    const vis = linesById[id];
+    if (vis) vis.classList.add('connector-selected');
+  }, true);
 
   document.addEventListener('mousemove', (e) => {
     if (isPanning) {
@@ -388,7 +431,10 @@
     if (marquee) updateMarquee(e.clientX, e.clientY);
   });
   document.addEventListener('mouseup', () => {
-    if (isPanning) { isPanning = false; if (currentTool === 'pan') stage.style.cursor = 'move'; }
+    if (isPanning) {
+      isPanning = false;
+      if (currentTool === 'pan') stage.style.cursor = 'move';
+    }
     if (marquee) endMarquee();
   });
 
@@ -512,6 +558,7 @@
     connectDrag.tempLine.setAttribute('y1', String(ca.cy));
     connectDrag.tempLine.setAttribute('x2', String(p.x));
     connectDrag.tempLine.setAttribute('y2', String(p.y));
+    // highlight hover
     const el = document.elementFromPoint(cx, cy);
     const hit = el?.closest?.('.canvas-item');
     const hid = hit ? Number(hit.dataset.id) : null;
@@ -533,45 +580,35 @@
     if (hid && hid !== from) createConnectorBetween(from, hid);
   }
 
-  // ---------- keyboard shortcuts ----------
+  // Keyboard delete / backspace
   window.addEventListener('keydown', (e) => {
-	  if (e.key === 'Delete' || e.key === 'Backspace') {
-		const tag = (e.target && e.target.tagName || '').toLowerCase();
-		if (tag === 'input' || tag === 'textarea' || e.target?.isContentEditable) return;
-		e.preventDefault();
-		if (selectedIds && selectedIds.size) [...selectedIds].forEach(id => deleteItem(id));
-		else if (selectedConnectorId) deleteConnector(selectedConnectorId);
-	  }
-	}, true);
-
+    if (e.key === 'Delete' || e.key === 'Backspace') {
+      const tag = (e.target && e.target.tagName || '').toLowerCase();
+      if (tag === 'input' || tag === 'textarea' || e.target?.isContentEditable) return;
+      e.preventDefault();
+      if (selectedIds && selectedIds.size) {
+        [...selectedIds].forEach(id => deleteItem(id));
+      } else if (selectedConnectorId) {
+        deleteConnector(selectedConnectorId);
+      }
+    }
+  }, true);
 
   // -------- init --------
   (async function init() {
-	  try {
-		ensureOverlaySizing();
+    ensureOverlaySizing();
+    const r = await apiGET(apiBase);
+    const arr = Array.isArray(r.data) ? r.data : [];
 
-		// 1) Resolve working API base
-		apiBase = await resolveApiBase();
+    // render items then connectors (respect hidden)
+    arr.filter(i => i.kind !== 'connector' && !i.hidden).forEach(renderItem);
+    arr.filter(i => i.kind === 'connector' && !i.hidden).forEach(c => {
+      itemsById[c.id] = { data: c };
+      renderConnector(c);
+    });
 
-		// 2) Load items
-		const r = await api('GET', apiBase);
-		// Normalize payload: some APIs return the array directly, some wrap it.
-		const arr = Array.isArray(r.data)
-		  ? r.data
-		  : (Array.isArray(r.data?.items) ? r.data.items : []);
+    setActiveTool('select');
+    applyTransforms();
+  })();
 
-		// 3) Render items then connectors (respect hidden if your model sets it)
-		arr.filter(i => i.kind !== 'connector' && !i.hidden).forEach(renderItem);
-		arr.filter(i => i.kind === 'connector' && !i.hidden).forEach(c => {
-		  itemsById[c.id] = { data: c };
-		  renderConnector(c);
-		});
-
-		setActiveTool('select');
-		applyTransforms();
-	  } catch (err) {
-		console.error('[canvas] init failed:', err);
-	  }
-	})();
 })();
-	

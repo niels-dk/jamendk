@@ -14,8 +14,7 @@
 require_once __DIR__ . '/../models/mood.php';
 require_once __DIR__ . '/../models/mood_canvas.php';
 
-//class canvas_controller
-class canvas
+class canvas_controller
 {
     /**
      * GET /api/moods/{slug}/canvas/items

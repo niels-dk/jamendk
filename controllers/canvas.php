@@ -98,13 +98,13 @@ class canvas_controller
      * cannot be undone through this endpoint.
      */
     // controllers/canvas.php
-	public function deleteItem($slug, $id)
-	{
-		require_once __DIR__ . '/../models/mood_canvas.php';
-		$m = new MoodCanvas();
-		$m->deleteItemById((int)$id);
-		echo json_encode(['ok' => true]);
+	public static function deleteItem($slug, $id) {
+		require_once __DIR__.'/../models/mood_canvas.php';
+		$ok = MoodCanvas::deleteItem($slug, (int)$id);
+		header('Content-Type: application/json');
+		echo json_encode(['success'=>$ok]);
 	}
+
 
 
     /**
@@ -139,32 +139,29 @@ class canvas_controller
 		echo json_encode($arrow);
 	}
 
-	public function deleteArrow(string $slug, int $arrowId): void
-	{
-		global $db;
-		$board = mood_model::get($db, $slug);
-		if (!$board) { http_response_code(404); echo json_encode(['error' => 'Board not found']); return; }
-
-		mood_canvas_model::deleteArrow($db, $arrowId);
+	public static function deleteArrow($slug, $id) {
+		require_once __DIR__.'/../models/mood_canvas.php';
+		$ok = MoodCanvas::deleteArrow($slug, (int)$id);
 		header('Content-Type: application/json');
-		echo json_encode(['ok' => true]);
+		echo json_encode(['success'=>$ok]);
 	}
-	
+
+
 	public function createArrow(string $slug): void
 	{
 		global $db;
 		$board = mood_model::get($db, $slug);
-		if (!$board) { http_response_code(404); echo json_encode(['error' => 'Board not found']); return; }
+		if (!$board) { http_response_code(404); echo json_encode(['error'=>'Board not found']); return; }
 
-		// Get JSON input (from POST)
-		$data = json_decode(file_get_contents('php://input'), true) ?? [];
-		$fromItem = (int)($data['from_item_id'] ?? 0);
-		$toItem   = (int)($data['to_item_id'] ?? 0);
-		$style    = $data['style'] ?? 'solid';
+		$data = json_decode(file_get_contents('php://input'), true) ?: [];
+		$from = (int)($data['from_item_id'] ?? 0);
+		$to   = (int)($data['to_item_id'] ?? 0);
+		$style = $data['style'] ?? 'solid';
 
-		$arrow = mood_canvas_model::createArrow($db, (int)$board['id'], $fromItem, $toItem, $style);
+		$arrow = mood_canvas_model::createArrow($db, (int)$board['id'], $from, $to, $style);
 		header('Content-Type: application/json');
 		echo json_encode($arrow);
 	}
+
 
 }

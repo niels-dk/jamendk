@@ -545,7 +545,7 @@ html, body { overflow-x: hidden; }
 
 /* --- Layering: content above connectors --- */
 #canvasContent { position:absolute; inset:0; z-index:2; }
-#canvasOverlay { z-index:1; pointer-events:auto; }
+#canvasOverlay { position:absolute; inset:0; z-index:1; pointer-events:auto; }
 #canvasOverlay, #canvasOverlay * { width:100%; height:100%; display:block; }
 
 /* Back group receives clicks; dashed preview should NOT */
@@ -554,7 +554,9 @@ html, body { overflow-x: hidden; }
 
 /* Hover + selected styles for connectors */
 #overlayBack line:hover { stroke:#60a5fa; stroke-width:3; }
-#overlayBack line.connector-selected { stroke:#3b82f6; stroke-width:3; }
+#overlayBack line.connector-line { pointer-events: stroke; }          /* normal */
+#overlayBack line.connector-line:hover { stroke:#60a5fa; stroke-width:3; }
+#overlayBack line.connector-selected   { stroke:#3b82f6; stroke-width:3; }
 
 /* --- Snap grid (toggled by JS on #canvasStage) --- */
 #canvasStage.snap-on {
@@ -569,7 +571,7 @@ line.connector-selected { stroke: #4a90e2; stroke-width: 3; }
 
 /* --- Items, selection & connector-hover --- */
 .canvas-item.selected { outline: 2px solid #4a90e2; outline-offset: 0; }
-.canvas-item.connect-hover { outline: 2px dashed #22c55e; outline-offset: 2px; }
+.canvas-item.connect-hover { outline:2px dashed #22c55e; }
 
 /* --- Marquee (rubberband) --- */
 .marquee {

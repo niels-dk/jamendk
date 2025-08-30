@@ -69,6 +69,7 @@ function route(string $uri): void
 		//'/api/moods/([A-Za-z0-9]{6,16})/arrows/([0-9]+):delete' 	  => ['canvas','deleteArrow'],
 		'/api/moods/([A-Za-z0-9]{6,16})/arrows'                       => ['canvas','createArrow'], // POST
 		'/api/moods/([A-Za-z0-9]{6,16})/arrows/([0-9]+):delete'       => ['canvas','deleteArrow'], // POST
+		'/api/moods/([A-Za-z0-9]{6,16})/items/([0-9]+):delete' 		  => ['mood_items','delete'],
 
         // Budget endpoints
         '/api/visions/([A-Za-z0-9]{6,16})/budget' => ['vision','getBudget'],  // GET

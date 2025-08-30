@@ -1,75 +1,62 @@
-/* mood-canvas.js — stable, no dup declarations; connectors under items; pan/zoom in sync */
+/* Mood Canvas – items + connectors via /canvas/items only (no /arrows) */
 (function () {
   'use strict';
 
   // ---------- DOM ----------
-  const stage   = document.getElementById('canvasStage');    // container DIV
-  const content = document.getElementById('canvasContent');  // HTML items live here (absolute DIVs)
-  const svgEl   = document.getElementById('canvasOverlay');  // <svg id="canvasOverlay">
+  const stage   = document.getElementById('canvasStage');
+  const content = document.getElementById('canvasContent');
+  const svgEl   = document.getElementById('canvasOverlay');
   const toolbar = document.getElementById('canvas-toolbar') || document.querySelector('[data-canvas-toolbar]');
   const toolPill= document.getElementById('tool-pill');
 
-  // Create/attach the two overlay groups once (back = permanent lines, front = dashed preview)
+  const slug    = window.boardSlug || '';
+  const apiBase = `/api/moods/${slug}/canvas/items`;
+
+  if (!stage || !content || !svgEl) {
+    console.error('[canvas] missing DOM nodes'); return;
+  }
+
+  // Ensure back/front groups exist
   let svgBack  = document.getElementById('overlayBack');
   let svgFront = document.getElementById('overlayFront');
-  if (svgEl && !svgBack)  { svgBack  = document.createElementNS('http://www.w3.org/2000/svg','g'); svgBack.id  = 'overlayBack';  svgEl.appendChild(svgBack); }
-  if (svgEl && !svgFront) { svgFront = document.createElementNS('http://www.w3.org/2000/svg','g'); svgFront.id = 'overlayFront'; svgEl.appendChild(svgFront); }
-	
+  if (!svgBack)  { svgBack  = document.createElementNS('http://www.w3.org/2000/svg','g'); svgBack.id  = 'overlayBack';  svgEl.appendChild(svgBack); }
+  if (!svgFront) { svgFront = document.createElementNS('http://www.w3.org/2000/svg','g'); svgFront.id = 'overlayFront'; svgEl.appendChild(svgFront); }
+
+  // Accept clicks on lines
+  svgEl.style.pointerEvents = 'auto';
   svgBack.setAttribute('pointer-events', 'auto');
   svgFront.setAttribute('pointer-events', 'none');
 
-  const slug    = window.boardSlug || '';
-  const apiBase = `/api/moods/${slug}/canvas/items`;
-  if (!stage || !content || !svgEl || !svgBack || !svgFront) { console.error('[canvas] missing DOM nodes'); return; }
-
   // ---------- state ----------
   let currentTool = 'select';
-  let snapToGrid  = false;
-
-  let stageOffset = { x: 0, y: 0 }; // pan
-  let stageScale  = 1;              // zoom
+  let snapOn = false;
+  let stageOffset = { x: 0, y: 0 };
+  let stageScale  = 1;
 
   let isPanning   = false;
   let panStart    = { x: 0, y: 0 };
 
-  let draggingGroup = null;      // [{id, dx, dy}]
-  let selectedIds   = new Set();
+  let selectedIds = new Set();
+  let selectedConnectorId = null; // single declaration
 
-  let resizing      = null;      // { id, handle, startMouse, startBox }
-  let movingSingle  = null;      // { id, startMouse, startPos } (center move in resize tool)
-
-  // Drag-to-connect state
-  let connectDrag   = null;      // { fromId, tempLine, hoverId }
-
-  // Data + element maps
-  const itemsById   = Object.create(null); // id -> { data, el }
-  const linesById   = Object.create(null); // connectorId -> <line>
+  // maps
+  const itemsById   = Object.create(null); // id -> {data, el}
+  const linesById   = Object.create(null); // connector id -> <line> (visible)
+  const lineHitsById= Object.create(null); // connector id -> <line> (wide hit)
   const connectorsByItem = Object.create(null); // itemId -> Set(connectorIds)
 
-  // Marquee
+  // marquee
   let marquee = null, marqueeStart = null;
-	
-  let selectedConnectorId = null;
-  
+
   // ---------- utils ----------
-  const clampInt = (v) => (Number.isFinite(v) ? (v | 0) : 0);
-  const snap     = (n) => snapToGrid ? Math.round(n / 8) * 8 : n;
-
-  const isEmptySpace = (t) => (t === stage || t === content);
-  const getItemFromTarget = (t) => t?.closest?.('.canvas-item') || null;
-
-  function logicalFromClient(clientX, clientY) {
-    const rect = stage.getBoundingClientRect();
-    return {
-      x: (clientX - rect.left - stageOffset.x) / stageScale,
-      y: (clientY - rect.top  - stageOffset.y) / stageScale
-    };
+  const snap = (n)=> snapOn ? Math.round(n/8)*8 : n;
+  function logicalFromClient(cx, cy) {
+    const r = stage.getBoundingClientRect();
+    return { x:(cx - r.left - stageOffset.x)/stageScale, y:(cy - r.top - stageOffset.y)/stageScale };
   }
-
+	
   function ensureOverlaySizing() {
-    // make sure the SVG fills the stage and has a viewBox
-    const w = stage.clientWidth || stage.offsetWidth || 1200;
-    const h = stage.clientHeight || stage.offsetHeight || 800;
+    const w = stage.clientWidth || 1200, h = stage.clientHeight || 800;
     svgEl.setAttribute('width',  String(w));
     svgEl.setAttribute('height', String(h));
     if (!svgEl.getAttribute('viewBox')) {
@@ -80,434 +67,455 @@
   window.addEventListener('resize', ensureOverlaySizing);
 
   function applyTransforms() {
-	  content.style.transform = `translate(${stageOffset.x}px, ${stageOffset.y}px) scale(${stageScale})`;
-	  content.style.transformOrigin = '0 0';
-	  const tf = `translate(${stageOffset.x}, ${stageOffset.y}) scale(${stageScale})`;
-	  svgBack.setAttribute('transform', tf);
-	  svgFront.setAttribute('transform', tf);
-	}
-
-  function centerFromData(d) {
-    const cx = (Number(d.x)||0) + (Number(d.w)||0)/2;
-    const cy = (Number(d.y)||0) + (Number(d.h)||0)/2;
-    return { cx, cy };
+    const tf = `translate(${stageOffset.x}px, ${stageOffset.y}px) scale(${stageScale})`;
+    content.style.transform = tf;
+    content.style.transformOrigin = '0 0';
+    const tfSvg = `translate(${stageOffset.x}, ${stageOffset.y}) scale(${stageScale})`;
+    svgBack.setAttribute('transform', tfSvg);
+    svgFront.setAttribute('transform', tfSvg);
+    // expose scale for helpers that read it
+    window.stageScale = stageScale;
   }
-  const ensureSet = (map, key) => (map[key] || (map[key] = new Set()));
 
-  function setActiveToolButton(action) {
-    // keep internal state in sync
-    currentTool = action;
-    if (toolbar) {
-      toolbar.querySelectorAll('[data-action]')
-        .forEach(b => b.classList.toggle('active', b.dataset.action === action));
-    }
-    stage.style.cursor =
-      action === 'pan'    ? 'move' :
-      action === 'select' ? 'default' :
-      action === 'resize' ? 'nwse-resize' : 'crosshair';
-    if (toolPill) toolPill.textContent = `Tool: ${action}${snapToGrid ? ' • Snap' : ''}`;
-    updateSelectionUI();
+  function setActiveTool(t) {
+    currentTool = t;
+    toolbar?.querySelectorAll('[data-action]').forEach(b => b.classList.toggle('active', b.dataset.action === t));
+    if (toolPill) toolPill.textContent = `Tool: ${t}${snapOn?' • Snap':''}`;
+    // 4-arrow cursor when pan is active
+    stage.style.cursor = (t === 'pan') ? 'move' : '';
   }
-  // Simple public API for debugging / external UI
-  window.moodCanvas = window.moodCanvas || {};
-  window.moodCanvas.setTool = (action) => setActiveToolButton(action);
-  window.moodCanvas.getTool = () => currentTool;
+  //window.moodCanvas = Object.assign(window.moodCanvas || {}, { setTool:setActiveTool });
+	window.moodCanvas = Object.assign(window.moodCanvas || {}, {
+	  setTool: setActiveTool,
+	  debugDelete: (id) => deleteItemSmart(Number(id))
+	});
 
-	svgEl.addEventListener('mousemove', (e) => {
-	  const overLine = !!e.target.closest?.('line');
-	  if (overLine && currentTool === 'delete') stage.style.cursor = 'pointer';
-	  else if (currentTool === 'pan') stage.style.cursor = 'move';
-	  else if (currentTool === 'resize') stage.style.cursor = 'nwse-resize';
-	  else stage.style.cursor = 'default';
-	}, true);
-
-	 // Click handler on lines
-		svgEl.addEventListener('click', (e) => {
-		  const line = e.target.closest && e.target.closest('line');
-		  if (!line) return;
-		  const id = Number(line.dataset.id);
-
-		  if (currentTool === 'delete') {
-			e.stopPropagation();
-			deleteConnector(id);
-			return;
-		  }
-
-		  // Otherwise select the connector visually
-		  if (selectedConnectorId && linesById[selectedConnectorId]) {
-			linesById[selectedConnectorId].classList.remove('connector-selected');
-		  }
-		  selectedConnectorId = id;
-		  line.classList.add('connector-selected');
-		}, true);
-
-  // ---------- API helper ----------
+  // ---------- API ----------
   async function api(method, url, body) {
-    let data = null, ok = false, status = 0;
-    try {
-      const res = await fetch(url, {
-        method,
-        headers: { 'Accept':'application/json', ...(body ? {'Content-Type':'application/json'} : {}) },
-        body: body ? JSON.stringify(body) : undefined
-      });
-      status = res.status; ok = res.ok;
-      try { data = await res.json(); } catch { data = null; }
-    } catch (e) {
-      console.warn('[canvas] network error:', method, url, e);
-      return { ok:false, status:0, data:null };
-    }
-    if (!ok) console.warn('[canvas] API non-OK:', method, url, status, data);
-    return { ok, status, data };
-  }
-	  
-  // Tries canonical /delete; if 404/Not OK, falls back to bulk op
-	async function deleteItemSmart(id) {
-	  // Try POST /items/:id/delete
-	  let res = await api('POST', `${apiBase}/${id}/delete`);
-	  if (res.ok) return res;
+	  const t0 = performance.now();
+	  const pretty = (v) => { try { return JSON.stringify(v); } catch { return String(v); } };
 
-	  // Fallback: POST /items/bulk with { op:'delete', id }
-	  res = await api('POST', `${apiBase}/bulk`, { ops: [{ op: 'delete', id: Number(id) }] });
-	  return res;
+	  console.groupCollapsed(`%c[canvas→API] ${method} ${url}`, 'color:#6b7280');
+	  if (body !== undefined) console.debug('payload →', body);
+
+	  try {
+		const res = await fetch(url, {
+		  method,
+		  headers: { 'Accept':'application/json', ...(body ? {'Content-Type':'application/json'} : {}) },
+		  body: body ? JSON.stringify(body) : undefined
+		});
+		const ms = (performance.now() - t0).toFixed(1);
+		let data = null;
+		try { data = await res.json(); } catch { /* non-JSON or empty */ }
+
+		console.debug('status  ←', res.status, res.ok ? '(OK)' : '(NON-OK)');
+		if (data !== null) console.debug('response ←', data);
+		else               console.debug('response ← (no JSON)');
+
+		if (!res.ok) console.warn('[canvas] API non-OK:', method, url, res.status, data);
+		console.groupEnd();
+
+		return { ok: res.ok, status: res.status, data };
+	  } catch (e) {
+		const ms = (performance.now() - t0).toFixed(1);
+		console.error(`%c[canvas→API] network error after ${ms}ms`, 'color:#ef4444', e);
+		console.groupEnd();
+		return { ok:false, status:0, data:null };
+	  }
 	}
 
-  const apiGET    = (u)   => api('GET', u);
-  const apiPOST   = (u,b) => api('POST', u, b);
-  const apiPATCH  = (u,b) => api('PATCH', u, b);
-  const apiDELETE = (u)   => api('POST', u);
+  const apiGET   = (u)=> api('GET', u);
+  const apiPOST  = (u,b)=> api('POST', u, b);
+  const apiPATCH = (u,b)=> api('POST', u, b); // router maps POST to update endpoint
 
-  // ---------- selection UI ----------
-  function addHandles(el) {
-    if (!el || el.querySelector('.resize-handle')) return;
-    ['nw','n','ne','e','se','s','sw','w'].forEach(pos => {
-      const h = document.createElement('div');
-      h.className = `resize-handle ${pos}`;
-      h.dataset.handle = pos;
-      h.addEventListener('mousedown', startResize);
-      el.appendChild(h);
-    });
-    // center move dot
-    const c = document.createElement('div');
-    c.className = 'resize-handle center';
-    c.dataset.handle = 'center';
-    c.title = 'Drag to move';
-    c.addEventListener('mousedown', startMoveCenter);
-    el.appendChild(c);
-  }
-  function removeHandles(el) { if (!el) return; el.querySelectorAll('.resize-handle').forEach(h => h.remove()); }
+ 	// Delete: try BULK first (guaranteed route), then /:id/delete, then soft-delete (hidden:1)
+	async function deleteItemSmart(id) {
+	  
+	  console.groupCollapsed(`%c[deleteItemSmart] id=${id}`, 'color:#0ea5e9');
 
-  function updateSelectionUI() {
-    for (const id in itemsById) {
-      const entry = itemsById[id]; const el = entry && entry.el;
-      if (!el) continue;
-      el.classList.remove('selected'); el.classList.remove('connect-hover');
-      removeHandles(el);
-    }
-    if (selectedIds.size === 1) {
-      const id = [...selectedIds][0];
-      const el = itemsById[id] && itemsById[id].el;
-      if (el) {
-        el.classList.add('selected');
-        if (currentTool === 'resize') addHandles(el);
-      }
-    } else if (selectedIds.size > 1) {
-      selectedIds.forEach(id => { const el = itemsById[id]?.el; if (el) el.classList.add('selected'); });
-    }
-  }
-  function clearSelection() { selectedIds.clear(); updateSelectionUI(); }
-  function addToSelection(id) { selectedIds.add(id); updateSelectionUI(); }
-  function setSingleSelection(id) { selectedIds = new Set([id]); updateSelectionUI(); }
-
-  // Click on a connector line
-	svgBack.addEventListener('mousedown', (e) => {
-	  const line = e.target.closest('line');
-	  if (!line) return;
-	  const id = Number(line.dataset.id);
-
-	  // in Delete tool: remove immediately
-	  if (currentTool === 'delete') {
-		e.preventDefault();
-		e.stopPropagation();
-		deleteConnector(id);
-		return;
+	  // 1) BULK
+	  const bulkPayload = { ops: [{ op:'delete', id:Number(id) }] };
+	  console.debug('bulk →', bulkPayload);
+	  const bulk = await api('POST', `${apiBase}/bulk`, bulkPayload);
+	  if (bulk.ok && (bulk.data?.success === true || bulk.status === 200)) {
+		console.info('[deleteItemSmart] bulk reported success');
+		console.groupEnd();
+		return bulk;
 	  }
+	  console.warn('[deleteItemSmart] bulk failed or not effective', bulk.status, bulk.data);
 
-	  // otherwise: select the connector for feedback
-	  if (selectedConnectorId && linesById[selectedConnectorId]) {
-		linesById[selectedConnectorId].classList.remove('connector-selected');
+	  // 2) direct /:id/delete
+	  const direct = await api('POST', `${apiBase}/${id}/delete`);
+	  if (direct.ok && (direct.data?.success === true || direct.status === 200)) {
+		console.info('[deleteItemSmart] direct /id/delete reported success');
+		console.groupEnd();
+		return direct;
 	  }
-	  selectedConnectorId = id;
-	  line.classList.add('connector-selected');
-	}, true);
+	  console.warn('[deleteItemSmart] direct delete failed', direct.status, direct.data);
+
+	  // 3) soft-delete fallback (hidden:1)
+	  const soft = await api('POST', `${apiBase}/${id}`, { hidden: 1 });
+	  if (soft.ok && (soft.data?.success === true || soft.status === 200)) {
+		console.info('[deleteItemSmart] soft delete (hidden:1) reported success');
+	  } else {
+		console.error('[deleteItemSmart] soft delete failed too', soft.status, soft.data);
+	  }
+	  console.groupEnd();
+					  return await api('POST', `/api/moods/${slug}/items/${id}:delete`);
+	  return soft;
+	}
+
+
+
+
 
   // ---------- renderers ----------
   function renderItem(item) {
+    if (item.hidden) return; // respect soft-deletes on load
+
     const el = document.createElement('div');
     el.className = `canvas-item kind-${item.kind}`;
     el.dataset.id = String(item.id);
     el.dataset.kind = item.kind;
-    el.style.cssText = [
-      'position:absolute','box-sizing:border-box','user-select:none',
-      `left:${clampInt(item.x)}px`, `top:${clampInt(item.y)}px`,
-      `width:${Math.max(1, clampInt(item.w))}px`, `height:${Math.max(1, clampInt(item.h))}px`,
-      'border:1px solid #999','background:#f9f9f9','padding:4px','color:#000'
-    ].join(';');
+    el.style.position = 'absolute';
+    el.style.left = `${item.x|0}px`;
+    el.style.top  = `${item.y|0}px`;
+    el.style.width  = `${Math.max(1, item.w|0)}px`;
+    el.style.height = `${Math.max(1, item.h|0)}px`;
+    el.style.boxSizing = 'border-box';
+    el.style.userSelect = 'none';
+    el.style.border = '1px solid #999';
+    el.style.background = (item.kind === 'note') ? '#fffbe6' : '#fff';
+    el.style.color = '#000';
+    el.style.padding = '4px';
 
     if (item.kind === 'note' || item.kind === 'label') {
-      el.textContent = (item.payload && item.payload.text) ? item.payload.text : (item.kind === 'label' ? 'Label' : 'Note');
-      el.style.fontSize = item.kind === 'label' ? '13px' : '14px';
-      if (item.kind === 'note') el.style.background = '#fffbe6';
-      if (item.kind === 'label') { el.style.background = '#eef'; el.style.borderRadius = '10px'; }
-      el.ondblclick = () => inlineEditText(item.id, el);
+      const txt = item.payload?.text ?? (item.kind === 'label' ? 'Label' : 'New note');
+      el.textContent = txt;
     } else if (item.kind === 'frame') {
-      el.style.background = '#fff';
-      el.style.border = '2px solid #666';
       const title = document.createElement('div');
-      title.textContent = (item.payload && item.payload.title) ? item.payload.title : 'Frame';
-      title.style.cssText = 'font-weight:600;margin-bottom:4px;font-size:14px;color:#000';
+      title.textContent = item.payload?.title ?? 'Frame';
+      title.style.fontWeight = '600';
       el.appendChild(title);
+      el.style.border = '2px solid #666';
     }
 
     content.appendChild(el);
-    itemsById[item.id] = { data: item, el };
-    return el;
+    itemsById[item.id] = { data:item, el };
   }
 
+  function centerFromData(d) { return { cx:(d.x||0)+(d.w||0)/2, cy:(d.y||0)+(d.h||0)/2 }; }
+
+  // render connector EXPECTING payload.a.item + payload.b.item
   function renderConnector(item) {
-	  const line = document.createElementNS('http://www.w3.org/2000/svg','line');
-	  line.dataset.id = String(item.id);
-	  line._payload = item.payload;
-	  line.setAttribute('stroke', '#888');
-	  line.setAttribute('stroke-width', '2');
-	  line.setAttribute('stroke-linecap', 'round');
-	  line.setAttribute('pointer-events', 'stroke');  // <= CLICKABLE
-	  svgBack.appendChild(line);
-	  linesById[item.id] = line;
+    if (item.hidden) return;
+    // item.payload: { a:{item:idA}, b:{item:idB}, style:'straight' }
+    const aId = item.payload?.a?.item, bId = item.payload?.b?.item;
 
-	  const aId = item.payload?.a?.item, bId = item.payload?.b?.item;
-	  if (aId) (connectorsByItem[aId] || (connectorsByItem[aId] = new Set())).add(item.id);
-	  if (bId) (connectorsByItem[bId] || (connectorsByItem[bId] = new Set())).add(item.id);
-	  updateConnectorLine(item.id);
-	}
+    // Visible line
+    const vis = document.createElementNS('http://www.w3.org/2000/svg','line');
+    vis.dataset.id = String(item.id);
+    vis._payload   = item.payload;                 // keep payload reference for updates
+    vis.classList.add('connector-line');           // CSS hover/selected uses this
+    vis.setAttribute('stroke', '#888');
+    vis.setAttribute('stroke-width', '2');
+    vis.setAttribute('stroke-linecap', 'round');
+    vis.setAttribute('pointer-events', 'stroke');  // click/hover directly on visible line
 
+    // Wide invisible hit line (easier clicking)
+    const hit = document.createElementNS('http://www.w3.org/2000/svg','line');
+    hit.dataset.id = String(item.id);
+    hit.classList.add('connector-hit');
+    hit.setAttribute('stroke', '#000');
+    hit.setAttribute('stroke-opacity', '0');
+    hit.setAttribute('stroke-width', '12');
+    hit.setAttribute('pointer-events', 'stroke');
 
-  function updateConnectorLine(connectorId) {
-    const line = linesById[connectorId]; if (!line) return;
+    // Append to back layer (under items visually; still clickable)
+    // Order: hit first, then visible—so CSS like ".connector-hit:hover + .connector-line" could work.
+    svgBack.appendChild(hit);
+    svgBack.appendChild(vis);
+
+    linesById[item.id]    = vis;
+    lineHitsById[item.id] = hit;
+
+    // reverse index: which connectors touch an item
+    if (aId) (connectorsByItem[aId] ||= new Set()).add(item.id);
+    if (bId) (connectorsByItem[bId] ||= new Set()).add(item.id);
+
+    updateConnectorLine(item.id);
+  }
+
+  function updateConnectorLine(connId) {
+    const line = linesById[connId]; if (!line) return;
+    const hit  = lineHitsById[connId];
     const p = line._payload;
     const a = p?.a?.item ? itemsById[p.a.item]?.data : null;
     const b = p?.b?.item ? itemsById[p.b.item]?.data : null;
-    if (!a || !b) { ['x1','y1','x2','y2'].forEach(k => line.setAttribute(k, '-1000')); return; }
-    const ca = centerFromData(a), cb = centerFromData(b);
-    line.setAttribute('x1', String(ca.cx));
-    line.setAttribute('y1', String(ca.cy));
-    line.setAttribute('x2', String(cb.cx));
-    line.setAttribute('y2', String(cb.cy));
+    if (!a || !b) return;
+    const ax = (a.x||0) + (a.w||0)/2, ay = (a.y||0) + (a.h||0)/2;
+    const bx = (b.x||0) + (b.w||0)/2, by = (b.y||0) + (b.h||0)/2;
+    line.setAttribute('x1', String(ax));
+    line.setAttribute('y1', String(ay));
+    line.setAttribute('x2', String(bx));
+    line.setAttribute('y2', String(by));
+    if (hit) {
+      hit.setAttribute('x1', String(ax));
+      hit.setAttribute('y1', String(ay));
+      hit.setAttribute('x2', String(bx));
+      hit.setAttribute('y2', String(by));
+    }
   }
 
   function refreshAttachedConnectors(itemId) {
     const set = connectorsByItem[itemId]; if (!set) return;
-    for (const cid of set) updateConnectorLine(cid);
-  }
-  function removeConnectorsAttachedTo(itemId) {
-    const set = connectorsByItem[itemId]; if (!set) return;
-    for (const cid of Array.from(set)) {
-      const line = linesById[cid];
-      if (line && line.parentNode) line.parentNode.removeChild(line);
-      delete linesById[cid];
-      Object.keys(connectorsByItem).forEach(k => connectorsByItem[k]?.delete(cid));
-      delete itemsById[cid];
-    }
-    delete connectorsByItem[itemId];
+    set.forEach(cid => updateConnectorLine(cid));
   }
 
   // ---------- create helpers ----------
-  async function createNoteAt(x, y) {
-    const r = await apiPOST(`${apiBase}/create`, { kind:'note', x:snap(x), y:snap(y), w:200, h:100, payload:{ text:'New note' } });
-    const item = r.data && r.data.id ? r.data : { id: Date.now(), kind:'note', x:snap(x), y:snap(y), w:200, h:100, payload:{text:'New note'} };
-    renderItem(item); setSingleSelection(item.id);
+  async function createNoteAt(x,y) {
+    const body = { kind:'note', x:snap(x), y:snap(y), w:200, h:100, payload:{ text:'New note' } };
+    const r = await apiPOST(`${apiBase}/create`, body);
+    const it = r.data && r.data.id ? r.data : Object.assign({ id: Date.now() }, body);
+    renderItem(it);
   }
-  async function createFrameAt(x, y) {
-    const r = await apiPOST(`${apiBase}/create`, { kind:'frame', x:snap(x), y:snap(y), w:300, h:200, payload:{ title:'Frame' } });
-    const item = r.data && r.data.id ? r.data : { id: Date.now(), kind:'frame', x:snap(x), y:snap(y), w:300, h:200, payload:{title:'Frame'} };
-    renderItem(item); setSingleSelection(item.id);
+  async function createFrameAt(x,y) {
+    const body = { kind:'frame', x:snap(x), y:snap(y), w:300, h:200, payload:{ title:'Frame' } };
+    const r = await apiPOST(`${apiBase}/create`, body);
+    const it = r.data && r.data.id ? r.data : Object.assign({ id: Date.now() }, body);
+    renderItem(it);
   }
   async function createConnectorBetween(aId, bId) {
-	  if (!aId || !bId || aId === bId) return;
-	  const res = await apiPOST(`/api/moods/${slug}/arrows`, {
-		from_item_id: Number(aId),
-		to_item_id:   Number(bId),
-		style:        'solid'
-	  });
-	  const conn = res && res.id ? res : {
-		id: Date.now(),
-		from_item_id: aId,
-		to_item_id:   bId,
-		style:        'solid'
-	  };
-	  renderConnector(conn);
+    if (!aId || !bId || aId === bId) return;
+    const body = { kind:'connector', x:0,y:0,w:0,h:0, payload:{ a:{item:Number(aId)}, b:{item:Number(bId)}, style:'straight' } };
+    const r = await apiPOST(`${apiBase}/create`, body);
+    const conn = r.data && r.data.id ? r.data : Object.assign({ id: Date.now() }, body);
+    itemsById[conn.id] = { data: conn }; // keep data map
+    renderConnector(conn);
+  }
+
+  // ---------- delete helpers ----------
+  async function deleteItem(id) {
+	  console.groupCollapsed(`%c[deleteItem] id=${id}`, 'color:#10b981');
+	  const entry = itemsById[id];
+	  if (!entry) { console.warn('no entry found in itemsById'); console.groupEnd(); return; }
+
+	  const r = await deleteItemSmart(id);
+	  console.debug('server result →', r);
+
+	  if (!r.ok) { console.warn('server did not OK delete; aborting DOM removal'); console.groupEnd(); return; }
+
+	  // Remove DOM node
+	  if (entry.el?.parentNode) {
+		entry.el.parentNode.removeChild(entry.el);
+		console.debug('removed element from DOM');
+	  }
+	  delete itemsById[id];
+
+	  // Remove any connected lines
+	  const set = connectorsByItem[id];
+	  if (set) {
+		set.forEach(cid => {
+		  const L = linesById[cid]; if (L?.parentNode) L.parentNode.removeChild(L);
+		  const H = lineHitsById?.[cid]; if (H?.parentNode) H.parentNode.removeChild(H);
+		  delete linesById[cid];
+		  if (lineHitsById) delete lineHitsById[cid];
+		  Object.keys(connectorsByItem).forEach(k => connectorsByItem[k]?.delete(cid));
+		  console.debug('removed connector', cid, 'linked to', id);
+		});
+		delete connectorsByItem[id];
+	  }
+	  console.groupEnd();
 	}
 
-  // ---------- inline edit (auto-grow) ----------
-  async function inlineEditText(id, el) {
-    const item = itemsById[id]?.data; if (!item) return;
-    const start = (item.payload && item.payload.text) ? item.payload.text : '';
-    const ta = document.createElement('textarea');
-    ta.value = start;
-    ta.style.cssText = 'position:absolute;inset:0;resize:none;border:1px solid #4a90e2;border-radius:4px;padding:6px;font:14px/1.4 system-ui;box-sizing:border-box;color:#000;background:#fff';
-    el.innerHTML = ''; el.appendChild(ta); ta.focus(); ta.select();
-    function grow(){ ta.style.height='auto'; ta.style.height = ta.scrollHeight+'px'; }
-    grow(); ta.addEventListener('input', grow);
-    function commit(save){
-      ta.onblur = ta.onkeydown = null;
-      const text = save ? ta.value : start;
-      el.innerHTML=''; el.textContent = text;
-      itemsById[id].data.payload = { ...(itemsById[id].data.payload||{}), text };
-      apiPATCH(`${apiBase}/${id}`, { payload:{ text } }).catch(console.warn);
-    }
-    ta.onblur = () => commit(true);
-    ta.onkeydown = (e)=>{ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); commit(true);} if(e.key==='Escape'){e.preventDefault(); commit(false);} };
-  }
 
-  // ---------- resize (handles + center move) ----------
-  function startMoveCenter(e) {
-    if (currentTool !== 'resize') return;
-    e.preventDefault(); e.stopPropagation();
-    const el = e.target.closest('.canvas-item'); if (!el) return;
+  async function deleteConnector(id) {
+	  console.groupCollapsed(`%c[deleteConnector] id=${id}`, 'color:#f59e0b');
+	  const line = linesById[id];
+	  if (!line) { console.warn('no <line> found for id', id); console.groupEnd(); return; }
+
+	  const res = await deleteItemSmart(id);
+	  console.debug('server result →', res);
+
+	  if (!res?.ok) { console.warn('server did not OK delete; aborting DOM removal'); console.groupEnd(); return; }
+
+	  const hit = lineHitsById?.[id];
+	  if (hit?.parentNode) hit.parentNode.removeChild(hit);
+	  if (line.parentNode) line.parentNode.removeChild(line);
+	  if (lineHitsById) delete lineHitsById[id];
+	  delete linesById[id];
+	  Object.keys(connectorsByItem).forEach(k => connectorsByItem[k]?.delete(id));
+	  delete itemsById[id]; // harmless if not present
+	  if (selectedConnectorId === id) selectedConnectorId = null;
+
+	  console.info('connector removed from DOM and maps');
+	  console.groupEnd();
+		return await api('POST', `/api/moods/${slug}/arrows/${id}:delete`);
+	}
+
+
+  // ---------- pointer + tools ----------
+  stage.addEventListener('mousedown', onDown);
+  function onDown(e) {
+    const tgt = e.target;
+    const itemEl = tgt.closest?.('.canvas-item');
+    const empty  = (tgt === stage || tgt === content || tgt === svgEl || tgt === svgBack || tgt === svgFront);
+
+    if (currentTool === 'pan') {
+      isPanning = true; panStart.x = e.clientX; panStart.y = e.clientY;
+      stage.style.cursor = 'grabbing';
+      return;
+    }
+
+    if (currentTool === 'delete') {
+      if (itemEl) return void deleteItem(Number(itemEl.dataset.id));
+      // lines handled by svgBack click listener
+      return;
+    }
+
+    if (currentTool === 'select') {
+      if (empty) return beginMarquee(e.clientX, e.clientY);
+      if (itemEl) return startDragItem(itemEl, e.clientX, e.clientY);
+      return;
+    }
+
+    if (currentTool === 'text' && empty) {
+      const p = logicalFromClient(e.clientX, e.clientY);
+      return void createNoteAt(p.x, p.y);
+    }
+    if (currentTool === 'frame' && empty) {
+      const p = logicalFromClient(e.clientX, e.clientY);
+      return void createFrameAt(p.x, p.y);
+    }
+
+    if (currentTool === 'resize' && itemEl) {
+      beginResizeItem(Number(itemEl.dataset.id), e.clientX, e.clientY);
+      return;
+    }
+
+    // ✅ Connector tool: start drag from an item
+    if (currentTool === 'connector' && itemEl) {
+      beginConnectDrag(Number(itemEl.dataset.id), e.clientX, e.clientY);
+      return;
+    }
+  }
+		
+  // Click on a connector (hit or visible line): delete (if Delete tool) or select (feedback)
+  svgBack.addEventListener('click', (e) => {
+    const lineEl = (e.target.closest && e.target.closest('line')) || null;
+    if (!lineEl) return;
+    const id = Number(lineEl.dataset.id);
+
+    if (currentTool === 'delete') {
+      e.stopPropagation();
+      deleteConnector(id);
+      return;
+    }
+
+    // selection feedback on visible line
+    if (selectedConnectorId && linesById[selectedConnectorId]) {
+      linesById[selectedConnectorId].classList.remove('connector-selected');
+    }
+    selectedConnectorId = id;
+    const vis = linesById[id];
+    if (vis) vis.classList.add('connector-selected');
+  }, true);
+
+  document.addEventListener('mousemove', (e) => {
+    if (isPanning) {
+      stageOffset.x += (e.clientX - panStart.x);
+      stageOffset.y += (e.clientY - panStart.y);
+      panStart.x = e.clientX; panStart.y = e.clientY;
+      applyTransforms();
+    }
+    if (marquee) updateMarquee(e.clientX, e.clientY);
+  });
+  document.addEventListener('mouseup', () => {
+    if (isPanning) {
+      isPanning = false;
+      if (currentTool === 'pan') stage.style.cursor = 'move';
+    }
+    if (marquee) endMarquee();
+  });
+
+  // toolbar
+  (toolbar || document).addEventListener('click', (e) => {
+    const b = e.target.closest?.('[data-action]'); if (!b) return;
+    const a = b.dataset.action;
+    if (a === 'snap') { snapOn = !snapOn; b.classList.toggle('active', snapOn); stage.classList.toggle('snap-on', snapOn); return; }
+    if (a === 'zoom-in')  { stageScale = Math.min(2, stageScale + 0.1); applyTransforms(); return; }
+    if (a === 'zoom-out') { stageScale = Math.max(0.4, stageScale - 0.1); applyTransforms(); return; }
+    if (a === 'reset-view'){ stageScale = 1; stageOffset = {x:0,y:0}; applyTransforms(); return; }
+    setActiveTool(a);
+  }, true);
+
+  // ---------- drag/marquee/connect ----------
+  let dragGroup = null;
+  function startDragItem(el, cx, cy) {
     const id = Number(el.dataset.id);
-    setSingleSelection(id);
-    const m = logicalFromClient(e.clientX, e.clientY);
-    movingSingle = { id, startMouse:m, startPos:{ x: parseInt(el.style.left,10), y: parseInt(el.style.top,10) } };
-    document.addEventListener('mousemove', onMoveCenter);
-    document.addEventListener('mouseup', onMoveCenterUp);
+    if (!selectedIds.has(id)) { selectedIds = new Set([id]); }
+    const m = logicalFromClient(cx, cy);
+    dragGroup = Array.from(selectedIds).map(sid => {
+      const d = itemsById[sid].data;
+      return { id:sid, dx: m.x - d.x, dy: m.y - d.y };
+    });
+    document.addEventListener('mousemove', onDragMove);
+    document.addEventListener('mouseup', onDragUp);
   }
-  function onMoveCenter(e) {
-    if (!movingSingle) return;
-    const { id, startMouse, startPos } = movingSingle;
-    const el = itemsById[id]?.el; if (!el) return;
+  function onDragMove(e) {
     const m = logicalFromClient(e.clientX, e.clientY);
-    const nx = snap(startPos.x + (m.x - startMouse.x));
-    const ny = snap(startPos.y + (m.y - startMouse.y));
-    el.style.left = `${nx}px`; el.style.top = `${ny}px`;
-    const d = itemsById[id].data; d.x = nx; d.y = ny;
-    refreshAttachedConnectors(id);
+    dragGroup.forEach(it => {
+      const d = itemsById[it.id].data;
+      d.x = snap(m.x - it.dx); d.y = snap(m.y - it.dy);
+      const el = itemsById[it.id].el;
+      el.style.left = `${d.x}px`; el.style.top = `${d.y}px`;
+      refreshAttachedConnectors(it.id);
+    });
   }
-  async function onMoveCenterUp() {
-    if (!movingSingle) return;
-    const { id } = movingSingle;
-    movingSingle = null;
-    document.removeEventListener('mousemove', onMoveCenter);
-    document.removeEventListener('mouseup', onMoveCenterUp);
-    const d = itemsById[id]?.data; if (!d) return;
-    await apiPATCH(`${apiBase}/${id}`, { x:d.x, y:d.y }).catch(console.warn);
+  async function onDragUp() {
+    const group = dragGroup; dragGroup = null;
+    document.removeEventListener('mousemove', onDragMove);
+    document.removeEventListener('mouseup', onDragUp);
+    for (const it of group) {
+      const d = itemsById[it.id].data;
+      await apiPATCH(`${apiBase}/${it.id}`, { x:d.x, y:d.y });
+    }
   }
 
-  function startResize(e) {
-    if (currentTool !== 'resize') return;
-    e.preventDefault(); e.stopPropagation();
-    const el = e.target.closest('.canvas-item'); if (!el) return;
-    const handle = e.target.dataset.handle;
-    if (handle === 'center') return; // handled by startMoveCenter
-    const id = Number(el.dataset.id);
-    const box = {
-      x: parseInt(el.style.left, 10),
-      y: parseInt(el.style.top, 10),
-      w: parseInt(el.style.width, 10),
-      h: parseInt(el.style.height, 10),
-    };
-    const m = logicalFromClient(e.clientX, e.clientY);
-    resizing = { id, handle, startMouse:m, startBox:box };
-    document.addEventListener('mousemove', onResizeMove);
-    document.addEventListener('mouseup', onResizeUp);
-  }
-  function onResizeMove(e) {
-    if (!resizing) return;
-    const { id, handle, startMouse, startBox } = resizing;
-    const entry = itemsById[id]; const el = entry && entry.el; if (!el) return;
-    const m  = logicalFromClient(e.clientX, e.clientY);
-    let dx = m.x - startMouse.x, dy = m.y - startMouse.y;
-    let x = startBox.x, y = startBox.y, w = startBox.w, h = startBox.h;
-    if (handle.includes('e')) w = startBox.w + dx;
-    if (handle.includes('s')) h = startBox.h + dy;
-    if (handle.includes('w')) { w = startBox.w - dx; x = startBox.x + dx; }
-    if (handle.includes('n')) { h = startBox.h - dy; y = startBox.y + dy; }
-    w = Math.max(40, snap(w)); h = Math.max(30, snap(h));
-    x = snap(x); y = snap(y);
-    el.style.left = `${x}px`; el.style.top = `${y}px`;
-    el.style.width = `${w}px`; el.style.height = `${h}px`;
-    const d = entry.data; d.x=x; d.y=y; d.w=w; d.h=h;
-    refreshAttachedConnectors(id);
-  }
-  async function onResizeUp() {
-    if (!resizing) return;
-    const { id } = resizing; resizing = null;
-    document.removeEventListener('mousemove', onResizeMove);
-    document.removeEventListener('mouseup', onResizeUp);
-    const d = itemsById[id]?.data; if (!d) return;
-    await apiPATCH(`${apiBase}/${id}`, { x:d.x, y:d.y, w:d.w, h:d.h }).catch(console.warn);
+  function beginResizeItem(id, cx, cy) {
+    const entry = itemsById[id]; if (!entry) return;
+    const d = entry.data;
+    const start = { w:d.w||0, h:d.h||0, cx, cy };
+
+    function onMove(ev) {
+      const dx = (ev.clientX - start.cx) / (window.stageScale || 1);
+      const dy = (ev.clientY - start.cy) / (window.stageScale || 1);
+      d.w = Math.max(8, (start.w + dx)|0);
+      d.h = Math.max(8, (start.h + dy)|0);
+      entry.el.style.width  = d.w + 'px';
+      entry.el.style.height = d.h + 'px';
+      const set = connectorsByItem[id]; if (set) set.forEach(cid => updateConnectorLine(cid));
+    }
+
+    async function onUp() {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      await api('POST', `${apiBase}/${id}`, { w:entry.data.w, h:entry.data.h });
+    }
+
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
   }
 
-  // ---------- drag-to-connect ----------
-  function beginConnectDrag(fromId, clientX, clientY) {
-    const line = document.createElementNS('http://www.w3.org/2000/svg','line');
-    line.setAttribute('stroke', '#22c55e');
-    line.setAttribute('stroke-width', '2');
-    line.setAttribute('stroke-dasharray', '5,5');
-    line.setAttribute('pointer-events', 'stroke'); // click exactly on the line
-    svgFront.appendChild(line);   // dashed preview
-    connectDrag = { fromId, tempLine: line, hoverId: null };
-    updateConnectDrag(clientX, clientY);
-    document.addEventListener('mousemove', onConnectDragMove, true);
-    document.addEventListener('mouseup', onConnectDragUp, true);
-  }
-  function updateConnectDrag(clientX, clientY) {
-    if (!connectDrag) return;
-    const fromEl = itemsById[connectDrag.fromId]?.el; if (!fromEl) return;
-    const { cx, cy } = centerFromData(itemsById[connectDrag.fromId].data);
-    connectDrag.tempLine.setAttribute('x1', cx);
-    connectDrag.tempLine.setAttribute('y1', cy);
-    const p = logicalFromClient(clientX, clientY);
-    connectDrag.tempLine.setAttribute('x2', p.x);
-    connectDrag.tempLine.setAttribute('y2', p.y);
-    // hover highlight
-    const hoverEl = document.elementFromPoint(clientX, clientY);
-    const itemEl  = getItemFromTarget(hoverEl);
-    const newHoverId = itemEl ? Number(itemEl.dataset.id) : null;
-    if (connectDrag.hoverId != null && itemsById[connectDrag.hoverId]?.el) {
-      itemsById[connectDrag.hoverId].el.classList.remove('connect-hover');
-    }
-    if (newHoverId != null && newHoverId !== connectDrag.fromId && itemsById[newHoverId]?.el) {
-      itemsById[newHoverId].el.classList.add('connect-hover');
-    }
-    connectDrag.hoverId = newHoverId;
-  }
-  function endConnectDrag(clientX, clientY) {
-    if (!connectDrag) return;
-    const dropEl = getItemFromTarget(document.elementFromPoint(clientX, clientY));
-    const toId = dropEl ? Number(dropEl.dataset.id) : null;
-    if (connectDrag.hoverId != null && itemsById[connectDrag.hoverId]?.el) {
-      itemsById[connectDrag.hoverId].el.classList.remove('connect-hover');
-    }
-    if (connectDrag.tempLine && connectDrag.tempLine.parentNode) connectDrag.tempLine.parentNode.removeChild(connectDrag.tempLine);
-    const fromId = connectDrag.fromId; connectDrag = null;
-    if (toId && toId !== fromId) createConnectorBetween(fromId, toId);
-  }
-  function onConnectDragMove(e) { updateConnectDrag(e.clientX, e.clientY); }
-  function onConnectDragUp(e) {
-    document.removeEventListener('mousemove', onConnectDragMove, true);
-    document.removeEventListener('mouseup', onConnectDragUp, true);
-    endConnectDrag(e.clientX, e.clientY);
-  }
-
-  // ---------- group drag / marquee ----------
-  function beginMarquee(clientX, clientY) {
-    marqueeStart = logicalFromClient(clientX, clientY);
-    marquee = document.createElement('div'); marquee.className = 'marquee';
+  function beginMarquee(cx, cy) {
+    marqueeStart = logicalFromClient(cx, cy);
+    marquee = document.createElement('div');
+    marquee.className = 'marquee';
     stage.appendChild(marquee);
-    updateMarquee(clientX, clientY);
+    updateMarquee(cx, cy);
   }
-  function updateMarquee(clientX, clientY) {
-    if (!marquee || !marqueeStart) return;
-    const cur = logicalFromClient(clientX, clientY);
+  function updateMarquee(cx, cy) {
+    const cur = logicalFromClient(cx, cy);
     const x = Math.min(marqueeStart.x, cur.x), y = Math.min(marqueeStart.y, cur.y);
     const w = Math.abs(cur.x - marqueeStart.x), h = Math.abs(cur.y - marqueeStart.y);
     const left = x * stageScale + stageOffset.x;
@@ -516,198 +524,91 @@
     marquee.style.width = `${w * stageScale}px`; marquee.style.height = `${h * stageScale}px`;
   }
   function endMarquee() {
-    if (!marquee || !marqueeStart) return;
     const box = marquee.getBoundingClientRect();
-    marquee.remove(); marquee = null; marqueeStart = null;
-    const rect = stage.getBoundingClientRect();
-    const lx = (box.left - rect.left - stageOffset.x) / stageScale;
-    const ly = (box.top  - rect.top  - stageOffset.y) / stageScale;
-    const lw = box.width  / stageScale;
-    const lh = box.height / stageScale;
-    clearSelection();
+    marquee.remove(); marquee = null;
+    const r = stage.getBoundingClientRect();
+    const lx = (box.left - r.left - stageOffset.x)/stageScale;
+    const ly = (box.top  - r.top  - stageOffset.y)/stageScale;
+    const lw = box.width/stageScale, lh = box.height/stageScale;
+    selectedIds.clear();
     for (const id in itemsById) {
-      const entry = itemsById[id]; if (!entry || !entry.el) continue;
-      const d = entry.data;
+      const d = itemsById[id].data;
       const inter = !(d.x + d.w < lx || d.y + d.h < ly || d.x > lx + lw || d.y > ly + lh);
-      if (inter && d.kind !== 'connector') addToSelection(Number(id));
-    }
-  }
-  function startGroupDragFromItem(itemEl, clientX, clientY) {
-    const id = Number(itemEl.dataset.id);
-    if (!selectedIds.has(id)) setSingleSelection(id);
-    const mouse = logicalFromClient(clientX, clientY);
-    draggingGroup = Array.from(selectedIds).map(sid => {
-      const d = itemsById[sid].data;
-      return { id:sid, dx: mouse.x - d.x, dy: mouse.y - d.y };
-    });
-    document.addEventListener('mousemove', onGroupDragMove);
-    document.addEventListener('mouseup', onGroupDragUp);
-  }
-  function onGroupDragMove(e) {
-    const m = logicalFromClient(e.clientX, e.clientY);
-    draggingGroup.forEach(it => {
-      const x = snap(m.x - it.dx), y = snap(m.y - it.dy);
-      const entry = itemsById[it.id]; const el = entry && entry.el; if (!el) return;
-      const d = entry.data;
-      d.x = x; d.y = y; el.style.left = `${x}px`; el.style.top = `${y}px`;
-      refreshAttachedConnectors(it.id);
-    });
-  }
-  async function onGroupDragUp() {
-    const group = draggingGroup; draggingGroup = null;
-    document.removeEventListener('mousemove', onGroupDragMove);
-    document.removeEventListener('mouseup', onGroupDragUp);
-    for (const it of group) {
-      const d = itemsById[it.id]?.data; if (!d) continue;
-      await apiPATCH(`${apiBase}/${it.id}`, { x:d.x, y:d.y }).catch(console.warn);
+      if (inter && d.kind !== 'connector') selectedIds.add(Number(id));
     }
   }
 
-  async function deleteConnector(id) {
-	  const line = linesById[id];
-	  const res = await apiPOST(`/api/moods/${slug}/arrows/${id}:delete`);
-	  if (res && res.ok) {
-		if (line && line.parentNode) line.parentNode.removeChild(line);
-		delete linesById[id];
-		Object.keys(connectorsByItem).forEach(k => connectorsByItem[k]?.delete(id));
-		delete itemsById[id];
-		if (selectedConnectorId === id) selectedConnectorId = null;
-	  }
-	}
-
-
-  // ---------- delete ----------
-  async function deleteItem(id) {
-  const it = itemsById[id];
-	  if (!it) return;
-
-	  const res = await deleteItemSmart(id);
-	  if (!res.ok) { console.warn('[canvas] delete failed for item', id, res.status, res.data); return; }
-
-	  if (it.el?.parentNode) it.el.parentNode.removeChild(it.el);
-	  delete itemsById[id];
-	  removeConnectorsAttachedTo(id);
-	  selectedIds.delete(id);
-	  updateSelectionUI();
-	}
-
-  // ---------- toolbar ----------
-  (toolbar || document).addEventListener('click', (e) => {
-    const btn = e.target.closest('[data-action]'); if (!btn) return;
-    const action = btn.dataset.action;
-    if (action === 'snap') {
-      snapToGrid = !snapToGrid;
-      btn.classList.toggle('active', snapToGrid);
-      (document.getElementById('canvasStage')||stage).classList.toggle('snap-on', snapToGrid);
-      if (toolPill) toolPill.textContent = `Tool: ${currentTool}${snapToGrid ? ' • Snap' : ''}`;
-      return;
+  // connector drag
+  let connectDrag = null;
+  function beginConnectDrag(fromId, cx, cy) {
+    const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+    line.setAttribute('stroke', '#888'); line.setAttribute('stroke-width', '6'); line.setAttribute('stroke-dasharray', '5,5');
+    line.setAttribute('pointer-events', 'stroke'); line.classList.add('connector-line');
+    svgFront.appendChild(line);
+    connectDrag = { fromId, tempLine: line, hoverId: null };
+    updateConnectDrag(cx, cy);
+    document.addEventListener('mousemove', onConnectDragMove, true);
+    document.addEventListener('mouseup', onConnectDragUp, true);
+  }
+  function updateConnectDrag(cx, cy) {
+    if (!connectDrag) return;
+    const a = itemsById[connectDrag.fromId]?.data; if (!a) return;
+    const ca = centerFromData(a); const p = logicalFromClient(cx, cy);
+    connectDrag.tempLine.setAttribute('x1', String(ca.cx));
+    connectDrag.tempLine.setAttribute('y1', String(ca.cy));
+    connectDrag.tempLine.setAttribute('x2', String(p.x));
+    connectDrag.tempLine.setAttribute('y2', String(p.y));
+    // highlight hover
+    const el = document.elementFromPoint(cx, cy);
+    const hit = el?.closest?.('.canvas-item');
+    const hid = hit ? Number(hit.dataset.id) : null;
+    if (connectDrag.hoverId && itemsById[connectDrag.hoverId]?.el) {
+      itemsById[connectDrag.hoverId].el.classList.remove('connect-hover');
     }
-    if (action === 'zoom-in')  { stageScale = Math.min(2, stageScale + 0.1); applyTransforms(); return; }
-    if (action === 'zoom-out') { stageScale = Math.max(0.4, stageScale - 0.1); applyTransforms(); return; }
-    if (action === 'reset-view'){ stageScale = 1; stageOffset = {x:0,y:0}; applyTransforms(); return; }
-    setActiveToolButton(action);
+    if (hid && hid !== connectDrag.fromId && itemsById[hid]?.el) {
+      itemsById[hid].el.classList.add('connect-hover');
+    }
+    connectDrag.hoverId = hid;
+  }
+  function onConnectDragMove(e){ updateConnectDrag(e.clientX, e.clientY); }
+  function onConnectDragUp(e){
+    document.removeEventListener('mousemove', onConnectDragMove, true);
+    document.removeEventListener('mouseup', onConnectDragUp, true);
+    const hid = connectDrag.hoverId, from = connectDrag.fromId;
+    if (connectDrag.tempLine?.parentNode) connectDrag.tempLine.parentNode.removeChild(connectDrag.tempLine);
+    connectDrag = null;
+    if (hid && hid !== from) createConnectorBetween(from, hid);
+  }
+
+  // Keyboard delete / backspace
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Delete' || e.key === 'Backspace') {
+      const tag = (e.target && e.target.tagName || '').toLowerCase();
+      if (tag === 'input' || tag === 'textarea' || e.target?.isContentEditable) return;
+      e.preventDefault();
+      if (selectedIds && selectedIds.size) {
+        [...selectedIds].forEach(id => deleteItem(id));
+      } else if (selectedConnectorId) {
+        deleteConnector(selectedConnectorId);
+      }
+    }
   }, true);
 
-  // ---------- pointer wiring ----------
-  function handleDown(e) {
-    const itemEl = getItemFromTarget(e.target);
-    const isItem = !!itemEl;
-    const empty  = isEmptySpace(e.target);
-
-    // pan
-    if (currentTool === 'pan') { isPanning = true; panStart.x = e.clientX; panStart.y = e.clientY; return; }
-
-    // resize: click to show handles, then drag handles or center move
-    if (currentTool === 'resize' && isItem) { setSingleSelection(Number(itemEl.dataset.id)); return; }
-
-    // select
-    if (currentTool === 'select') {
-      if (empty) return beginMarquee(e.clientX, e.clientY);
-      if (isItem && !e.target.classList.contains('resize-handle')) {
-        return startGroupDragFromItem(itemEl, e.clientX, e.clientY);
-      }
-      return;
-    }
-
-    // create
-    // prevent accidental double-create from duplicate listeners
-	let _createLock = false;
-
-	if ((currentTool === 'text' || currentTool === 'frame') && empty) {
-	  if (_createLock) return;
-	  _createLock = true;
-	  const p = logicalFromClient(e.clientX, e.clientY);
-	  (currentTool === 'text' ? createNoteAt(p.x, p.y) : createFrameAt(p.x, p.y));
-	  setTimeout(() => { _createLock = false; }, 0); // release next tick
-	  return;
-	}
-
-
-    // delete
-    if (currentTool === 'delete' && isItem) { return void deleteItem(Number(itemEl.dataset.id)); }
-
-    // connector: drag from item A to B
-    if (currentTool === 'connector' && isItem) {
-      e.preventDefault(); e.stopPropagation();
-      const fromId = Number(itemEl.dataset.id);
-      beginConnectDrag(fromId, e.clientX, e.clientY);
-      return;
-    }
-  }
-
-  stage.addEventListener('mousedown', handleDown);
-
-  document.addEventListener('mousemove', (e) => {
-    if (isPanning) {
-      const dx = e.clientX - panStart.x, dy = e.clientY - panStart.y;
-      stageOffset.x += dx; stageOffset.y += dy;
-      panStart.x = e.clientX; panStart.y = e.clientY;
-      applyTransforms(); return;
-    }
-    if (marquee) updateMarquee(e.clientX, e.clientY);
-  });
-  document.addEventListener('mouseup', () => {
-    if (isPanning) isPanning = false;
-    if (marquee) endMarquee();
-  });
-
-  document.addEventListener('keydown', (e) => {
-    let action = null;
-    if (e.key === 's') action = 'select';
-    else if (e.key === 'p') action = 'pan';
-    else if (e.key === 'r') action = 'resize';
-    else if (e.key === 'c') action = 'connector';
-    else if (e.key === 't') action = 'text';
-    else if (e.key === 'f') action = 'frame';
-    else if (e.key === 'd') action = 'delete';
-    else if (e.key === '+') action = 'zoom-in';
-    else if (e.key === '-') action = 'zoom-out';
-    else if (e.key === '0') action = 'reset-view';
-    else return;
-
-    e.preventDefault();
-    if (action === 'zoom-in' || action === 'zoom-out' || action === 'reset-view') {
-      const control = (toolbar || document).querySelector(`[data-action="${action}"]`);
-      if (control) control.click();
-      else {
-        if (action === 'zoom-in')  { stageScale = Math.min(2, stageScale + 0.1); applyTransforms(); }
-        if (action === 'zoom-out') { stageScale = Math.max(0.4, stageScale - 0.1); applyTransforms(); }
-        if (action === 'reset-view'){ stageScale = 1; stageOffset = {x:0,y:0}; applyTransforms(); }
-      }
-      return;
-    }
-    setActiveToolButton(action);
-  }, true);
-
-  // ---------- init ----------
+  // -------- init --------
   (async function init() {
     ensureOverlaySizing();
     const r = await apiGET(apiBase);
-    const items = Array.isArray(r.data) ? r.data : [];
-    // items then connectors
-    items.filter(i => i.kind !== 'connector').forEach(renderItem);
-    items.filter(i => i.kind === 'connector').forEach(c => { itemsById[c.id] = { data:c }; renderConnector(c); });
-    setActiveToolButton('select');
+    const arr = Array.isArray(r.data) ? r.data : [];
+
+    // render items then connectors (respect hidden)
+    arr.filter(i => i.kind !== 'connector' && !i.hidden).forEach(renderItem);
+    arr.filter(i => i.kind === 'connector' && !i.hidden).forEach(c => {
+      itemsById[c.id] = { data: c };
+      renderConnector(c);
+    });
+
+    setActiveTool('select');
     applyTransforms();
   })();
+
 })();

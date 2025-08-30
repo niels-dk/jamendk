@@ -4,6 +4,20 @@
  *
  * Encapsulates CRUD operations for the `canvas_items` table.
  */
+class MoodCanvas {
+    public static function deleteItem($slug, $id) {
+        $db = db();
+        return $db->prepare("DELETE FROM mood_board_items WHERE id=? AND board_id=(SELECT id FROM mood_boards WHERE slug=?)")
+                  ->execute([$id, $slug]);
+    }
+
+    public static function deleteArrow($slug, $id) {
+        $db = db();
+        return $db->prepare("DELETE FROM mood_board_arrows WHERE id=? AND board_id=(SELECT id FROM mood_boards WHERE slug=?)")
+                  ->execute([$id, $slug]);
+    }
+}
+
 class mood_canvas_model
 {
     public static function listItems(PDO $db, int $boardId): array {
@@ -102,30 +116,30 @@ class mood_canvas_model
 	}
 
 	public static function deleteArrow(PDO $db, int $arrowId): void
-    {
+	{
         $db->prepare("DELETE FROM mood_board_arrows WHERE id=?")->execute([$arrowId]);
     }
 	
-	public static function createArrow(PDO $db, int $boardId, int $fromItem, int $toItem, string $style = 'solid'): array
-    {
-        $stmt = $db->prepare("INSERT INTO mood_board_arrows 
-            (board_id, from_item_id, to_item_id, style, created_at, updated_at) 
-            VALUES (:board_id, :from_item_id, :to_item_id, :style, NOW(), NOW())");
-        $stmt->execute([
-            ':board_id'     => $boardId,
-            ':from_item_id' => $fromItem,
-            ':to_item_id'   => $toItem,
-            ':style'        => $style,
-        ]);
-        $id = (int)$db->lastInsertId();
-        return [
-            'id'            => $id,
-            'board_id'      => $boardId,
-            'from_item_id'  => $fromItem,
-            'to_item_id'    => $toItem,
-            'style'         => $style,
-        ];
-    }
+	public static function createArrow(PDO $db, int $boardId, int $from, int $to, string $style = 'solid'): array {
+			$stmt = $db->prepare("INSERT INTO mood_board_arrows 
+				 (board_id, from_item_id, to_item_id, style, created_at, updated_at)
+				 VALUES (:board_id, :from_item, :to_item, :style, NOW(), NOW())");
+			$stmt->execute([
+				':board_id' => $boardId,
+				':from_item' => $from,
+				':to_item' => $to,
+				':style' => $style,
+			]);
+			$id = (int)$db->lastInsertId();
+			return [
+				'id' => $id,
+				'board_id' => $boardId,
+				'from_item_id' => $from,
+				'to_item_id' => $to,
+				'style' => $style,
+			];
+		}
+
 
 	
 	public function deleteItemById(int $id): void {

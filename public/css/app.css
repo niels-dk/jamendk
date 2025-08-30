@@ -558,6 +558,11 @@ html, body { overflow-x: hidden; }
 #overlayBack line.connector-line:hover { stroke:#60a5fa; stroke-width:3; }
 #overlayBack line.connector-selected   { stroke:#3b82f6; stroke-width:3; }
 
+/* Hover + selected feedback for connectors */
+#overlayBack line.connector-line.connector-hover,
+#overlayBack line.connector-line:hover { stroke:#60a5fa; stroke-width:3; }
+#overlayBack line.connector-line.connector-selected { stroke:#3b82f6; stroke-width:3; }
+
 /* --- Snap grid (toggled by JS on #canvasStage) --- */
 #canvasStage.snap-on {
   background-image:

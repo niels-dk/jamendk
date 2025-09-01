@@ -35,6 +35,10 @@
 <script>
 // Expose the slug so the JS can construct API URLs
 window.boardSlug = <?= json_encode($board['slug'] ?? '') ?>;
-console.log(window.boardSlug);
+//console.log(window.boardSlug);
 </script>
+<!-- core js -->
 <script src="/public/js/mood-canvas.js?v=2"></script>
+
+<script src="/public/js/mood-canvas-highlight.js"></script>
+

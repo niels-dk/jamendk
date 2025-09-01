@@ -544,8 +544,12 @@ html, body { overflow-x: hidden; }
 ***************************/
 
 /* --- Layering: content above connectors --- */
-#canvasContent { position:absolute; inset:0; z-index:2; }
-#canvasOverlay { position:absolute; inset:0; z-index:1; pointer-events:auto; }
+/* #canvasContent { position:absolute; inset:0; z-index:2; } */
+#canvasContent { position: absolute; z-index: 1; }
+
+/* #canvasOverlay { position:absolute; inset:0; z-index:1; pointer-events:auto; } */
+#canvasOverlay { position: absolute; z-index: 0; pointer-events: none; }
+
 #canvasOverlay, #canvasOverlay * { width:100%; height:100%; display:block; }
 
 /* Back group receives clicks; dashed preview should NOT */
@@ -575,6 +579,7 @@ html, body { overflow-x: hidden; }
 line.connector-selected { stroke: #4a90e2; stroke-width: 3; }
 
 /* --- Items, selection & connector-hover --- */
+.canvas-item { position: relative; } /* ensure inner fill positions correctly */
 .canvas-item.selected { outline: 2px solid #4a90e2; outline-offset: 0; }
 .canvas-item.connect-hover { outline:2px dashed #22c55e; }
 

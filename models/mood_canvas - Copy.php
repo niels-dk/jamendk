@@ -7,7 +7,7 @@
 class MoodCanvas {
     public static function deleteItem($slug, $id) {
         $db = db();
-        return $db->prepare("1DELETE FROM mood_board_items WHERE id=? AND board_id=(SELECT id FROM mood_boards WHERE slug=?)")
+        return $db->prepare("DELETE FROM mood_board_items WHERE id=? AND board_id=(SELECT id FROM mood_boards WHERE slug=?)")
                   ->execute([$id, $slug]);
     }
 
@@ -21,39 +21,16 @@ class MoodCanvas {
 class mood_canvas_model
 {
     public static function listItems(PDO $db, int $boardId): array {
-    // Only return non-hidden items.
-		$st = $db->prepare(
-			"SELECT id, kind, x, y, w, h, z, rotation, locked, hidden, payload_json, style_json
-			 FROM canvas_items
-			 WHERE board_id = ? AND hidden = 0
-			 ORDER BY z ASC, id ASC"
-		);
-		$st->execute([$boardId]);
-		$rows = $st->fetchAll(PDO::FETCH_ASSOC);
-
-		foreach ($rows as &$row) {
-			// decode JSON fields to API shape expected by the client
-			$row['payload'] = $row['payload_json'] ? json_decode($row['payload_json'], true) : null;
-			$row['style']   = $row['style_json']   ? json_decode($row['style_json'],   true) : null;
-
-			// remove raw columns
-			unset($row['payload_json'], $row['style_json']);
-
-			// cast scalar flags (optional but nice)
-			$row['id']       = (int)$row['id'];
-			$row['x']        = (int)$row['x'];
-			$row['y']        = (int)$row['y'];
-			$row['w']        = (int)$row['w'];
-			$row['h']        = (int)$row['h'];
-			$row['z']        = (int)$row['z'];
-			$row['rotation'] = (int)$row['rotation'];
-			$row['locked']   = (bool)$row['locked'];
-			$row['hidden']   = (bool)$row['hidden'];
-		}
-
-		return $rows;
-	}
-
+        $st = $db->prepare("SELECT id, kind, x, y, w, h, z, rotation, locked, hidden, payload_json
+                            FROM canvas_items WHERE board_id=? ORDER BY z ASC, id ASC");
+        $st->execute([$boardId]);
+        $rows = $st->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($rows as &$row) {
+            $row['payload'] = $row['payload_json'] ? json_decode($row['payload_json'], true) : null;
+            unset($row['payload_json']);
+        }
+        return $rows;
+    }
 
     public static function createItem(PDO $db, int $boardId, string $kind, int $x, int $y, int $w, int $h, $payload): array {
         $payloadJson = $payload !== null ? json_encode($payload) : null;
@@ -86,62 +63,30 @@ class mood_canvas_model
     }
 
     public static function updateItem(PDO $db, int $itemId, array $fields): void {
-		if (!$fields) return;
-
-		$allowed = ['x','y','w','h','z','rotation','locked','hidden','payload_json','style_json'];
-		$set     = [];
-		$vals    = [];
-
-		foreach ($fields as $k => $v) {
-			if (!in_array($k, $allowed, true)) {
-				// alias: payload → payload_json
-				if ($k === 'payload') {
-					$set[] = 'payload_json = :payload_json';
-					$vals[':payload_json'] = is_array($v) ? json_encode($v, JSON_UNESCAPED_SLASHES) : $v;
-				}
-				// alias: style → style_json
-				else if ($k === 'style') {
-					// 1) load current style_json
-					$cur = $db->prepare("SELECT style_json FROM canvas_items WHERE id = ?");
-					$cur->execute([$itemId]);
-					$row = $cur->fetch(PDO::FETCH_ASSOC);
-					$current = $row && $row['style_json'] ? json_decode($row['style_json'], true) : [];
-
-					// 2) merge shallow (null/'' removes key)
-					if (is_array($v)) {
-						foreach ($v as $sk => $sv) {
-							if ($sv === null || $sv === '') unset($current[$sk]);
-							else $current[$sk] = $sv;
-						}
-					}
-
-					$set[] = 'style_json = :style_json';
-					$vals[':style_json'] = json_encode($current, JSON_UNESCAPED_SLASHES);
-				}
-				continue;
-			}
-
-			// standard scalar fields
-			$set[]       = "$k = :$k";
-			$vals[":$k"] = $v;
-		}
-
-		if (!$set) return;
-
-		$sql  = "UPDATE canvas_items SET " . implode(',', $set) . ", updated_at = NOW() WHERE id = :id";
-		$vals[':id'] = $itemId;
-		$st   = $db->prepare($sql);
-		$st->execute($vals);
-	}
-
+        if (!$fields) return;
+        $allowed = ['x','y','w','h','z','rotation','locked','hidden','payload_json'];
+        $set     = [];
+        $vals    = [];
+        foreach ($fields as $k => $v) {
+            if (!in_array($k, $allowed, true)) {
+                if ($k === 'payload') {
+                    $set[]       = 'payload_json = :payload_json';
+                    $vals[':payload_json'] = is_array($v) ? json_encode($v) : $v;
+                }
+                continue;
+            }
+            $set[]       = "$k = :$k";
+            $vals[":$k"] = $v;
+        }
+        if (!$set) return;
+        $sql  = "UPDATE canvas_items SET " . implode(',', $set) . ", updated_at = NOW() WHERE id = :id";
+        $vals[':id'] = $itemId;
+        $st   = $db->prepare($sql);
+        $st->execute($vals);
+    }
 
     public static function deleteItem(PDO $db, int $itemId): void {
-        // Soft-delete items by marking them hidden rather than removing them completely.
-        // This preserves the record so that bulk operations and related connectors can
-        // reference it if needed. It also avoids race conditions where a client
-        // deletes an item that another client is still editing.
-        $st = $db->prepare("UPDATE canvas_items SET hidden=1, updated_at=NOW() WHERE id=?");
-        $st->execute([$itemId]);
+        $db->prepare("DELETE FROM canvas_items WHERE id=?")->execute([$itemId]);
     }
 
     public static function bulkUpdate(PDO $db, int $boardId, array $moves): void {

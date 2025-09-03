@@ -41,4 +41,5 @@ window.boardSlug = <?= json_encode($board['slug'] ?? '') ?>;
 <script src="/public/js/mood-canvas.js?v=2"></script>
 
 <script src="/public/js/mood-canvas-highlight.js"></script>
+<script src="/public/js/mood-canvas-media.js"></script>
 

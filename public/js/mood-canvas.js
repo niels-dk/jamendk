@@ -152,6 +152,67 @@
   const apiPOST   = (u,b) => api('POST', u, b);
   const apiPATCH  = (u,b) => api('PATCH', u, b);
   const apiDELETE = (u)   => api('DELETE', u);
+	  
+	  function __mc_renderMediaIntoFrame(el, media) {
+		  if (!el || el.dataset.kind !== 'frame') return;
+
+		  const body    = el.querySelector('.item-body') || el;
+		  const titleEl = el.querySelector('.frame-title');
+
+		  // Clear media → show title + restore top gap, then exit
+		  if (!media) {
+			if (titleEl) titleEl.style.display = '';
+			if (body)    body.style.top = '26px';
+			// Remove any existing media node
+			const old = body.querySelector('.mc-media');
+			if (old) old.remove();
+			return;
+		  }
+
+		  // Media present → hide title + remove top gap
+		  if (titleEl) titleEl.style.display = 'none';
+		  if (body)    body.style.top = '0';
+
+		  // Replace existing media node
+		  const old = body.querySelector('.mc-media');
+		  if (old) old.remove();
+
+		  const wrap = document.createElement('div');
+		  wrap.className = 'mc-media';
+		  wrap.style.cssText = 'position:absolute;inset:0;border-radius:inherit;overflow:hidden;';
+		  wrap.style.pointerEvents = 'none'; // let frame receive drags/clicks
+
+		  const makeImg = (src, alt, fit) => {
+			const img = document.createElement('img');
+			img.src = src;
+			img.alt = alt || '';
+			img.style.width = '100%';
+			img.style.height = '100%';
+			img.style.objectFit = fit;
+			img.draggable = false;
+			img.setAttribute('draggable', 'false');
+			img.style.userSelect = 'none';
+			img.style.webkitUserDrag = 'none';
+			img.addEventListener('dragstart', e => e.preventDefault());
+			return img;
+		  };
+
+		  if ((media.mime_type || '').startsWith('image/')) {
+			wrap.appendChild(
+			  makeImg('/storage/thumbs/' + media.uuid + '_thumb.jpg',
+					  media.file_name || media.uuid, 'contain')
+			);
+		  } else if (media.provider === 'youtube' && media.provider_id) {
+			wrap.appendChild(
+			  makeImg('https://img.youtube.com/vi/' + media.provider_id + '/hqdefault.jpg',
+					  media.file_name || media.provider_id, 'cover')
+			);
+		  }
+
+		  body.appendChild(wrap);
+		}
+
+
 
   // ---------- selection UI ----------
   function addHandles(el) {
@@ -256,17 +317,58 @@
 		if (item.kind === 'label') { el.style.background = '#eef'; el.style.borderRadius = '10px'; }
 		el.ondblclick = () => inlineEditText(item.id, el); // inline edit should target .item-body
 	  } else if (item.kind === 'frame') {
-		el.style.background = '#fff';
-		el.style.border = '2px solid #666';
+		  el.style.background = '#fff';
+		  el.style.border = '2px solid #666';
 
-		const title = document.createElement('div');
-		title.textContent = (item.payload && item.payload.title) ? item.payload.title : 'Frame';
-		title.style.cssText = 'font-weight:600;margin:4px 4px 6px 4px;font-size:14px;color:#000';
-		el.appendChild(title);
+		  const title = document.createElement('div');
+		  title.className = 'frame-title';
+		  title.textContent = (item.payload && item.payload.title) ? item.payload.title : 'Frame';
+		  title.style.cssText = 'font-weight:600;margin:4px 4px 6px 4px;font-size:14px;color:#000';
+		  el.appendChild(title);
 
-		// Body becomes frame content area under the title
-		body.style.top = '26px'; // leave space for title (adjust if you change title styles)
-	  }
+		  // Decide if this frame already has media (from JOIN or payload)
+		  const mediaObj =
+			item.media ||
+			(item.payload && item.payload.media) ||
+			null;
+
+		  if (mediaObj) {
+			// Media present → hide title and remove gap, then render media
+			title.style.display = 'none';
+			body.style.top = '0';
+			__mc_renderMediaIntoFrame(el, mediaObj);
+		  } else {
+			// No media → show title and keep gap
+			title.style.display = '';
+			body.style.top = '26px';
+		  }
+		}
+
+
+	  
+	  // If frame has media in payload, render it
+		if (item.kind === 'frame' && item.payload && item.payload.media) {
+		  const m = item.payload.media;
+		  const mediaEl = document.createElement('div');
+		  mediaEl.className = 'mc-media';
+		  mediaEl.style.cssText = 'position:absolute;inset:0;border-radius:inherit;overflow:hidden;';
+		  if ((m.mime_type||'').startsWith('image/')) {
+			const img = document.createElement('img');
+			img.src = '/storage/thumbs/' + m.uuid + '_thumb.jpg'; // or your thumb/original route
+			img.alt = m.file_name || m.uuid;
+			img.style.width='100%'; img.style.height='100%'; img.style.objectFit='contain';
+			mediaEl.appendChild(img);
+		  } else if (m.provider === 'youtube' && m.provider_id) {
+			// Lightweight: use thumb; heavy: store embed_html and use <iframe>
+			const img = document.createElement('img');
+			img.src = 'https://img.youtube.com/vi/' + m.provider_id + '/hqdefault.jpg';
+			img.alt = m.file_name || m.provider_id;
+			img.style.width='100%'; img.style.height='100%'; img.style.objectFit='cover';
+			mediaEl.appendChild(img);
+		  }
+		  body.appendChild(mediaEl);
+		}
+
 
 	  // Apply saved style from DB (highlight etc.)
 	  if (item.style) {
@@ -279,8 +381,7 @@
 	  itemsById[item.id] = { data: item, el };
 	  return el;
 	}
-
-
+	  
   function renderConnector(item) {
     const line = document.createElementNS('http://www.w3.org/2000/svg','line');
     line.dataset.id = String(item.id);
@@ -368,6 +469,31 @@
 	  if ('x' in patch || 'y' in patch || 'w' in patch || 'h' in patch) {
 		refreshAttachedConnectors(id);
 	  }
+	  
+	  // optimistic media handling
+	  if ('media' in patch || 'media_id' in patch || (patch.payload && 'media' in patch.payload)) {
+		  const entry = itemsById[id];
+		  if (entry) {
+			const d  = entry.data;
+			const el = entry.el;
+
+			let media = null;
+			if (patch.media && typeof patch.media === 'object') media = patch.media;
+			else if (patch.payload && patch.payload.media)       media = patch.payload.media;
+			else if (patch.media_id === null)                    media = null;
+
+			// keep in item data so it survives until server echo
+			if (media === null) {
+			  if (d.payload) delete d.payload.media;
+			  d.media = null;
+			} else if (media) {
+			  d.payload = Object.assign({}, d.payload||{}, { media });
+			  d.media   = media;
+			}
+
+			if (el) __mc_renderMediaIntoFrame(el, media);
+		  }
+		}
 
 	  // 6) Persist to server (non-blocking UI)
 	  try {
@@ -707,7 +833,7 @@
   }
 
   stage.addEventListener('mousedown', handleDown);
-  content.addEventListener('mousedown', handleDown);
+  //content.addEventListener('mousedown', handleDown);
 
   document.addEventListener('mousemove', (e) => {
     if (isPanning) {
@@ -838,6 +964,19 @@ window.moodCanvas = {
 		? window.__mc_updateItem(id, { style })
 		: false
 	),
+  setItemPayload: (id, payload) => (
+  	typeof window.__mc_updateItem === 'function'
+    	? window.__mc_updateItem(id, { payload })
+    	: false
+	),
+	
+  // pass full media object (id, uuid, mime_type, provider, provider_id, file_name)
+	setItemMedia: (id, media) => (
+	  typeof window.__mc_updateItem === 'function'
+		? window.__mc_updateItem(id, { media })  // optimistic UI + PATCH
+		: false
+	),
+
 
   registerKeyBinding: (combo, fn)=>{ __mc_customKeyBindings.set(combo.toLowerCase(), fn); }
 };

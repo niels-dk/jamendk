@@ -260,7 +260,87 @@ class media_controller
 		echo json_encode(['success' => true, 'group_id' => $groupId]);
 	}
 
+	// controllers/MediaController.php
+    public static function listMedia(PDO $db): void {
+        $q      = isset($_GET['q']) ? trim($_GET['q']) : '';
+        $limit  = isset($_GET['limit']) ? max(1, min(100, (int)$_GET['limit'])) : 40;
+        $offset = isset($_GET['offset']) ? max(0, (int)$_GET['offset']) : 0;
+        $type   = isset($_GET['type']) ? $_GET['type'] : 'all';
 
+        $where = [];
+        $args  = [];
+
+        if ($q !== '') {
+            $where[] = '(file_name LIKE ? OR provider LIKE ? OR tags LIKE ?)';
+            $args[] = "%$q%"; $args[] = "%$q%"; $args[] = "%$q%";
+        }
+        if ($type === 'image') {
+            $where[] = "mime_type LIKE 'image/%'";
+        } elseif ($type === 'video') {
+            $where[] = "mime_type LIKE 'video/%' OR provider = 'youtube'";
+        }
+
+        $sql = 'SELECT id, uuid, file_name, mime_type, provider, provider_id, created_at, tags
+                FROM vision_media';
+        if ($where) $sql .= ' WHERE ' . implode(' AND ', $where);
+        $sql .= ' ORDER BY id DESC LIMIT ? OFFSET ?';
+
+        $args[] = $limit;
+        $args[] = $offset;
+
+        $st = $db->prepare($sql);
+        foreach ($args as $i => $v) {
+            $st->bindValue($i+1, $v, is_int($v) ? PDO::PARAM_INT : PDO::PARAM_STR);
+        }
+        $st->execute();
+        $rows = $st->fetchAll(PDO::FETCH_ASSOC);
+
+        header('Content-Type: application/json');
+        echo json_encode($rows, JSON_UNESCAPED_SLASHES);
+    }
+
+	public static function listAll(): void {
+        global $db; // or inject PDO as in your project
+        $q      = isset($_GET['q']) ? trim($_GET['q']) : '';
+        $limit  = isset($_GET['limit']) ? max(1, min(100, (int)$_GET['limit'])) : 40;
+        $offset = isset($_GET['offset']) ? max(0, (int)$_GET['offset']) : 0;
+        $type   = isset($_GET['type']) ? $_GET['type'] : 'all';
+
+        $where = [];
+        $args  = [];
+
+        if ($q !== '') {
+            $where[] = '(file_name LIKE ? OR provider LIKE ? OR tags LIKE ?)';
+            $args[] = "%$q%"; $args[] = "%$q%"; $args[] = "%$q%";
+        }
+        if ($type === 'image') {
+            $where[] = "mime_type LIKE 'image/%'";
+        } elseif ($type === 'video') {
+            $where[] = "mime_type LIKE 'video/%' OR provider = 'youtube'";
+        }
+
+        $sql = 'SELECT id, uuid, file_name, mime_type, provider, provider_id, created_at, tags
+                FROM vision_media';
+        if ($where) $sql .= ' WHERE ' . implode(' AND ', $where);
+        $sql .= ' ORDER BY id DESC LIMIT ? OFFSET ?';
+
+        $pdo = $db; // adjust if you use a different PDO handle name
+        $st = $pdo->prepare($sql);
+
+        // bind with correct types
+        $i = 1;
+        foreach ($args as $v) {
+            $st->bindValue($i++, $v, PDO::PARAM_STR);
+        }
+        $st->bindValue($i++, $limit, PDO::PARAM_INT);
+        $st->bindValue($i++, $offset, PDO::PARAM_INT);
+
+        $st->execute();
+        $rows = $st->fetchAll(PDO::FETCH_ASSOC);
+
+        header('Content-Type: application/json');
+        echo json_encode($rows, JSON_UNESCAPED_SLASHES);
+    }
 
     // POST /api/visions/{slug}/media:link  (YouTube only v1)
     public static function link(string $slug): void

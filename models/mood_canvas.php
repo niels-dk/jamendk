@@ -21,25 +21,45 @@ class MoodCanvas {
 class mood_canvas_model
 {
     public static function listItems(PDO $db, int $boardId): array {
-    // Only return non-hidden items.
-		$st = $db->prepare(
-			"SELECT id, kind, x, y, w, h, z, rotation, locked, hidden, payload_json, style_json
-			 FROM canvas_items
-			 WHERE board_id = ? AND hidden = 0
-			 ORDER BY z ASC, id ASC"
-		);
+		$sql = "
+		  SELECT
+			ci.id, ci.kind, ci.x, ci.y, ci.w, ci.h, ci.z, ci.rotation, ci.locked, ci.hidden,
+			ci.payload_json, ci.style_json, ci.media_id,
+			vm.uuid        AS media_uuid,
+			vm.file_name   AS media_file_name,
+			vm.mime_type   AS media_mime_type,
+			vm.provider    AS media_provider,
+			vm.provider_id AS media_provider_id
+		  FROM canvas_items ci
+		  LEFT JOIN vision_media vm ON vm.id = ci.media_id
+		  WHERE ci.board_id = ? AND ci.hidden = 0
+		  ORDER BY ci.z ASC, ci.id ASC
+		";
+		$st = $db->prepare($sql);
 		$st->execute([$boardId]);
 		$rows = $st->fetchAll(PDO::FETCH_ASSOC);
 
 		foreach ($rows as &$row) {
-			// decode JSON fields to API shape expected by the client
 			$row['payload'] = $row['payload_json'] ? json_decode($row['payload_json'], true) : null;
 			$row['style']   = $row['style_json']   ? json_decode($row['style_json'],   true) : null;
 
-			// remove raw columns
-			unset($row['payload_json'], $row['style_json']);
+			// NEW: pack a media object if present
+			if (!empty($row['media_id'])) {
+				$row['media'] = [
+				  'id'          => (int)$row['media_id'],
+				  'uuid'        => $row['media_uuid'],
+				  'file_name'   => $row['media_file_name'],
+				  'mime_type'   => $row['media_mime_type'],
+				  'provider'    => $row['media_provider'],
+				  'provider_id' => $row['media_provider_id'],
+				];
+			} else {
+				$row['media'] = null;
+			}
 
-			// cast scalar flags (optional but nice)
+			unset($row['payload_json'], $row['style_json'],
+				  $row['media_uuid'], $row['media_file_name'], $row['media_mime_type'],
+				  $row['media_provider'], $row['media_provider_id']);
 			$row['id']       = (int)$row['id'];
 			$row['x']        = (int)$row['x'];
 			$row['y']        = (int)$row['y'];
@@ -50,9 +70,9 @@ class mood_canvas_model
 			$row['locked']   = (bool)$row['locked'];
 			$row['hidden']   = (bool)$row['hidden'];
 		}
-
 		return $rows;
 	}
+
 
 
     public static function createItem(PDO $db, int $boardId, string $kind, int $x, int $y, int $w, int $h, $payload): array {
@@ -88,35 +108,53 @@ class mood_canvas_model
     public static function updateItem(PDO $db, int $itemId, array $fields): void {
 		if (!$fields) return;
 
-		$allowed = ['x','y','w','h','z','rotation','locked','hidden','payload_json','style_json'];
+		$allowed = ['x','y','w','h','z','rotation','locked','hidden','payload_json','style_json','media_id'];
 		$set     = [];
 		$vals    = [];
 
 		foreach ($fields as $k => $v) {
 			if (!in_array($k, $allowed, true)) {
-				// alias: payload → payload_json
+				// alias: payload → payload_json (merge)
 				if ($k === 'payload') {
+					// read current
+					$cur = $db->prepare("SELECT payload_json FROM canvas_items WHERE id = ?");
+					$cur->execute([$itemId]);
+					$row = $cur->fetch(PDO::FETCH_ASSOC);
+					$current = $row && $row['payload_json'] ? json_decode($row['payload_json'], true) : [];
+					if (is_array($v)) $current = array_merge($current ?: [], $v);
+
 					$set[] = 'payload_json = :payload_json';
-					$vals[':payload_json'] = is_array($v) ? json_encode($v, JSON_UNESCAPED_SLASHES) : $v;
+					$vals[':payload_json'] = json_encode($current, JSON_UNESCAPED_SLASHES);
 				}
-				// alias: style → style_json
+				// alias: style → style_json (merge)
 				else if ($k === 'style') {
-					// 1) load current style_json
 					$cur = $db->prepare("SELECT style_json FROM canvas_items WHERE id = ?");
 					$cur->execute([$itemId]);
 					$row = $cur->fetch(PDO::FETCH_ASSOC);
 					$current = $row && $row['style_json'] ? json_decode($row['style_json'], true) : [];
-
-					// 2) merge shallow (null/'' removes key)
 					if (is_array($v)) {
 						foreach ($v as $sk => $sv) {
-							if ($sv === null || $sv === '') unset($current[$sk]);
-							else $current[$sk] = $sv;
+							if ($sv === null || $sv === '') unset($current[$sk]); else $current[$sk] = $sv;
 						}
 					}
-
 					$set[] = 'style_json = :style_json';
 					$vals[':style_json'] = json_encode($current, JSON_UNESCAPED_SLASHES);
+				}
+				// alias: media → media_id (by id or uuid)
+				else if ($k === 'media') {
+					$mediaId = null;
+					if (is_array($v)) {
+						if (!empty($v['id'])) {
+							$mediaId = (int)$v['id'];
+						} else if (!empty($v['uuid'])) {
+							$q = $db->prepare("SELECT id FROM vision_media WHERE uuid = ?");
+							$q->execute([$v['uuid']]);
+							$found = $q->fetch(PDO::FETCH_ASSOC);
+							if ($found) $mediaId = (int)$found['id'];
+						}
+					}
+					$set[] = 'media_id = :media_id';
+					$vals[':media_id'] = $mediaId; // can be null to clear
 				}
 				continue;
 			}
@@ -133,6 +171,7 @@ class mood_canvas_model
 		$st   = $db->prepare($sql);
 		$st->execute($vals);
 	}
+
 
 
     public static function deleteItem(PDO $db, int $itemId): void {

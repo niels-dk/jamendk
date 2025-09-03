@@ -11,6 +11,7 @@
   --radius:16px;--card-shadow:0 8px 24px rgba(0,0,0,.35);
 }
 
+
 /* ---------- Base ---------- */
 *{box-sizing:border-box}
 html,body{height:100%; overflow-x: hidden;}
@@ -582,6 +583,14 @@ line.connector-selected { stroke: #4a90e2; stroke-width: 3; }
 .canvas-item { position: relative; } /* ensure inner fill positions correctly */
 .canvas-item.selected { outline: 2px solid #4a90e2; outline-offset: 0; }
 .canvas-item.connect-hover { outline:2px dashed #22c55e; }
+
+/* media overlay should not intercept mouse/touch */
+.canvas-item .mc-media,
+.canvas-item .mc-media * {
+  pointer-events: none;
+  -webkit-user-drag: none;
+  user-select: none;
+}
 
 /* --- Marquee (rubberband) --- */
 .marquee {

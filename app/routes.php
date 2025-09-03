@@ -88,6 +88,9 @@ function route(string $uri): void
         '/api/tags'                                => ['media','tags_list'],     // GET
         //'/api/media/([0-9]+)/tags'                 => ['media','update_tags'],   // POST
 
+		// Global Media API (search/list) � used by mood-canvas-media.js overlay
+		'/api/media'                   => ['media','listAll'],   // GET  ?q=&limit=&offset=&type=
+		
         // ── General Dashboard ─────────────────────────────────────────────────
         '/dashboard'          => ['home', 'dashboard'],
 

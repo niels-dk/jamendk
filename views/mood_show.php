@@ -12,6 +12,6 @@
   <p>This mood board is under construction.  An interactive canvas will appear here in a future update.</p>
   <div class="btnbar">
     <a class="btn" href="/moods/<?= htmlspecialchars($board['slug']) ?>/media">Edit</a>
-	<a class="btn ghost" href="/dashboard/moods">Back to list</a>
+	<a class="btn ghost" href="/dashboard/mood">Back to list</a>
   </div>
 </div>

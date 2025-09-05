@@ -547,7 +547,8 @@
 	  // edit inside body; keep outer el free for handles/outline
 	  body.innerHTML = '';
 	  body.appendChild(ta);
-	  ta.focus(); ta.select();
+	  ta.focus(); 
+	  //ta.select();
 	  
 	  window.__mc_isEditingText = true;
 
@@ -569,6 +570,20 @@
 	  
 	  ta.onblur = () => commit(true);
 	  ta.onkeydown = (e)=>{ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); commit(true);} if(e.key==='Escape'){e.preventDefault(); commit(false);} };
+	  
+	  // Focus without selecting all, place caret at end (iOS/Android/desktop safe)
+		ta.focus({ preventScroll: true });
+		const placeCaretAtEnd = () => {
+		  try {
+			const end = ta.value.length;
+			ta.setSelectionRange(end, end);
+		  } catch(_) {}
+		};
+		if ('requestAnimationFrame' in window) {
+		  requestAnimationFrame(placeCaretAtEnd);
+		} else {
+		  setTimeout(placeCaretAtEnd, 0);
+		}
 	}
 
 

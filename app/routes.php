@@ -146,7 +146,7 @@ function route(string $uri): void
         '/moods/([A-Za-z0-9]{6,16})'               => ['mood', 'show'],
 		
 		'/moods/([A-Za-z0-9]{6,16})/canvas'        => ['mood', 'canvas'],
-		'/moods/([A-Za-z0-9]{6,16})/media'         => ['mood', 'edit'],
+		'/moods/([A-Za-z0-9]{6,16})/media'         => ['mood', 'editMedia'],
         '/moods/([A-Za-z0-9]{6,16})/edit'          => ['mood', 'edit'],
         '/moods/([A-Za-z0-9]{6,16})/archive'       => ['mood', 'archive'],
         '/moods/([A-Za-z0-9]{6,16})/unarchive'     => ['mood', 'unarchive'],

@@ -51,7 +51,7 @@ class mood_controller
     }
 
     /** GET /moods/{slug}/edit – edit form for a mood board. */
-    public static function edit(string $slug): void
+    public static function editMedia(string $slug): void
     {
         global $db;
         $board = mood_model::get($db, $slug);
@@ -63,6 +63,49 @@ class mood_controller
         $content = ob_get_clean();
         include __DIR__ . '/../views/layout.php';
     }
+	
+	public static function edit(string $slug): void
+	{
+		global $db;
+
+		// Fetch the board by slug.  If it does not exist, return 404.
+		$board = mood_model::get($db, $slug);
+		if (!$board) {
+			http_response_code(404);
+			echo 'Mood board not found';
+			return;
+		}
+
+		// On POST, update the title and description then redirect back to the
+		// mood board info page.
+		if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+			$title       = trim($_POST['title'] ?? '');
+			$description = trim($_POST['description'] ?? '');
+
+			// Only update fields if they are provided.  The partialUpdate
+			// method will ignore unknown columns.
+			$fields = [];
+			if ($title !== '') {
+				$fields['title'] = $title;
+			}
+			if ($description !== '') {
+				$fields['description'] = $description;
+			}
+			if ($fields) {
+				mood_model::partialUpdate($db, (int)$board['id'], $fields);
+			}
+			// Redirect to the mood board's show page after saving.
+			header('Location: /moods/' . $slug);
+			exit;
+		}
+
+		// Otherwise show the edit form.  Set a page title for the layout.
+		$pageTitle = 'Edit Mood Board';
+		ob_start();
+		include __DIR__ . '/../views/mood_edit.php';
+		$content = ob_get_clean();
+		include __DIR__ . '/../views/layout.php';
+	}
 
     /** POST /moods/update – save title or other basics (non‑AJAX fallback). */
     public static function update(): void

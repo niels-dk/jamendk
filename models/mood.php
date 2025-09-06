@@ -62,7 +62,7 @@ class mood_model
     public static function partialUpdate(PDO $db, int $id, array $fields): void
     {
         if (!$fields) return;
-        $allowed = ['title','vision_id'];
+        $allowed = ['title','description','vision_id'];
         $set     = [];
         $vals    = [];
         foreach ($fields as $k => $v) {

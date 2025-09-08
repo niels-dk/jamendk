@@ -61,12 +61,22 @@
   let TAGS_CACHE   = null;
   let GROUPS_CACHE = null;
 	
-  const btnBoard  = document.querySelector('[data-tab="board"]');
-  const btnAll    = document.querySelector('[data-tab="all"]');
-  const search    =
-    document.querySelector('#media-search') ||
-    document.querySelector('#mediaSearch')  ||
-    null;
+  // Try data-tab first; if not found, fall back to data-scope attributes
+	const btnBoard =
+		document.querySelector('[data-tab="board"]') ||
+		document.querySelector('[data-scope="board"]');
+
+	const btnAll =
+		document.querySelector('[data-tab="all"]')   ||  // preferred attribute
+		document.querySelector('[data-scope="vision"]') || // used by your “All Media Files” button
+		document.querySelector('[data-scope="all"]');    // fallback if you rename later
+
+	// Keep using #media-search, but fall back to the camelCase ID if present
+	const search =
+		document.querySelector('#media-search') ||
+		document.querySelector('#mediaSearch') ||
+		null;
+	
   let limit = 50, offset = 0;
  
   if (typeof renderMedia !== 'function') {

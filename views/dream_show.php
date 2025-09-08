@@ -67,7 +67,7 @@ ob_start();
   <p style="margin-top:1.4rem"><small>Created <?= $dream['created_at'] ?></small></p>
 
   <a class="btn" href="/dreams/<?= $dream['slug'] ?>/edit">Edit Dream</a>
-  <a class="btn" href="/dashboard" style="margin-left:.6rem">Back to dashboard</a>
+  <a class="btn" href="/dashboard/dream" style="margin-left:.6rem">Back to dashboard</a>
 </div>
 
 <?php

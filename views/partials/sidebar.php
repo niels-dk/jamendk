@@ -3,10 +3,9 @@ $uri    = $_SERVER['REQUEST_URI'] ?? '/';
 $active = fn(string $pattern) => preg_match($pattern, $uri) ? 'active' : '';
 ?>
 <div class="sidebar">
-  <button class="sidebar-collapse" aria-label="Collapse sidebar">⟨</button>
-  <div class="brand">DreamBoard</div>
 
   <!-- Global fold-out navigation -->
+  <div class="nav-top">
   <nav class="nav">
     <div class="new-board">
       <button type="button" class="menu-toggle btn">Boards ▾</button>
@@ -27,6 +26,7 @@ $active = fn(string $pattern) => preg_match($pattern, $uri) ? 'active' : '';
       </div>
     </div>
   </nav>
+	</div>
 
   <!-- Context-specific navigation -->
   <?php

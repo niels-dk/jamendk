@@ -13,6 +13,8 @@
     <main><?= $content ?? '' ?></main>
   </div>
 
+  <link rel="stylesheet" href="/public/css/dashboard.css">
+
   <!-- Dream board modal & scripts -->
   <?php include __DIR__ . '/partials/dream-modal.php'; ?>
   <script src="/public/js/mobile-dream.js?v=11"></script>

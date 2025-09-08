@@ -38,27 +38,40 @@ class vision_controller
 
     /** GET /visions/{slug} – show vision */
     public static function show(string $slug): void
-    {
-        global $db;
-        $vision = vision_model::get($db, $slug);
-        if (!$vision) { http_response_code(404); echo 'Vision not found'; return; }
-        // fetch flags
-        $st = $db->prepare("SELECT * FROM vision_presentation WHERE vision_id=?");
-        $st->execute([(int)$vision['id']]);
-        $presentationFlags = $st->fetch(PDO::FETCH_ASSOC) ?: [];
-        // flatten anchors
-        $kv = [];
-        $map = vision_model::getAnchors($db, (int)$vision['id']);
-        foreach ($map as $k => $vals) {
-            foreach ($vals as $v) $kv[] = ['key'=>$k,'value'=>$v];
-        }
-        // include view
-        ob_start();
-        include __DIR__.'/../views/vision_show.php';
-        $content = ob_get_clean();
-        $boardType = 'vision';
-        include __DIR__.'/../views/layout.php';
-    }
+	{
+		global $db, $currentUserId;
+
+		// Allow public show page for now (mirror your Dream show behavior).
+		// If you want auth-only, add a check here.
+
+		// Fetch by slug (exclude deleted)
+		$stmt = $db->prepare("
+			SELECT id, slug, title, description, created_at, updated_at, archived, deleted_at
+			FROM visions
+			WHERE slug = ? AND deleted_at IS NULL
+			LIMIT 1
+		");
+		$stmt->execute([$slug]);
+		$vision = $stmt->fetch(PDO::FETCH_ASSOC);
+
+		if (!$vision) {
+			http_response_code(404);
+			echo 'Vision not found';
+			return;
+		}
+
+		// Page vars for the layout
+		$pageTitle = $vision['title'] ?: 'Vision';
+		$pageDescription = $vision['description'] ?: 'Vision';
+		$noSidebar = true; // matches your Dream “show” layout
+
+		// Render view into $content then include the site layout
+		ob_start();
+		include __DIR__ . '/../views/vision_show.php';
+		$content = ob_get_clean();
+		include __DIR__ . '/../views/layout.php';
+	}
+
 
     /** GET /visions/{slug}/edit – edit form */
     public static function edit(string $slug): void

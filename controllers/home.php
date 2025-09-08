@@ -1,4 +1,4 @@
-<?php
+	<?php
 require_once __DIR__ . '/../models/dream.php';
 require_once __DIR__ . '/../models/vision.php';
 require_once __DIR__ . '/../models/mood.php';
@@ -87,60 +87,119 @@ class home_controller
      *  - If a model class like vision_model::listByType exists, we use it.
      *  - Otherwise we fall back to a generic SQL over the mapped table.
      */
-    private static function fetchBoards(PDO $db, int $userId, string $type, string $filter): array
-    {
-        // model class if present (e.g., dream_model, vision_model…)
-        $modelClass = $type . '_model';
-        if (class_exists($modelClass) && method_exists($modelClass, 'listByType')) {
-            return $modelClass::listByType($db, $userId, $type, $filter);
-        }
+    //function fetchBoards($type, $filter = 'active', $limit = null, $orderBy = null, $includeFavorites = false)
+	public static function fetchBoards(
+		PDO $db,
+		int $userId,
+		string $type,
+		string $filter = 'active',
+		?int $limit = null,          // <— NEW (null = no limit)
+		?string $orderBy = null      // <— optional external sort
+	): array
+	{
+		// map type ? table (kept from your code)
+		$tableMap = [
+			'dream'  => 'dream_boards',
+			'vision' => 'visions',
+			'mood'   => 'mood_boards',
+			// 'trip' => 'trips',
+		];
+		if (!isset($tableMap[$type])) return [];
+		$table = $tableMap[$type];
 
-        // Fallback: generic SQL by table
-        $tableMap = [
-            'dream'  => 'dreams',
-            'vision' => 'visions',
-            'mood'   => 'mood_boards',
-            'trip'   => 'trips',
-        ];
-        if (!isset($tableMap[$type])) {
-            return [];
-        }
-        $table  = $tableMap[$type];
+		// WHERE by filter
+		$where  = "$table.user_id = ?";
+		$params = [$userId];
+		switch ($filter) {
+			case 'active':   $where .= " AND $table.archived = 0 AND $table.deleted_at IS NULL"; break;
+			case 'archived': $where .= " AND $table.archived = 1 AND $table.deleted_at IS NULL"; break;
+			case 'trash':    $where .= " AND $table.deleted_at IS NOT NULL"; break;
+			default:         $where .= " AND $table.archived = 0 AND $table.deleted_at IS NULL"; break;
+		}
 
+		// Resolve ORDER BY only if not provided from the caller
+		if (!$orderBy) {
+			$orderBy = 'created_at DESC';
+			try {
+				$colCheck = $db->prepare("SHOW COLUMNS FROM `$table` LIKE 'start_date'");
+				$colCheck->execute();
+				if ($colCheck->fetch(PDO::FETCH_NUM)) {
+					$orderBy = "IFNULL(start_date, created_at) DESC, created_at DESC";
+				}
+			} catch (\Throwable $e) {
+				// keep default
+			}
+		}
 
-        $where  = 'user_id = ?';
-        $params = [$userId];
-
-        switch ($filter) {
-            case 'active':
-                $where .= ' AND archived = 0 AND deleted_at IS NULL';
-                break;
-            case 'archived':
-                $where .= ' AND archived = 1 AND deleted_at IS NULL';
-                break;
-            case 'trash':
-                $where .= ' AND deleted_at IS NOT NULL';
-                break;
-            default:
-                $where .= ' AND archived = 0 AND deleted_at IS NULL';
-                break;
-        }
-
-        // Prefer start_date if present; otherwise fallback to created_at
-        $orderBy = 'created_at DESC';
-        try {
-            $colCheck = $db->prepare("SHOW COLUMNS FROM `$table` LIKE 'start_date'");
-            $colCheck->execute();
-            if ($colCheck->fetch(PDO::FETCH_ASSOC)) {
-                $orderBy = "IFNULL(start_date, created_at) DESC, created_at DESC";
-            }
-        } catch (\Throwable $e) {
-            // ignore and keep default
-        }
-
+		// Build SQL
 		$sql = "SELECT * FROM `$table` WHERE $where ORDER BY $orderBy";
-        $stmt = $db->prepare($sql);
-        $stmt->execute($params);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
-    }
+		if ($limit !== null) {
+			$sql .= " LIMIT " . (int)$limit;   // integer cast to avoid injection
+		}
+
+		$stmt = $db->prepare($sql);
+		$stmt->execute($params);
+		return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+	}
+
+
+
+	
+	public static function dashboard_overview(): void
+	{
+		global $db, $currentUserId;
+
+		if (empty($currentUserId)) { $currentUserId = 1; }
+
+		// Sorting mode (latest|newest|favorites)
+		$sort = isset($_GET['sort']) ? strtolower(trim($_GET['sort'])) : 'latest';
+
+		// Limit for each section: default 2, unless user sets ?limit_each=...
+		$limitEachParam = isset($_GET['limit_each']) ? (int)$_GET['limit_each'] : 2;
+		$limitEach = $limitEachParam > 0 ? $limitEachParam : null;
+
+		$types  = ['dream','vision','mood','trip'];
+		$boards = [];
+
+		foreach ($types as $type) {
+			$list = self::fetchBoards($db, (int)$currentUserId, $type, 'active');
+
+			// Sorting
+			if ($sort === 'newest') {
+				usort($list, fn($a,$b) => strcmp($b['created_at'] ?? '', $a['created_at'] ?? ''));
+			} elseif ($sort === 'favorites') {
+				usort($list, function($a,$b){
+					$fa = (int)($a['is_favorite'] ?? 0);
+					$fb = (int)($b['is_favorite'] ?? 0);
+					if ($fa !== $fb) return $fb <=> $fa;
+					return strcmp($b['updated_at'] ?? '', $a['updated_at'] ?? '');
+				});
+			} else {
+				usort($list, fn($a,$b) => strcmp($b['updated_at'] ?? '', $a['updated_at'] ?? ''));
+			}
+
+			// Apply limit only if not null
+			if ($limitEach !== null) {
+				$list = array_slice($list, 0, $limitEach);
+			}
+
+			$boards[$type] = $list;
+		}
+
+		// View vars
+		$pageTitle  = 'Dashboard';
+		$boardSets  = $boards;
+		$noSidebar  = true;
+		$sortValue  = $sort;
+		$limitValue = $limitEachParam;
+
+		// Render
+		ob_start();
+		include __DIR__ . '/../views/dashboard_overview.php';
+		$content = ob_get_clean();
+		include __DIR__ . '/../views/layout.php';
+	}
+
+
+
 }

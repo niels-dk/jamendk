@@ -111,21 +111,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Initial load
   if (navigator.onLine) {
-    console.log('[Offline-UI] init (online)');
+    //console.log('[Offline-UI] init (online)');
     syncQueuedDreams();
   } else {
-    console.log('[Offline-UI] init (offline)');
+    //console.log('[Offline-UI] init (offline)');
     showBanner('You are offline', 'offline');
     injectOfflineCards();
   }
 
   window.addEventListener('online', () => {
-    console.log('[Offline-UI] event: online');
+    //console.log('[Offline-UI] event: online');
     showBanner('You are back online', 'online');
     syncQueuedDreams();
   });
   window.addEventListener('offline', () => {
-    console.log('[Offline-UI] event: offline');
+    //console.log('[Offline-UI] event: offline');
     showBanner('You are offline', 'offline');
     injectOfflineCards();
   });

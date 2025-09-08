@@ -159,8 +159,8 @@ $currentTypeLabel = $boardLabels[$boardType] ?? 'Boards';
             : 'Created ' . date('Y-m-d', strtotime($d['created_at'])) ?>
         </small>
 
+		  <button class="menu-toggle" aria-label="Actions">&#8942;</button> <!-- ? -->
         <div class="card-menu">
-          <button class="menu-toggle" aria-label="Actions">⋮</button>
           <ul class="menu">
             <?php if ($filter === 'active'): ?>
               <li><button onclick="location='/<?= $boardType ?>s/<?= $d['slug'] ?>/archive'">Archive</button></li>

@@ -318,6 +318,8 @@ trix-editor.trix-content {
   color: var(--text-muted);
   cursor: pointer;
   padding: 0.2rem;
+  right: 0.8rem;
+  position: absolute;
 }
 .menu-toggle:hover {
   color: var(--text-main);
@@ -325,7 +327,7 @@ trix-editor.trix-content {
 
 /* The dropdown menu (hidden by default) */
 .card-menu .menu {
-  display: none;
+  display: block;
   position: absolute;
   top: 1.8rem;    /* just below the toggle */
   right: 0;
@@ -1025,3 +1027,167 @@ header nav { display: none; }
 .field-row select.field-key { width:110px; }
 .field-row input.field-value { flex:1; }
 .btn-remove-field { padding:4px; }
+
+/* ── Sidebar: stack split-button menus on top ───────────────────────── */
+.sidebar .nav-top {           /* optional wrapper (see PHP below) */
+  margin-bottom: 12px;
+  padding-bottom: 24px;
+  border-bottom: 0px solid #1c2740;
+}
+
+/* Each split button group becomes one full-width row */
+.sidebar .btn-group {
+  display: flex !important;   /* override earlier inline-block */
+  width: 100%;
+  margin: 0 0 8px 0;
+}
+
+/* Main button (text) expands, chevron stays compact */
+.sidebar .btn-group .btn.primary {
+  flex: 1 1 auto;
+  min-width: 0;                         /* allow truncation */
+  border-radius: 10px 0 0 10px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+.sidebar .btn-group .btn.split {
+  flex: 0 0 42px;
+  width: 42px;
+  border-radius: 0 10px 10px 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  padding-left: 0; padding-right: 0;
+}
+
+/* Ensure their dropdown stays aligned and above other content */
+.sidebar .btn-group { position: relative; }
+.sidebar .btn-group .split-menu {
+  right: 0; left: auto;
+  z-index: 500;
+}
+
+/* Space before the dynamic/secondary nav below */
+.sidebar .board-nav { margin-top: 12px; }
+
+/* ───────────────── Sidebar: stack the two top menus ───────────────── */
+.sidebar .nav-top .nav{
+  /* whatever it was before, make it a column list */
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px;
+}
+
+.sidebar .nav-top .new-board{
+  width: 100%;
+}
+
+/* Make the toggle button span the full width and align label + chevron */
+.sidebar .nav-top .new-board .menu-toggle.btn{
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;  /* text on left, ▾ on right */
+  text-align: left;
+  padding: 10px 12px;
+  border-radius: 10px;
+}
+
+/* Drop-down menu styling/behavior */
+.sidebar .nav-top .new-board .card-menu{
+  display: none;             /* hidden by default */
+  position: relative;        /* sits under its toggle */
+  margin-top: 6px;
+  background: #0f141b;
+  border: 1px solid #222a36;
+  border-radius: 10px;
+  overflow: hidden;
+}
+.sidebar .nav-top .new-board .card-menu a{
+  display: block;
+  padding: 9px 12px;
+  color: #c7d2df;
+  text-decoration: none;
+}
+.sidebar .nav-top .new-board .card-menu a:hover{
+  background: #1a2231;
+  color: #e8edf4;
+}
+
+/* JS toggles .open; show it when open */
+.sidebar .nav-top .new-board .card-menu.open{
+  display: block;
+}
+
+/* Clear separation before the dynamic sidebar below */
+.sidebar .board-nav{
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid #1c2740;
+}
+
+/* ── Sidebar: top menus (Boards / + New board) ─────────────────────── */
+
+/* Stack them with a gap */
+.sidebar .nav-top .nav{
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 10px;                       /* <— the space between the two toggles */
+}
+
+/* Each toggle group is the anchor for an absolute menu */
+.sidebar .nav-top .new-board{
+  position: relative;              /* <— so the dropdown positions from here */
+  padding-bottom: 15px;
+}
+
+/* Remove the blue button look on these two only */
+.sidebar .nav-top .new-board .menu-toggle.btn{
+  background: transparent !important;   /* kill blue bg */
+  color: #c7d2df !important;
+  border-radius: 10px;
+  padding: 8px 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;                              /* space before the ▾ */
+  box-shadow: none !important;
+}
+.sidebar .nav-top .new-board .menu-toggle.btn:hover{
+  background: #1a2231;                  /* gentle hover (optional) */
+}
+
+/* Dropdown is an overlay: does NOT push layout */
+.sidebar .nav-top .new-board .card-menu{
+  display: none;                        /* default hidden */
+  position: absolute;                   /* <— overlay */
+  top: calc(100% + 22px);                /* sit below the toggle with a gap */
+  left: 0;
+  min-width: 240px;
+  background: #0f141b;
+  border: 1px solid #222a36;
+  border-radius: 12px;
+  padding: 8px 0;
+  box-shadow: 0 12px 28px rgba(0,0,0,.45);
+  z-index: 1000;                        /* above the rest of sidebar */
+}
+.sidebar .nav-top .new-board .card-menu.open{
+  display: block;                       /* JS toggles .open */
+}
+
+/* Items inside the overlay */
+.sidebar .nav-top .new-board .card-menu a{
+  display: block;
+  padding: 9px 14px;
+  color: #c7d2df;
+  text-decoration: none;
+}
+.sidebar .nav-top .new-board .card-menu a:hover{
+  background: #1a2231;
+  color: #e8edf4;
+}
+
+/* Small separator before the dynamic sidebar below */
+.sidebar .board-nav{
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid #1c2740;
+}
+

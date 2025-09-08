@@ -92,7 +92,7 @@ function route(string $uri): void
 		'/api/media'                   => ['media','listAll'],   // GET  ?q=&limit=&offset=&type=
 		
         // ── General Dashboard ─────────────────────────────────────────────────
-        '/dashboard'          => ['home', 'dashboard'],
+        '/dashboard'          => ['home', 'dashboard_overview'],
 
         // New structure: pluralized board dashboards under /dashboard/<type>
         '/dashboard/(dreams|visions|moods|trips)/(archived|trash)'

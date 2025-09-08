@@ -62,14 +62,14 @@
   let GROUPS_CACHE = null;
 	
   // Try data-tab first; if not found, fall back to data-scope attributes
-	const btnBoard =
-		document.querySelector('[data-tab="board"]') ||
-		document.querySelector('[data-scope="board"]');
-
-	const btnAll =
-		document.querySelector('[data-tab="all"]')   ||  // preferred attribute
-		document.querySelector('[data-scope="vision"]') || // used by your “All Media Files” button
-		document.querySelector('[data-scope="all"]');    // fallback if you rename later
+	btnBoard?.addEventListener('click', () => {
+	  setActive('board');
+	  reloadMedia();
+	});
+	btnAll?.addEventListener('click', () => {
+	  setActive('all');
+	  reloadMedia();
+	});
 
 	// Keep using #media-search, but fall back to the camelCase ID if present
 	const search =
@@ -307,35 +307,23 @@
 	  btnAll?.classList.toggle('active',   mediaSource === 'all');
 	}
 
-  if (!window.__mediaFiltersBound) {
-		window.__mediaFiltersBound = true;
-
-		const debounce = (fn, ms) => {
-			let t;
-			return (...a) => {
-				clearTimeout(t);
-				t = setTimeout(() => fn(...a), ms);
-			};
-		};
-		const onFilterChange = debounce(() => reloadMedia(), 150);
-
-		// Attach the handler to whichever elements exist
-		if (search)    search.addEventListener('input', onFilterChange);
-		if (typeSel)   typeSel.addEventListener('change', onFilterChange);
-		if (groupSel)  groupSel.addEventListener('change', onFilterChange);
-		if (sortSel)   sortSel.addEventListener('change', onFilterChange);   // sort dropdown
-		if (tagsFilter) tagsFilter.addEventListener('input', onFilterChange); // tag filter
-	}
-	  
-  if (!window.__mediaFiltersBound) {
+  // Bind filter and sort listeners only once
+	if (!window.__mediaFiltersBound) {
 	  window.__mediaFiltersBound = true;
-
-	  const debounce = (fn, ms)=>{ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), ms); }; };
+	  const debounce = (fn, ms) => {
+		let t;
+		return (...a) => {
+		  clearTimeout(t);
+		  t = setTimeout(() => fn(...a), ms);
+		};
+	  };
 	  const onFilterChange = debounce(() => reloadMedia(), 150);
-
-	  search?.addEventListener('input', onFilterChange);
-	  typeSel?.addEventListener('change', onFilterChange);
-	  groupSel?.addEventListener('change', onFilterChange);
+	  // Attach handlers to existing controls
+	  if (search)    search.addEventListener('input',  onFilterChange);
+	  if (typeSel)   typeSel.addEventListener('change', onFilterChange);
+	  if (groupSel)  groupSel.addEventListener('change', onFilterChange);
+	  if (sortSel)   sortSel.addEventListener('change', onFilterChange);
+	  if (tagsFilter) tagsFilter.addEventListener('input', onFilterChange);
 	}
 
 

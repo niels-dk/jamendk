@@ -63,7 +63,10 @@
 	
   const btnBoard  = document.querySelector('[data-tab="board"]');
   const btnAll    = document.querySelector('[data-tab="all"]');
-  const search    = document.querySelector('#media-search'); // optional
+  const search    =
+    document.querySelector('#media-search') ||
+    document.querySelector('#mediaSearch')  ||
+    null;
   let limit = 50, offset = 0;
  
   if (typeof renderMedia !== 'function') {
@@ -122,12 +125,18 @@
   }
 
   function getFilters() {
-	  return {
-		q:    (typeof search  !== 'undefined' && search  && search.value) ? search.value.trim() : '',
-		type: (typeof typeSel !== 'undefined' && typeSel && typeSel.value) ? typeSel.value : '',
-		group: (typeof groupSel !== 'undefined' && groupSel && groupSel.value) ? groupSel.value : ''
-	  };
-	}
+    const qVal = (search && search.value) ? search.value.trim() : '';
+    const typeVal =
+        (typeof typeSel !== 'undefined' && typeSel && typeSel.value)
+            ? typeSel.value
+            : '';
+    const groupVal =
+        (typeof groupSel !== 'undefined' && groupSel && groupSel.value)
+            ? groupSel.value
+            : '';
+    return { q: qVal, type: typeVal, group: groupVal };
+  }
+
 
   function ytIdFromUrl(url) {
     if (!url) return '';
@@ -288,12 +297,25 @@
 	  btnAll?.classList.toggle('active',   mediaSource === 'all');
 	}
 
-  btnBoard?.addEventListener('click', () => { setActive('board'); reloadMedia(); });
-  btnAll?.addEventListener('click',   () => { setActive('all');   reloadMedia(); });
+  if (!window.__mediaFiltersBound) {
+		window.__mediaFiltersBound = true;
 
-  // tie into search/type filters
-  search?.addEventListener('input',   () => reloadMedia());
-  typeSel?.addEventListener('change', () => reloadMedia());
+		const debounce = (fn, ms) => {
+			let t;
+			return (...a) => {
+				clearTimeout(t);
+				t = setTimeout(() => fn(...a), ms);
+			};
+		};
+		const onFilterChange = debounce(() => reloadMedia(), 150);
+
+		// Attach the handler to whichever elements exist
+		if (search)    search.addEventListener('input', onFilterChange);
+		if (typeSel)   typeSel.addEventListener('change', onFilterChange);
+		if (groupSel)  groupSel.addEventListener('change', onFilterChange);
+		if (sortSel)   sortSel.addEventListener('change', onFilterChange);   // sort dropdown
+		if (tagsFilter) tagsFilter.addEventListener('input', onFilterChange); // tag filter
+	}
 	  
   if (!window.__mediaFiltersBound) {
 	  window.__mediaFiltersBound = true;

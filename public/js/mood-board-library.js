@@ -49,7 +49,12 @@
   // caches
   let TAGS_CACHE   = null;
   let GROUPS_CACHE = null;
-
+	
+  const btnBoard  = document.querySelector('[data-tab="board"]');
+  const btnAll    = document.querySelector('[data-tab="all"]');
+  const search    = document.querySelector('#media-search'); // optional
+  let limit = 50, offset = 0;
+	
   // -----------------------------
   // Network helpers
   // -----------------------------
@@ -134,6 +139,41 @@
     const j = await r.json();
     return toTagsArray(j.tags);
   }
+	  
+  async function loadBoardFiles() {
+	  const q    = search?.value?.trim() || '';
+	  const type = typeSel?.value || '';
+	  const url  = `/api/moods/${encodeURIComponent(window.moodSlug)}/media`
+				 + `?limit=${limit}&offset=${offset}`
+				 + (q ? `&q=${encodeURIComponent(q)}` : '')
+				 + (type ? `&type=${encodeURIComponent(type)}` : '');
+	  const res  = await fetch(url, { headers: { 'X-Requested-With':'XMLHttpRequest' }});
+	  const json = await res.json();
+	  if (json.success) renderMedia(json.items, json.total);
+	}
+
+	async function loadAllFiles() {
+	  const q    = search?.value?.trim() || '';
+	  const type = typeSel?.value || '';
+	  const url  = `/api/media?limit=${limit}&offset=${offset}`
+				 + (q ? `&q=${encodeURIComponent(q)}` : '')
+				 + (type ? `&type=${encodeURIComponent(type)}` : '');
+	  const res  = await fetch(url, { headers: { 'X-Requested-With':'XMLHttpRequest' }});
+	  const json = await res.json();
+	  if (json.success) renderMedia(json.items, json.total);
+	}
+
+	function setActive(tab) {
+	  btnBoard.classList.toggle('active', tab === 'board');
+	  btnAll.classList.toggle('active',   tab === 'all');
+	}
+
+  btnBoard?.addEventListener('click', () => { setActive('board'); offset = 0; loadBoardFiles(); });
+  btnAll?.addEventListener('click',   () => { setActive('all');   offset = 0; loadAllFiles(); });
+
+  // tie into search/type filters
+  search?.addEventListener('input',  () => (btnBoard.classList.contains('active') ? loadBoardFiles() : loadAllFiles()));
+  typeSel?.addEventListener('change',() => (btnBoard.classList.contains('active') ? loadBoardFiles() : loadAllFiles()));
 
   // -----------------------------
   // Overlay / Sheet
@@ -980,4 +1020,7 @@
   // -----------------------------
   loadGroups(); // prefill group select
   fetchList();
+  // Initial tab = Board Files
+  setActive('board');
+  loadBoardFiles();
 })();

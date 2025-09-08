@@ -190,6 +190,140 @@ class media_controller
         ];
     }
 	
+	public static function listForMood(string $slug): void
+	{
+		global $db, $currentUserId;
+
+		header('Content-Type: application/json');
+
+		// 1) Resolve board by slug (ignore archived; exclude soft-deleted)
+		$stmt = $db->prepare("
+			SELECT id, user_id
+			FROM mood_boards
+			WHERE slug = ? AND deleted_at IS NULL
+			LIMIT 1
+		");
+		$stmt->execute([$slug]);
+		$board = $stmt->fetch(PDO::FETCH_ASSOC);
+
+		if (!$board) {
+			http_response_code(404);
+			echo json_encode(['success' => false, 'error' => 'Board not found']);
+			return;
+		}
+
+		// Optional ownership guard — uncomment if needed
+		// if (!empty($currentUserId) && (int)$board['user_id'] !== (int)$currentUserId) {
+		//     http_response_code(403);
+		//     echo json_encode(['success' => false, 'error' => 'Forbidden']);
+		//     return;
+		// }
+
+		// 2) Lightweight filters
+		$q         = isset($_GET['q']) ? trim($_GET['q']) : '';              // matches file_name / tags / provider_id
+		$type      = isset($_GET['type']) ? trim($_GET['type']) : '';        // 'image' | 'video' | 'audio' | 'doc' | …
+		$groupId   = isset($_GET['group_id']) ? (int)$_GET['group_id'] : 0;  // optional filter by vm.group_id
+		$limit     = isset($_GET['limit'])  ? max(1, min(100, (int)$_GET['limit'])) : 50;
+		$offset    = isset($_GET['offset']) ? max(0, (int)$_GET['offset']) : 0;
+
+		// Map "type" to real columns (we only have mime_type + provider)
+		$typeSql = '';
+		if ($type !== '') {
+			switch ($type) {
+				case 'image':
+					$typeSql = " AND vm.mime_type LIKE 'image/%' ";
+					break;
+				case 'video':
+					// treat YouTube et al as videos too (provider='youtube')
+					$typeSql = " AND (vm.mime_type LIKE 'video/%' OR vm.provider = 'youtube') ";
+					break;
+				case 'audio':
+					$typeSql = " AND vm.mime_type LIKE 'audio/%' ";
+					break;
+				case 'pdf':
+					$typeSql = " AND vm.mime_type = 'application/pdf' ";
+					break;
+				default:
+					// generic starts-with match (e.g. application/, text/)
+					$typeSql = " AND (vm.mime_type LIKE :typePrefix OR vm.provider = :typeProvider) ";
+			}
+		}
+
+		// 3) WHERE + params
+		$where   = ["mbm.board_id = :bid"];
+		$params  = [':bid' => (int)$board['id']];
+
+		if ($q !== '') {
+			$where[]        = "(vm.file_name LIKE :q OR vm.tags LIKE :q OR vm.provider_id LIKE :q)";
+			$params[':q']   = '%' . $q . '%';
+		}
+
+		if ($groupId > 0) {
+			$where[]           = "vm.group_id = :gid";
+			$params[':gid']    = $groupId;
+		}
+
+		$whereSql = implode(' AND ', $where);
+
+		// 4) Count (no deleted_at on vision_media)
+		$countSql = "
+			SELECT COUNT(*)
+			FROM mood_board_media mbm
+			JOIN vision_media vm ON vm.id = mbm.media_id
+			WHERE $whereSql
+			$typeSql
+		";
+		$c = $db->prepare($countSql);
+		// Bind optional generic type mapping
+		if ($type !== '' && !in_array($type, ['image','video','audio','pdf'], true)) {
+			$c->bindValue(':typePrefix', $type . '/%');
+			$c->bindValue(':typeProvider', $type);
+		}
+		foreach ($params as $k => $v) $c->bindValue($k, $v);
+		$c->execute();
+		$total = (int)$c->fetchColumn();
+
+		// 5) Items (return only real columns that exist)
+		$sql = "
+			SELECT
+				vm.id,
+				vm.uuid,
+				vm.file_name,
+				vm.mime_type,
+				vm.file_size,
+				vm.provider,
+				vm.provider_id,
+				vm.provider_url,
+				vm.embed_html,
+				vm.tags,
+				vm.group_id,
+				vm.created_at,
+				vm.updated_at,
+				mbm.added_at
+			FROM mood_board_media mbm
+			JOIN vision_media vm ON vm.id = mbm.media_id
+			WHERE $whereSql
+			$typeSql
+			ORDER BY vm.created_at DESC
+			LIMIT $limit OFFSET $offset
+		";
+		$s = $db->prepare($sql);
+		if ($type !== '' && !in_array($type, ['image','video','audio','pdf'], true)) {
+			$s->bindValue(':typePrefix', $type . '/%');
+			$s->bindValue(':typeProvider', $type);
+		}
+		foreach ($params as $k => $v) $s->bindValue($k, $v);
+		$s->execute();
+		$items = $s->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+		echo json_encode([
+			'success' => true,
+			'total'   => $total,
+			'items'   => $items,
+		]);
+	}
+
+
 	public static function setGroup(int $mediaId): void
 	{
 		header('Content-Type: application/json');

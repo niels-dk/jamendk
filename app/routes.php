@@ -70,6 +70,9 @@ function route(string $uri): void
 		'/api/moods/([A-Za-z0-9]{6,16})/arrows'                       => ['canvas','createArrow'], // POST
 		'/api/moods/([A-Za-z0-9]{6,16})/arrows/([0-9]+):delete'       => ['mood_arrows','delete'], // POST
 		'/api/moods/([A-Za-z0-9]{6,16})/items/([0-9]+):delete' 		  => ['mood_items','delete'],
+		
+		// Board-scoped media (Mood canvas)
+		'/api/moods/([A-Za-z0-9]{6,16})/media'						  => ['media','listForMood'], // GET
 
         // Budget endpoints
         '/api/visions/([A-Za-z0-9]{6,16})/budget' => ['vision','getBudget'],  // GET

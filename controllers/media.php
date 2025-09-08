@@ -190,13 +190,14 @@ class media_controller
         ];
     }
 	
+	// controllers/media.php
 	public static function listForMood(string $slug): void
 	{
 		global $db, $currentUserId;
 
 		header('Content-Type: application/json');
 
-		// 1) Resolve board by slug (ignore archived; exclude soft-deleted)
+		// Find the board by slug; exclude deleted boards
 		$stmt = $db->prepare("
 			SELECT id, user_id
 			FROM mood_boards
@@ -205,28 +206,40 @@ class media_controller
 		");
 		$stmt->execute([$slug]);
 		$board = $stmt->fetch(PDO::FETCH_ASSOC);
-
 		if (!$board) {
 			http_response_code(404);
 			echo json_encode(['success' => false, 'error' => 'Board not found']);
 			return;
 		}
 
-		// Optional ownership guard — uncomment if needed
+		// Optional: check that the current user owns the board
 		// if (!empty($currentUserId) && (int)$board['user_id'] !== (int)$currentUserId) {
 		//     http_response_code(403);
 		//     echo json_encode(['success' => false, 'error' => 'Forbidden']);
 		//     return;
 		// }
 
-		// 2) Lightweight filters
-		$q         = isset($_GET['q']) ? trim($_GET['q']) : '';              // matches file_name / tags / provider_id
-		$type      = isset($_GET['type']) ? trim($_GET['type']) : '';        // 'image' | 'video' | 'audio' | 'doc' | …
-		$groupId   = isset($_GET['group_id']) ? (int)$_GET['group_id'] : 0;  // optional filter by vm.group_id
-		$limit     = isset($_GET['limit'])  ? max(1, min(100, (int)$_GET['limit'])) : 50;
-		$offset    = isset($_GET['offset']) ? max(0, (int)$_GET['offset']) : 0;
+		// Read filters from the query string
+		$q       = isset($_GET['q']) ? trim($_GET['q']) : '';
+		$type    = isset($_GET['type']) ? trim($_GET['type']) : '';
+		$groupId = isset($_GET['group_id']) ? (int)$_GET['group_id'] : 0;
+		$limit   = isset($_GET['limit']) ? max(1, min(100, (int)$_GET['limit'])) : 50;
+		$offset  = isset($_GET['offset']) ? max(0, (int)$_GET['offset']) : 0;
 
-		// Map "type" to real columns (we only have mime_type + provider)
+		// Build the WHERE clause
+		$where   = ['mbm.board_id = :bid'];
+		$params  = [':bid' => (int)$board['id']];
+
+		if ($q !== '') {
+			$where[]      = "(vm.file_name LIKE :q OR vm.tags LIKE :q OR vm.provider_id LIKE :q)";
+			$params[':q'] = '%' . $q . '%';
+		}
+		if ($groupId > 0) {
+			$where[]         = "vm.group_id = :gid";
+			$params[':gid']  = $groupId;
+		}
+
+		// Map type filter to real columns (mime_type or provider)
 		$typeSql = '';
 		if ($type !== '') {
 			switch ($type) {
@@ -234,7 +247,6 @@ class media_controller
 					$typeSql = " AND vm.mime_type LIKE 'image/%' ";
 					break;
 				case 'video':
-					// treat YouTube et al as videos too (provider='youtube')
 					$typeSql = " AND (vm.mime_type LIKE 'video/%' OR vm.provider = 'youtube') ";
 					break;
 				case 'audio':
@@ -244,28 +256,13 @@ class media_controller
 					$typeSql = " AND vm.mime_type = 'application/pdf' ";
 					break;
 				default:
-					// generic starts-with match (e.g. application/, text/)
 					$typeSql = " AND (vm.mime_type LIKE :typePrefix OR vm.provider = :typeProvider) ";
 			}
 		}
 
-		// 3) WHERE + params
-		$where   = ["mbm.board_id = :bid"];
-		$params  = [':bid' => (int)$board['id']];
-
-		if ($q !== '') {
-			$where[]        = "(vm.file_name LIKE :q OR vm.tags LIKE :q OR vm.provider_id LIKE :q)";
-			$params[':q']   = '%' . $q . '%';
-		}
-
-		if ($groupId > 0) {
-			$where[]           = "vm.group_id = :gid";
-			$params[':gid']    = $groupId;
-		}
-
 		$whereSql = implode(' AND ', $where);
 
-		// 4) Count (no deleted_at on vision_media)
+		// Count matching items
 		$countSql = "
 			SELECT COUNT(*)
 			FROM mood_board_media mbm
@@ -273,18 +270,17 @@ class media_controller
 			WHERE $whereSql
 			$typeSql
 		";
-		$c = $db->prepare($countSql);
-		// Bind optional generic type mapping
+		$countStmt = $db->prepare($countSql);
 		if ($type !== '' && !in_array($type, ['image','video','audio','pdf'], true)) {
-			$c->bindValue(':typePrefix', $type . '/%');
-			$c->bindValue(':typeProvider', $type);
+			$countStmt->bindValue(':typePrefix', $type . '/%');
+			$countStmt->bindValue(':typeProvider', $type);
 		}
-		foreach ($params as $k => $v) $c->bindValue($k, $v);
-		$c->execute();
-		$total = (int)$c->fetchColumn();
+		foreach ($params as $k => $v) $countStmt->bindValue($k, $v);
+		$countStmt->execute();
+		$total = (int)$countStmt->fetchColumn();
 
-		// 5) Items (return only real columns that exist)
-		$sql = "
+		// Fetch the items (only returning real columns)
+		$itemsSql = "
 			SELECT
 				vm.id,
 				vm.uuid,
@@ -307,14 +303,14 @@ class media_controller
 			ORDER BY vm.created_at DESC
 			LIMIT $limit OFFSET $offset
 		";
-		$s = $db->prepare($sql);
+		$itemsStmt = $db->prepare($itemsSql);
 		if ($type !== '' && !in_array($type, ['image','video','audio','pdf'], true)) {
-			$s->bindValue(':typePrefix', $type . '/%');
-			$s->bindValue(':typeProvider', $type);
+			$itemsStmt->bindValue(':typePrefix', $type . '/%');
+			$itemsStmt->bindValue(':typeProvider', $type);
 		}
-		foreach ($params as $k => $v) $s->bindValue($k, $v);
-		$s->execute();
-		$items = $s->fetchAll(PDO::FETCH_ASSOC) ?: [];
+		foreach ($params as $k => $v) $itemsStmt->bindValue($k, $v);
+		$itemsStmt->execute();
+		$items = $itemsStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
 		echo json_encode([
 			'success' => true,

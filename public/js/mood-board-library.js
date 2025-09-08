@@ -16,7 +16,9 @@
   const visionSlug = root.dataset.visionSlug || '';  // may be empty for standalone boards
   const boardSlug  = root.dataset.boardSlug || '';   // required for board ops
   const boardId    = parseInt(root.dataset.boardId || '0', 10);
-
+  // Ensure window.moodSlug is defined so loadBoardFiles() works
+  window.moodSlug = window.moodSlug || boardSlug;
+	
   const tabs = {
     board: $('[data-scope="board"]'),
     vision: $('[data-scope="vision"]')
@@ -41,6 +43,15 @@
 
   let currentScope = 'board';
   let items = [];
+  let mediaSource =
+  	document.querySelector('[data-tab="all"]')?.classList.contains('active') ? 'all' : 'board';
+	
+  // Accept a list of media items and update the grid.
+  // This mirrors how fetchList() sets items and calls render().
+  function renderMedia(medias, total) {
+    items = medias || [];
+    render();             // use the existing render() function
+  }
 
   // overlay
   const overlay = document.getElementById('ml-overlay');
@@ -54,7 +65,47 @@
   const btnAll    = document.querySelector('[data-tab="all"]');
   const search    = document.querySelector('#media-search'); // optional
   let limit = 50, offset = 0;
+ 
+  if (typeof renderMedia !== 'function') {
+    window.renderMedia = function (medias, total) {
+       items = Array.isArray(medias) ? medias : [];
+      if (typeof render === 'function') render();
+    };
+  }
+  
+  let isLoading = false;
+  let lastRequestKey = '';
+  let totalCount = 0;           // track total from API (for infinite scroll)
+  let hasFirstPageLoaded = false;
+  let currentAbort = null;      // optional: cancel in-flight
+
+  function normalizeMediaResponse(json) {
+	  // Accept the board API shape
+	  if (json && Array.isArray(json.items)) {
+		return { success: json.success !== false, items: json.items, total: json.total ?? json.items.length };
+	  }
+	  // Accept an array at the root (what /api/media returns)
+	  if (Array.isArray(json)) {
+		return { success: true, items: json, total: json.length };
+	  }
+	  // Accept some alternative {data: []} shapes if they ever appear
+	  if (json && Array.isArray(json.data)) {
+		return { success: json.success !== false, items: json.data, total: json.total ?? json.data.length };
+	  }
+	  return { success: false, items: [], total: 0 };
+	}
 	
+  // Build a stable key for deduping identical requests
+	function makeKey({ source, slug, q, type, offset }) {
+	  return [
+		source,
+		slug || 'all',
+		q || '',
+		type || '',
+		String(offset || 0)
+	  ].join('|');
+	}
+
   // -----------------------------
   // Network helpers
   // -----------------------------
@@ -69,6 +120,14 @@
     // else fall back to the board slug.
     return visionSlug || boardSlug;
   }
+
+  function getFilters() {
+	  return {
+		q:    (typeof search  !== 'undefined' && search  && search.value) ? search.value.trim() : '',
+		type: (typeof typeSel !== 'undefined' && typeSel && typeSel.value) ? typeSel.value : '',
+		group: (typeof groupSel !== 'undefined' && groupSel && groupSel.value) ? groupSel.value : ''
+	  };
+	}
 
   function ytIdFromUrl(url) {
     if (!url) return '';
@@ -139,41 +198,114 @@
     const j = await r.json();
     return toTagsArray(j.tags);
   }
-	  
-  async function loadBoardFiles() {
-	  const q    = search?.value?.trim() || '';
-	  const type = typeSel?.value || '';
-	  const url  = `/api/moods/${encodeURIComponent(window.moodSlug)}/media`
-				 + `?limit=${limit}&offset=${offset}`
-				 + (q ? `&q=${encodeURIComponent(q)}` : '')
-				 + (type ? `&type=${encodeURIComponent(type)}` : '');
-	  const res  = await fetch(url, { headers: { 'X-Requested-With':'XMLHttpRequest' }});
-	  const json = await res.json();
-	  if (json.success) renderMedia(json.items, json.total);
+  
+  function resolveMoodSlug() {
+	  // 1) dataset on your root element
+	  const root = document.getElementById('mood-lib-root') || document.getElementById('media-root');
+	  if (root?.dataset?.boardSlug) return root.dataset.boardSlug;
+
+	  // 2) global injected from PHP
+	  if (typeof window.moodSlug === 'string' && window.moodSlug) return window.moodSlug;
+
+	  // 3) URL fallback: /moods/{slug}/...
+	  const m = location.pathname.match(/\/moods\/([A-Za-z0-9]{6,16})/i);
+	  if (m) return m[1];
+
+	  return '';
+	}
+		  
+    async function loadBoardFiles() {
+	  const { q, type, group } = getFilters();
+	  const slug = resolveMoodSlug();
+	  if (!slug) { setActive('all'); return loadAllFiles(); }
+
+	  const key = makeKey({ source: 'board', slug, q, type, offset });
+	  if (key === lastRequestKey || isLoading) return;
+	  lastRequestKey = key;
+
+	  const url =
+		`/api/moods/${encodeURIComponent(slug)}/media` +
+		`?limit=${limit}&offset=${offset}` +
+		(q ? `&q=${encodeURIComponent(q)}` : '') +
+		(type ? `&type=${encodeURIComponent(type)}` : '') +
+		(group ? `&group_id=${encodeURIComponent(group)}` : '');
+
+	  try {
+		isLoading = true;
+		if (currentAbort) currentAbort.abort();
+		currentAbort = new AbortController();
+
+		const res  = await fetch(url, { headers: { 'X-Requested-With':'XMLHttpRequest' }, signal: currentAbort.signal });
+		const json = await res.json();
+		const { success, items: got, total } = normalizeMediaResponse(json);
+		if (!success) return;
+
+		totalCount = total ?? 0;
+		items = offset ? items.concat(got) : got.slice();
+		(typeof renderMedia === 'function' ? renderMedia : render)(items, totalCount);
+		offset += got.length;
+	  } finally {
+		isLoading = false;
+	  }
 	}
 
 	async function loadAllFiles() {
-	  const q    = search?.value?.trim() || '';
-	  const type = typeSel?.value || '';
-	  const url  = `/api/media?limit=${limit}&offset=${offset}`
-				 + (q ? `&q=${encodeURIComponent(q)}` : '')
-				 + (type ? `&type=${encodeURIComponent(type)}` : '');
-	  const res  = await fetch(url, { headers: { 'X-Requested-With':'XMLHttpRequest' }});
-	  const json = await res.json();
-	  if (json.success) renderMedia(json.items, json.total);
+	  const { q, type, group } = getFilters();
+
+	  const key = makeKey({ source: 'all', slug: '', q, type, offset });
+	  if (key === lastRequestKey || isLoading) return;
+	  lastRequestKey = key;
+
+	  const url =
+		`/api/media?limit=${limit}&offset=${offset}` +
+		(q ? `&q=${encodeURIComponent(q)}` : '') +
+		(type ? `&type=${encodeURIComponent(type)}` : '') +
+		(group ? `&group_id=${encodeURIComponent(group)}` : '');
+
+	  try {
+		isLoading = true;
+		if (currentAbort) currentAbort.abort();
+		currentAbort = new AbortController();
+
+		const res  = await fetch(url, { headers: { 'X-Requested-With':'XMLHttpRequest' }, signal: currentAbort.signal });
+		const json = await res.json();
+		const { success, items: got, total } = normalizeMediaResponse(json);
+		if (!success) return;
+
+		totalCount = total ?? 0;
+		items = offset ? items.concat(got) : got.slice();
+		(typeof renderMedia === 'function' ? renderMedia : render)(items, totalCount);
+		offset += got.length;
+	  } finally {
+		isLoading = false;
+	  }
 	}
+
 
 	function setActive(tab) {
-	  btnBoard.classList.toggle('active', tab === 'board');
-	  btnAll.classList.toggle('active',   tab === 'all');
+	  mediaSource = (tab === 'all') ? 'all' : 'board';
+	  btnBoard?.classList.toggle('active', mediaSource === 'board');
+	  btnAll?.classList.toggle('active',   mediaSource === 'all');
 	}
 
-  btnBoard?.addEventListener('click', () => { setActive('board'); offset = 0; loadBoardFiles(); });
-  btnAll?.addEventListener('click',   () => { setActive('all');   offset = 0; loadAllFiles(); });
+  btnBoard?.addEventListener('click', () => { setActive('board'); reloadMedia(); });
+  btnAll?.addEventListener('click',   () => { setActive('all');   reloadMedia(); });
 
   // tie into search/type filters
-  search?.addEventListener('input',  () => (btnBoard.classList.contains('active') ? loadBoardFiles() : loadAllFiles()));
-  typeSel?.addEventListener('change',() => (btnBoard.classList.contains('active') ? loadBoardFiles() : loadAllFiles()));
+  search?.addEventListener('input',   () => reloadMedia());
+  typeSel?.addEventListener('change', () => reloadMedia());
+	  
+  if (!window.__mediaFiltersBound) {
+	  window.__mediaFiltersBound = true;
+
+	  const debounce = (fn, ms)=>{ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), ms); }; };
+	  const onFilterChange = debounce(() => reloadMedia(), 150);
+
+	  search?.addEventListener('input', onFilterChange);
+	  typeSel?.addEventListener('change', onFilterChange);
+	  groupSel?.addEventListener('change', onFilterChange);
+	}
+
 
   // -----------------------------
   // Overlay / Sheet
@@ -833,6 +965,15 @@
 		});
 	  }
 	}
+	  
+	  async function reloadMedia() {
+		  offset = 0; items = []; totalCount = 0;
+		  hasFirstPageLoaded = false; lastRequestKey = '';
+		  if (currentAbort) currentAbort.abort();
+		  document.getElementById('media-grid')?.replaceChildren();
+
+		  return (mediaSource === 'all') ? loadAllFiles() : loadBoardFiles();
+		}
 
 	async function doUpload(job) {
 	  const { file, tempId } = job;
@@ -1019,7 +1160,7 @@
   // Init
   // -----------------------------
   loadGroups(); // prefill group select
-  fetchList();
+//  fetchList();
   // Initial tab = Board Files
   setActive('board');
   loadBoardFiles();

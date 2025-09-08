@@ -17,8 +17,8 @@
       <!--button class="tab-btn active" data-scope="board" type="button">Board Files</button-->
       <!--button class="tab-btn" data-scope="vision" type="button">All Media Files</button-->
 		
-		<button data-tab="board" class="btn active">Board Files 2</button>
-<button data-tab="all"   class="btn">All Media Files 2</button>
+		<button data-tab="board" class="btn active">Board Files</button>
+<button data-tab="all"   class="btn">All Media Files</button>
     </div>
 
     <div class="library-actions">

@@ -383,6 +383,7 @@
 	}
 	  
   function renderConnector(item) {
+    // Visible line
     const line = document.createElementNS('http://www.w3.org/2000/svg','line');
     line.dataset.id = String(item.id);
     line._payload = item.payload;
@@ -390,8 +391,33 @@
     line.setAttribute('stroke-width', '2');
     line.setAttribute('stroke-linecap', 'round');
     line.setAttribute('pointer-events', 'none');
-    svgBack.appendChild(line); // permanent lines under items
+    svgBack.appendChild(line);
     linesById[item.id] = line;
+
+    // Wide transparent hit line so hover/click work without needing pixel-perfect aim
+    const hit = document.createElementNS('http://www.w3.org/2000/svg','line');
+    hit.setAttribute('stroke', 'transparent');
+    hit.setAttribute('stroke-width', '20');
+    hit.setAttribute('stroke-linecap', 'round');
+    hit.setAttribute('pointer-events', 'stroke');
+    hit.style.cursor = 'pointer';
+    svgBack.appendChild(hit);
+    line._hitLine = hit;
+
+    hit.addEventListener('mouseenter', () => {
+      line.setAttribute('stroke', '#4a90e2');
+      line.setAttribute('stroke-width', '3');
+    });
+    hit.addEventListener('mouseleave', () => {
+      line.setAttribute('stroke', '#888');
+      line.setAttribute('stroke-width', '2');
+    });
+    hit.addEventListener('click', (e) => {
+      if (currentTool === 'delete') {
+        e.stopPropagation();
+        deleteConnector(Number(item.id));
+      }
+    });
 
     const aId = item.payload?.a?.item, bId = item.payload?.b?.item;
     if (aId) ensureSet(connectorsByItem, aId).add(item.id);
@@ -404,12 +430,19 @@
     const p = line._payload;
     const a = p?.a?.item ? itemsById[p.a.item]?.data : null;
     const b = p?.b?.item ? itemsById[p.b.item]?.data : null;
-    if (!a || !b) { ['x1','y1','x2','y2'].forEach(k => line.setAttribute(k, '-1000')); return; }
+    if (!a || !b) {
+      ['x1','y1','x2','y2'].forEach(k => {
+        line.setAttribute(k, '-1000');
+        if (line._hitLine) line._hitLine.setAttribute(k, '-1000');
+      });
+      return;
+    }
     const ca = centerFromData(a), cb = centerFromData(b);
-    line.setAttribute('x1', String(ca.cx));
-    line.setAttribute('y1', String(ca.cy));
-    line.setAttribute('x2', String(cb.cx));
-    line.setAttribute('y2', String(cb.cy));
+    const coords = { x1: String(ca.cx), y1: String(ca.cy), x2: String(cb.cx), y2: String(cb.cy) };
+    Object.entries(coords).forEach(([k, v]) => {
+      line.setAttribute(k, v);
+      if (line._hitLine) line._hitLine.setAttribute(k, v);
+    });
   }
 
   function refreshAttachedConnectors(itemId) {
@@ -420,7 +453,8 @@
     const set = connectorsByItem[itemId]; if (!set) return;
     for (const cid of Array.from(set)) {
       const line = linesById[cid];
-      if (line && line.parentNode) line.parentNode.removeChild(line);
+      if (line?.parentNode) line.parentNode.removeChild(line);
+      if (line?._hitLine?.parentNode) line._hitLine.parentNode.removeChild(line._hitLine);
       delete linesById[cid];
       Object.keys(connectorsByItem).forEach(k => connectorsByItem[k]?.delete(cid));
       delete itemsById[cid];
@@ -790,6 +824,16 @@
     if (it.el?.parentNode) it.el.parentNode.removeChild(it.el);
     delete itemsById[id]; removeConnectorsAttachedTo(id);
     selectedIds.delete(id); updateSelectionUI();
+  }
+
+  async function deleteConnector(id) {
+    const line = linesById[id]; if (!line) return;
+    if (line.parentNode) line.parentNode.removeChild(line);
+    if (line._hitLine?.parentNode) line._hitLine.parentNode.removeChild(line._hitLine);
+    delete linesById[id];
+    Object.keys(connectorsByItem).forEach(k => connectorsByItem[k]?.delete(id));
+    delete itemsById[id];
+    await apiDELETE(`${apiBase}/${id}/delete`).catch(console.warn);
   }
 
   // ---------- toolbar ----------

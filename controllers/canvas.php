@@ -100,11 +100,9 @@ class canvas_controller
     // controllers/canvas.php
 	public static function deleteItem($slug, $id) {
 		global $db;
-		require_once __DIR__.'/../models/mood_canvas.php';
-		//$ok = MoodCanvas::deleteItem($slug, (int)$id);
-		$ok = mood_canvas_model::deleteItem($db, (int)$id);
+		mood_canvas_model::deleteItem($db, (int)$id);
 		header('Content-Type: application/json');
-		echo json_encode(['success'=>$ok]);
+		echo json_encode(['success' => true]);
 	}
 
 
@@ -142,10 +140,10 @@ class canvas_controller
 	}
 
 	public static function deleteArrow($slug, $id) {
-		require_once __DIR__.'/../models/mood_canvas.php';
-		$ok = MoodCanvas::deleteArrow($slug, (int)$id);
+		global $db;
+		mood_canvas_model::deleteItem($db, (int)$id);
 		header('Content-Type: application/json');
-		echo json_encode(['success'=>$ok]);
+		echo json_encode(['success' => true]);
 	}
 
 

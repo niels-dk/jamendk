@@ -424,6 +424,7 @@
       delete linesById[cid];
       Object.keys(connectorsByItem).forEach(k => connectorsByItem[k]?.delete(cid));
       delete itemsById[cid];
+      apiDELETE(`${apiBase}/${cid}/delete`).catch(console.warn);
     }
     delete connectorsByItem[itemId];
   }

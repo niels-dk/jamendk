@@ -175,12 +175,30 @@ class mood_canvas_model
 
 
     public static function deleteItem(PDO $db, int $itemId): void {
-        // Soft-delete items by marking them hidden rather than removing them completely.
-        // This preserves the record so that bulk operations and related connectors can
-        // reference it if needed. It also avoids race conditions where a client
-        // deletes an item that another client is still editing.
-        $st = $db->prepare("UPDATE canvas_items SET hidden=1, updated_at=NOW() WHERE id=?");
-        $st->execute([$itemId]);
+        $db->prepare("UPDATE canvas_items SET hidden=1, updated_at=NOW() WHERE id=?")
+           ->execute([$itemId]);
+
+        // Cascade: hide connectors whose payload references this item as an endpoint.
+        try {
+            $db->prepare("
+                UPDATE canvas_items SET hidden=1, updated_at=NOW()
+                WHERE kind='connector' AND hidden=0 AND (
+                    JSON_EXTRACT(payload_json, '$.a.item') = ? OR
+                    JSON_EXTRACT(payload_json, '$.b.item') = ?
+                )
+            ")->execute([$itemId, $itemId]);
+        } catch (\Throwable $e) {
+            // Fallback for MySQL < 5.7 / MariaDB < 10.2 without JSON_EXTRACT
+            $sel = $db->prepare("SELECT id, payload_json FROM canvas_items WHERE kind='connector' AND hidden=0");
+            $sel->execute();
+            foreach ($sel->fetchAll(PDO::FETCH_ASSOC) as $row) {
+                $p = json_decode($row['payload_json'], true) ?: [];
+                if (($p['a']['item'] ?? null) == $itemId || ($p['b']['item'] ?? null) == $itemId) {
+                    $db->prepare("UPDATE canvas_items SET hidden=1, updated_at=NOW() WHERE id=?")
+                       ->execute([$row['id']]);
+                }
+            }
+        }
     }
 
     public static function bulkUpdate(PDO $db, int $boardId, array $moves): void {

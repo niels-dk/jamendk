@@ -16,7 +16,7 @@
   if (svgEl && !svgFront) { svgFront = document.createElementNS('http://www.w3.org/2000/svg','g'); svgFront.id = 'overlayFront'; svgEl.appendChild(svgFront); }
 
   const slug    = window.boardSlug || '';
-  const apiBase = `/api/moods/${slug}/canvas/items`;
+  let apiBase = `/api/moods/${slug}/canvas/items`;
   if (!stage || !content || !svgEl || !svgBack || !svgFront) { console.error('[canvas] missing DOM nodes'); return; }
 
   // ---------- state ----------
@@ -983,6 +983,16 @@
   // ---------- init ----------
   (async function init() {
     ensureOverlaySizing();
+
+    // Probe both URL patterns; use whichever the server responds to
+    for (const candidate of [
+      `/api/moods/${slug}/canvas/items`,
+      `/api/moods/${slug}/items`
+    ]) {
+      const probe = await apiGET(candidate);
+      if (probe.ok) { apiBase = candidate; break; }
+    }
+
     const r = await apiGET(apiBase);
     const items = Array.isArray(r.data) ? r.data : [];
     // items then connectors

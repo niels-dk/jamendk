@@ -40,6 +40,8 @@
   let resizing      = null;      // { id, handle, startMouse, startBox }
   let movingSingle  = null;      // { id, startMouse, startPos } (center move in resize tool)
 
+  let selectedConnectorId = null; // connector selected via select tool
+
   // Drag-to-connect state
   let connectDrag   = null;      // { fromId, tempLine, hoverId }
 
@@ -413,9 +415,12 @@
       line.setAttribute('stroke-width', '2');
     });
     hit.addEventListener('click', (e) => {
+      e.stopPropagation();
       if (currentTool === 'delete') {
-        e.stopPropagation();
         deleteConnector(Number(item.id));
+      } else if (currentTool === 'select') {
+        clearSelection();
+        selectConnector(Number(item.id));
       }
     });
 
@@ -833,7 +838,21 @@
     delete linesById[id];
     Object.keys(connectorsByItem).forEach(k => connectorsByItem[k]?.delete(id));
     delete itemsById[id];
+    if (selectedConnectorId === id) selectedConnectorId = null;
     await apiDELETE(`${apiBase}/${id}/delete`).catch(console.warn);
+  }
+
+  function selectConnector(id) {
+    // Deselect previous
+    if (selectedConnectorId !== null) {
+      const prev = linesById[selectedConnectorId];
+      if (prev) { prev.setAttribute('stroke', '#888'); prev.setAttribute('stroke-width', '2'); }
+    }
+    selectedConnectorId = id;
+    if (id !== null) {
+      const line = linesById[id];
+      if (line) { line.setAttribute('stroke', '#4a90e2'); line.setAttribute('stroke-width', '3'); }
+    }
   }
 
   // ---------- toolbar ----------
@@ -867,7 +886,7 @@
 
     // select
     if (currentTool === 'select') {
-      if (empty) return beginMarquee(e.clientX, e.clientY);
+      if (empty) { selectConnector(null); return beginMarquee(e.clientX, e.clientY); }
       if (isItem && !e.target.classList.contains('resize-handle')) {
         return startGroupDragFromItem(itemEl, e.clientX, e.clientY);
       }
@@ -925,6 +944,14 @@
 		const fn = window.__mc_customKeyBindings && window.__mc_customKeyBindings.get(combo);
 		if (fn) { e.preventDefault(); try { fn(e); } catch(err){ console.error(err); } return; }
 	  })();
+
+    // Delete/Backspace — remove selected items and/or selected connector
+    if (e.key === 'Delete' || e.key === 'Backspace') {
+      e.preventDefault();
+      if (selectedIds.size > 0) Array.from(selectedIds).forEach(id => deleteItem(id));
+      if (selectedConnectorId !== null) deleteConnector(selectedConnectorId);
+      return;
+    }
 
     let action = null;
     if (e.key === 's') action = 'select';

@@ -52,7 +52,7 @@ if (!$coverUrl && !empty($moodMedia)) {
 }
 
 // Helpers for canvas snapshot positioning
-$pct = function (int $v, int $base): string {
+$pctOf = function (int $v, int $base): string {
     return number_format(($v / max(1, $base)) * 100, 4, '.', '') . '%';
 };
 ?>
@@ -526,10 +526,10 @@ $pct = function (int $v, int $base): string {
         <?php foreach ($sortedItems as $ci): ?>
           <?php
             if ($ci['kind'] === 'connector') continue;
-            $left   = $pct($ci['x'] - $mx, $cw);
-            $top    = $pct($ci['y'] - $my, $ch);
-            $width  = $pct($ci['w'], $cw);
-            $height = $pct($ci['h'], $ch);
+            $left   = $pctOf($ci['x'] - $mx, $cw);
+            $top    = $pctOf($ci['y'] - $my, $ch);
+            $width  = $pctOf($ci['w'], $cw);
+            $height = $pctOf($ci['h'], $ch);
             $rot    = (int)($ci['rotation'] ?? 0);
             $transform = $rot ? "transform:rotate({$rot}deg);" : '';
             $imgPos = $ci['payload']['image_pos'] ?? ['x'=>50,'y'=>50];

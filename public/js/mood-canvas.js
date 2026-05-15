@@ -185,9 +185,8 @@
 		  if (!media) {
 			if (titleEl) titleEl.style.display = '';
 			if (body)    body.style.top = '26px';
-			// Remove any existing media node
-			const old = body.querySelector('.mc-media');
-			if (old) old.remove();
+			// Remove any existing media node(s)
+			body.querySelectorAll('.mc-media').forEach(n => n.remove());
 			return;
 		  }
 
@@ -195,9 +194,13 @@
 		  if (titleEl) titleEl.style.display = 'none';
 		  if (body)    body.style.top = '0';
 
-		  // Replace existing media node
-		  const old = body.querySelector('.mc-media');
-		  if (old) old.remove();
+		  // Replace existing media node(s) — be defensive, kill stacks from legacy data
+		  body.querySelectorAll('.mc-media').forEach(n => n.remove());
+
+		  // Pull image position from the item payload (default centered)
+		  const itemId = Number(el.dataset.id);
+		  const itemData = itemsById[itemId]?.data;
+		  const pos = itemData?.payload?.image_pos || { x: 50, y: 50 };
 
 		  const wrap = document.createElement('div');
 		  wrap.className = 'mc-media';
@@ -211,6 +214,7 @@
 			img.style.width = '100%';
 			img.style.height = '100%';
 			img.style.objectFit = fit;
+			img.style.objectPosition = `${pos.x}% ${pos.y}%`;
 			img.draggable = false;
 			img.setAttribute('draggable', 'false');
 			img.style.userSelect = 'none';
@@ -222,7 +226,7 @@
 		  if ((media.mime_type || '').startsWith('image/')) {
 			wrap.appendChild(
 			  makeImg('/storage/thumbs/' + media.uuid + '_thumb.jpg',
-					  media.file_name || media.uuid, 'contain')
+					  media.file_name || media.uuid, 'cover')
 			);
 		  } else if (media.provider === 'youtube' && media.provider_id) {
 			wrap.appendChild(
@@ -369,29 +373,8 @@
 
 
 	  
-	  // If frame has media in payload, render it
-		if (item.kind === 'frame' && item.payload && item.payload.media) {
-		  const m = item.payload.media;
-		  const mediaEl = document.createElement('div');
-		  mediaEl.className = 'mc-media';
-		  mediaEl.style.cssText = 'position:absolute;inset:0;border-radius:inherit;overflow:hidden;';
-		  if ((m.mime_type||'').startsWith('image/')) {
-			const img = document.createElement('img');
-			img.src = '/storage/thumbs/' + m.uuid + '_thumb.jpg'; // or your thumb/original route
-			img.alt = m.file_name || m.uuid;
-			img.style.width='100%'; img.style.height='100%'; img.style.objectFit='contain';
-			mediaEl.appendChild(img);
-		  } else if (m.provider === 'youtube' && m.provider_id) {
-			// Lightweight: use thumb; heavy: store embed_html and use <iframe>
-			const img = document.createElement('img');
-			img.src = 'https://img.youtube.com/vi/' + m.provider_id + '/hqdefault.jpg';
-			img.alt = m.file_name || m.provider_id;
-			img.style.width='100%'; img.style.height='100%'; img.style.objectFit='cover';
-			mediaEl.appendChild(img);
-		  }
-		  body.appendChild(mediaEl);
-		}
-
+	  // (Frame media is rendered above via __mc_renderMediaIntoFrame; older
+	  // duplicate block removed to stop multiple stacked images.)
 
 	  // Apply saved style from DB (highlight etc.)
 	  if (item.style) {
@@ -1156,6 +1139,153 @@
     closeCtxMenu();
     if (h) h(cmd);
   });
+
+  // ---------- frame image trim mode (drag to reposition object-position) ----------
+  let trimming = null; // { id, el, img, startX, startY, startPos, ovX, ovY }
+
+  // CSS for trim state
+  (function injectTrimStyles(){
+    if (document.getElementById('canvasTrimStyles')) return;
+    const s = document.createElement('style'); s.id = 'canvasTrimStyles';
+    s.textContent = `
+      .canvas-item.is-trimming { outline: 2px dashed #3a76d2; outline-offset: -2px; cursor: grab; }
+      .canvas-item.is-trimming .mc-media { pointer-events: auto; cursor: grab; }
+      .canvas-item.is-trimming .mc-media.grabbing { cursor: grabbing; }
+    `;
+    document.head.appendChild(s);
+  })();
+
+  function _frameOverflow(itemEl) {
+    const img = itemEl.querySelector('.mc-media img');
+    if (!img) return null;
+    const fw = itemEl.clientWidth, fh = itemEl.clientHeight;
+    const nw = img.naturalWidth || 0, nh = img.naturalHeight || 0;
+    if (!fw || !fh || !nw || !nh) return null;
+    const fAsp = fw / fh, iAsp = nw / nh;
+    let renderedW, renderedH;
+    if (iAsp > fAsp) { renderedH = fh; renderedW = fh * iAsp; }
+    else             { renderedW = fw; renderedH = fw / iAsp; }
+    return { ovX: Math.max(0, renderedW - fw), ovY: Math.max(0, renderedH - fh) };
+  }
+
+  function enterTrim(id) {
+    const entry = itemsById[id]; if (!entry?.el || entry.data?.kind !== 'frame') return;
+    if (!entry.data.media && !entry.data.payload?.media) return;
+    exitTrim();
+    entry.el.classList.add('is-trimming');
+    trimming = { id, el: entry.el };
+  }
+  function exitTrim() {
+    if (!trimming) return;
+    trimming.el.classList.remove('is-trimming');
+    const mediaEl = trimming.el.querySelector('.mc-media');
+    if (mediaEl) mediaEl.classList.remove('grabbing');
+    trimming = null;
+  }
+
+  function _onTrimStart(clientX, clientY) {
+    if (!trimming) return false;
+    const entry = itemsById[trimming.id]; if (!entry?.data) return false;
+    const ov = _frameOverflow(trimming.el);
+    if (!ov) return false;
+    const pos = entry.data.payload?.image_pos || { x: 50, y: 50 };
+    trimming.startX = clientX;
+    trimming.startY = clientY;
+    trimming.startPos = { x: pos.x, y: pos.y };
+    trimming.ovX = ov.ovX;
+    trimming.ovY = ov.ovY;
+    const m = trimming.el.querySelector('.mc-media');
+    if (m) m.classList.add('grabbing');
+    return true;
+  }
+  function _onTrimMove(clientX, clientY) {
+    if (!trimming || trimming.startPos == null) return;
+    // Drag distance in screen pixels → image pan in image pixels (accounting for canvas zoom)
+    const dx = (clientX - trimming.startX) / stageScale;
+    const dy = (clientY - trimming.startY) / stageScale;
+    const ovX = trimming.ovX, ovY = trimming.ovY;
+    // Dragging right reveals more of the LEFT side of the image → position decreases
+    const dPctX = ovX > 0 ? (dx / ovX) * 100 : 0;
+    const dPctY = ovY > 0 ? (dy / ovY) * 100 : 0;
+    const nx = Math.max(0, Math.min(100, trimming.startPos.x - dPctX));
+    const ny = Math.max(0, Math.min(100, trimming.startPos.y - dPctY));
+    const img = trimming.el.querySelector('.mc-media img');
+    if (img) img.style.objectPosition = `${nx}% ${ny}%`;
+    trimming._currentPos = { x: nx, y: ny };
+  }
+  async function _onTrimEnd() {
+    if (!trimming) return;
+    const id = trimming.id;
+    const pos = trimming._currentPos;
+    const m = trimming.el.querySelector('.mc-media');
+    if (m) m.classList.remove('grabbing');
+    trimming.startPos = null;
+    if (pos) {
+      const entry = itemsById[id];
+      if (entry?.data) {
+        entry.data.payload = entry.data.payload || {};
+        entry.data.payload.image_pos = pos;
+      }
+      await apiPATCH(`${apiBase}/${id}`, { payload: { image_pos: pos } }).catch(console.warn);
+    }
+  }
+
+  // Double-click on a frame with media → enter trim mode
+  // Single click on a frame → if in trim and clicked outside, exit
+  content.addEventListener('dblclick', (e) => {
+    const itemEl = getItemFromTarget(e.target); if (!itemEl) return;
+    if (itemEl.dataset.kind !== 'frame') return;
+    const id = Number(itemEl.dataset.id);
+    const d = itemsById[id]?.data;
+    if (!d?.media && !d?.payload?.media) return;
+    e.preventDefault(); e.stopPropagation();
+    enterTrim(id);
+  });
+
+  // Trim drag handlers — capture on the document so drag works edge-to-edge
+  stage.addEventListener('mousedown', (e) => {
+    if (!trimming) return;
+    const itemEl = getItemFromTarget(e.target);
+    if (!itemEl || itemEl !== trimming.el) { exitTrim(); return; }
+    e.preventDefault(); e.stopPropagation();
+    if (_onTrimStart(e.clientX, e.clientY)) {
+      document.addEventListener('mousemove', _trimMoveDoc, true);
+      document.addEventListener('mouseup',   _trimUpDoc,   true);
+    }
+  }, true);
+  function _trimMoveDoc(e) { _onTrimMove(e.clientX, e.clientY); }
+  function _trimUpDoc(e) {
+    document.removeEventListener('mousemove', _trimMoveDoc, true);
+    document.removeEventListener('mouseup',   _trimUpDoc,   true);
+    _onTrimEnd();
+  }
+  // Touch
+  stage.addEventListener('touchstart', (e) => {
+    if (!trimming) return;
+    if (e.touches.length !== 1) return;
+    const t = e.touches[0];
+    const itemEl = getItemFromTarget(document.elementFromPoint(t.clientX, t.clientY));
+    if (!itemEl || itemEl !== trimming.el) { exitTrim(); return; }
+    if (_onTrimStart(t.clientX, t.clientY)) {
+      e.preventDefault();
+      document.addEventListener('touchmove', _trimTouchMove, { passive:false });
+      document.addEventListener('touchend',  _trimTouchEnd,  { passive:true });
+    }
+  }, { passive:false });
+  function _trimTouchMove(e) {
+    if (e.touches.length !== 1) return;
+    e.preventDefault();
+    _onTrimMove(e.touches[0].clientX, e.touches[0].clientY);
+  }
+  function _trimTouchEnd() {
+    document.removeEventListener('touchmove', _trimTouchMove);
+    document.removeEventListener('touchend',  _trimTouchEnd);
+    _onTrimEnd();
+  }
+  // Esc exits trim
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && trimming) { e.stopPropagation(); exitTrim(); }
+  }, true);
 
   // ---------- floating connector toolbar (touch-first) ----------
   const connToolbar = document.createElement('div');

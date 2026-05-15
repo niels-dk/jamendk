@@ -296,6 +296,14 @@ class vision_controller
             $ms->execute([$vision['mood_id']]);
             $linkedMood = $ms->fetch(PDO::FETCH_ASSOC) ?: null;
         }
+        // For budget overlay: load existing budget row
+        $budget = null;
+        if ($section === 'budget') {
+            $bs = $db->prepare("SELECT currency, amount_cents, show_on_dashboard, show_on_trip
+                                FROM vision_budget WHERE vision_id = ? LIMIT 1");
+            $bs->execute([(int)$vision['id']]);
+            $budget = $bs->fetch(PDO::FETCH_ASSOC) ?: null;
+        }
         $partial = __DIR__.'/../views/partials/overlay_'.$section.'.php';
         if (!file_exists($partial)) { http_response_code(404); echo 'Overlay not found'; return; }
         // include partial; it will echo HTML

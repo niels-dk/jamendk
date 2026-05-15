@@ -116,18 +116,22 @@ $slug = htmlspecialchars($vision['slug'] ?? '', ENT_QUOTES);
       return;
     }
     list.innerHTML = rows.map(r => {
-      const name = r.name || '(no name)';
-      const cmp  = r.company || '';
-      const email= r.email || '';
-      const flags= [];
+      const cmp   = r.company || '';
+      const email = r.email || '';
+      // Fall back to email/company when no Name is set
+      const primary = r.name || email || cmp || '(unnamed)';
+      const secondary = r.name
+        ? [cmp, email].filter(Boolean).join(' — ')
+        : (primary === email ? cmp : [cmp, email].filter(v => v && v !== primary).join(' — '));
+      const flags = [];
       if (r.is_main)    flags.push('Main');
       if (r.is_current) flags.push('Current');
       const flagTxt = flags.length ? `<small class="badge">${flags.join(', ')}</small>` : '';
       return `
         <div class="contact-item" data-id="${r.vc_id}">
           <div class="info">
-            <div><strong>${name}</strong>${flagTxt}</div>
-            <div class="small">${[cmp, email].filter(Boolean).join(' — ')}</div>
+            <div><strong>${primary}</strong>${flagTxt}</div>
+            ${secondary ? `<div class="small">${secondary}</div>` : ''}
           </div>
           <div class="actions">
             <button type="button" class="btn act-edit">Edit</button>
@@ -158,18 +162,15 @@ $slug = htmlspecialchars($vision['slug'] ?? '', ENT_QUOTES);
     return fd;
   }
 
-  function hasValidName() {
-    return Array.from(fields.querySelectorAll('.field-row')).some(row => {
-      return row.querySelector('.field-key').value.trim() === 'Name'
-          && row.querySelector('.field-value').value.trim() !== '';
-    });
+  function hasAnyValue() {
+    return Array.from(fields.querySelectorAll('.field-value')).some(el => el.value.trim() !== '');
   }
 
   let saveTimer;
   function autoSave() {
     clearTimeout(saveTimer);
     saveTimer = setTimeout(async () => {
-      if (!hasValidName()) { status.textContent = ''; return; }
+      if (!hasAnyValue()) { status.textContent = ''; return; }
       const vcId = form.querySelector('[name="vc_id"]').value.trim();
       const url  = vcId
         ? `/api/visions/${slug}/contacts/${vcId}`

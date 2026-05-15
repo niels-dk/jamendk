@@ -600,10 +600,10 @@ class vision_controller
 		if (!$keys || !$vals || count($keys) != count($vals)) {
 			http_response_code(400); echo json_encode(['error'=>'Invalid fields']); return;
 		}
-		// Validate a Name
-		$hasName = false;
-		foreach ($keys as $k) { if (trim($k)==='Name') $hasName = true; }
-		if (!$hasName) { http_response_code(422); echo json_encode(['error'=>'Name is required']); return; }
+		// At least one field must have a value
+		$hasAny = false;
+		foreach ($vals as $v) { if (trim((string)$v) !== '') { $hasAny = true; break; } }
+		if (!$hasAny) { http_response_code(422); echo json_encode(['error'=>'At least one field must have a value']); return; }
 
 		$db->beginTransaction();
 
@@ -665,9 +665,9 @@ class vision_controller
 		if (!$keys || count($keys) != count($vals)) {
 			http_response_code(400); echo json_encode(['error'=>'Invalid fields']); return;
 		}
-		$hasName = false;
-		foreach ($keys as $k) { if (trim($k)==='Name') $hasName = true; }
-		if (!$hasName) { http_response_code(422); echo json_encode(['error'=>'Name is required']); return; }
+		$hasAny = false;
+		foreach ($vals as $v) { if (trim((string)$v) !== '') { $hasAny = true; break; } }
+		if (!$hasAny) { http_response_code(422); echo json_encode(['error'=>'At least one field must have a value']); return; }
 
 		$db->beginTransaction();
 		try {

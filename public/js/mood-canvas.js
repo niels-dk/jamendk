@@ -53,6 +53,9 @@
   // Marquee
   let marquee = null, marqueeStart = null;
 
+  // Space-to-pan: remembers the tool that was active before space was held
+  let _spaceHeldPriorTool = null;
+
   // ---------- utils ----------
   const clampInt = (v) => (Number.isFinite(v) ? (v | 0) : 0);
   const snap     = (n) => snapToGrid ? Math.round(n / 8) * 8 : n;
@@ -68,7 +71,20 @@
     };
   }
 
+  function ensureArrowMarker() {
+    if (svgEl.querySelector('#arrowEnd')) return;
+    const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+    // context-stroke makes the marker follow the line's stroke color
+    defs.innerHTML = `
+      <marker id="arrowEnd" viewBox="0 0 10 10" refX="9" refY="5"
+              markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path d="M0,0 L10,5 L0,10 z" fill="context-stroke" stroke="none"></path>
+      </marker>`;
+    svgEl.insertBefore(defs, svgEl.firstChild);
+  }
+
   function ensureOverlaySizing() {
+    ensureArrowMarker();
     // make sure the SVG fills the stage and has a viewBox
     const w = stage.clientWidth || stage.offsetWidth || 1200;
     const h = stage.clientHeight || stage.offsetHeight || 800;
@@ -392,6 +408,7 @@
     line.setAttribute('stroke', '#888');
     line.setAttribute('stroke-width', '2');
     line.setAttribute('stroke-linecap', 'round');
+    line.setAttribute('marker-end', 'url(#arrowEnd)');
     line.setAttribute('pointer-events', 'none');
     svgBack.appendChild(line);
     linesById[item.id] = line;
@@ -758,7 +775,9 @@
   }
 
   // ---------- group drag / marquee ----------
-  function beginMarquee(clientX, clientY) {
+  let marqueeAdditive = false;
+  function beginMarquee(clientX, clientY, additive) {
+    marqueeAdditive = !!additive;
     marqueeStart = logicalFromClient(clientX, clientY);
     marquee = document.createElement('div'); marquee.className = 'marquee';
     stage.appendChild(marquee);
@@ -783,13 +802,14 @@
     const ly = (box.top  - rect.top  - stageOffset.y) / stageScale;
     const lw = box.width  / stageScale;
     const lh = box.height / stageScale;
-    clearSelection();
+    if (!marqueeAdditive) clearSelection();
     for (const id in itemsById) {
       const entry = itemsById[id]; if (!entry || !entry.el) continue;
       const d = entry.data;
       const inter = !(d.x + d.w < lx || d.y + d.h < ly || d.x > lx + lw || d.y > ly + lh);
       if (inter && d.kind !== 'connector') addToSelection(Number(id));
     }
+    marqueeAdditive = false;
   }
   function startGroupDragFromItem(itemEl, clientX, clientY) {
     const id = Number(itemEl.dataset.id);
@@ -855,6 +875,50 @@
     }
   }
 
+  // ---------- nudge / duplicate (Tier-1 keyboard helpers) ----------
+  const _nudgeTimers = Object.create(null);
+  function nudgeSelection(dx, dy) {
+    if (!selectedIds.size) return;
+    selectedIds.forEach(id => {
+      const entry = itemsById[id]; if (!entry?.el || !entry.data) return;
+      const d = entry.data;
+      d.x = (d.x | 0) + dx;
+      d.y = (d.y | 0) + dy;
+      entry.el.style.left = `${d.x}px`;
+      entry.el.style.top  = `${d.y}px`;
+      refreshAttachedConnectors(id);
+      // Debounce the PATCH per item so holding the key doesn't flood the network
+      clearTimeout(_nudgeTimers[id]);
+      _nudgeTimers[id] = setTimeout(() => {
+        apiPATCH(`${apiBase}/${id}`, { x: d.x, y: d.y }).catch(console.warn);
+      }, 200);
+    });
+  }
+
+  async function duplicateSelection() {
+    if (!selectedIds.size) return;
+    const sourceIds = Array.from(selectedIds);
+    const newIds = [];
+    for (const id of sourceIds) {
+      const src = itemsById[id]?.data; if (!src || src.kind === 'connector') continue;
+      const body = {
+        kind: src.kind,
+        x: snap((src.x | 0) + 20),
+        y: snap((src.y | 0) + 20),
+        w: src.w, h: src.h,
+        payload: src.payload ? JSON.parse(JSON.stringify(src.payload)) : null,
+      };
+      const r = await apiPOST(`${apiBase}/create`, body);
+      const item = r?.data && r.data.id ? r.data : { id: Date.now() + Math.random(), ...body };
+      renderItem(item);
+      newIds.push(Number(item.id));
+    }
+    if (newIds.length) {
+      clearSelection();
+      newIds.forEach(addToSelection);
+    }
+  }
+
   // ---------- toolbar ----------
   (toolbar || document).addEventListener('click', (e) => {
     const btn = e.target.closest('[data-action]'); if (!btn) return;
@@ -886,8 +950,24 @@
 
     // select
     if (currentTool === 'select') {
-      if (empty) { selectConnector(null); return beginMarquee(e.clientX, e.clientY); }
+      if (empty) {
+        selectConnector(null);
+        // shift+click on empty preserves selection; plain click clears via marquee
+        return beginMarquee(e.clientX, e.clientY, e.shiftKey);
+      }
       if (isItem && !e.target.classList.contains('resize-handle')) {
+        const id = Number(itemEl.dataset.id);
+        if (e.shiftKey) {
+          // toggle membership; do not start drag
+          if (selectedIds.has(id)) {
+            selectedIds.delete(id);
+            updateSelectionUI();
+            if (window.moodCanvasBus) window.moodCanvasBus.emit('selection:changed', { items: new Set(selectedIds) });
+          } else {
+            addToSelection(id);
+          }
+          return;
+        }
         return startGroupDragFromItem(itemEl, e.clientX, e.clientY);
       }
       return;
@@ -953,6 +1033,53 @@
       return;
     }
 
+    // Escape — cancel tool first, then clear selection
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      if (currentTool !== 'select') { setActiveToolButton('select'); return; }
+      if (selectedIds.size > 0)     { clearSelection(); return; }
+      if (selectedConnectorId !== null) selectConnector(null);
+      return;
+    }
+
+    // Ctrl/Cmd+A — select all non-connector items
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'a' || e.key === 'A')) {
+      e.preventDefault();
+      clearSelection();
+      for (const id in itemsById) {
+        const d = itemsById[id]?.data;
+        if (d && d.kind !== 'connector') addToSelection(Number(id));
+      }
+      return;
+    }
+
+    // Ctrl/Cmd+D — duplicate current selection
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'd' || e.key === 'D')) {
+      e.preventDefault();
+      duplicateSelection();
+      return;
+    }
+
+    // Arrow keys — nudge selected items (Shift = 10px steps)
+    if (selectedIds.size && ['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) {
+      e.preventDefault();
+      const step = e.shiftKey ? 10 : 1;
+      const dx = e.key === 'ArrowLeft' ? -step : e.key === 'ArrowRight' ? step : 0;
+      const dy = e.key === 'ArrowUp'   ? -step : e.key === 'ArrowDown'  ? step : 0;
+      nudgeSelection(dx, dy);
+      return;
+    }
+
+    // Space — temporarily switch to pan tool while held
+    if (e.key === ' ' && !e.repeat) {
+      if (currentTool !== 'pan') {
+        _spaceHeldPriorTool = currentTool;
+        setActiveToolButton('pan');
+        e.preventDefault();
+      }
+      return;
+    }
+
     let action = null;
     if (e.key === 's') action = 'select';
     else if (e.key === 'p') action = 'pan';
@@ -979,6 +1106,14 @@
     }
     setActiveToolButton(action);
   }, true);
+
+  // Restore previous tool when Space is released
+  document.addEventListener('keyup', (e) => {
+    if (e.key === ' ' && _spaceHeldPriorTool) {
+      setActiveToolButton(_spaceHeldPriorTool);
+      _spaceHeldPriorTool = null;
+    }
+  });
 
   // ---------- init ----------
   (async function init() {

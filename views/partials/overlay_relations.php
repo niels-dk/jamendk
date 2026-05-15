@@ -33,6 +33,9 @@ $showTrip     = (int)($vision['show_mood_on_trip']      ?? 0);
     <input type="hidden" name="mood_id" value="<?= htmlspecialchars($currentMood, ENT_QUOTES) ?>">
     <div class="mood-suggestions" hidden></div>
   </div>
+  <p class="hint" style="opacity:.6;font-size:.85em;margin:.25rem 0 1rem;">
+    Only one mood board per vision. To change, remove the current one first.
+  </p>
 
   <h4>Visibility</h4>
 
@@ -50,18 +53,27 @@ $showTrip     = (int)($vision['show_mood_on_trip']      ?? 0);
 </form>
 
 <style>
-  .mood-picker { position: relative; margin-bottom: 1rem; }
+  .mood-picker { position: relative; }
+  /* Chip occupies the same slot as the search input */
   .mood-chip {
-    display: inline-flex; align-items: center; gap: .5rem;
-    background: #1f2533; border: 1px solid #2b3346;
-    padding: .35rem .35rem .35rem .7rem; border-radius: 999px;
+    display: flex; align-items: center; justify-content: space-between;
+    width: 100%; box-sizing: border-box;
+    background: #1f2533; border: 1px solid #3a76d2;
+    padding: .5rem .55rem .5rem .8rem; border-radius: 8px;
+    min-height: 42px;
   }
-  .mood-chip .chip-id { opacity: .55; font-size: .85em; margin-left: .35rem; font-family: monospace; }
+  .mood-chip .chip-label { display: flex; align-items: baseline; gap: .5rem; }
+  .mood-chip .chip-id { opacity: .55; font-size: .85em; font-family: monospace; }
   .mood-chip .chip-remove {
-    background: transparent; border: 0; color: #aaa; font-size: 1.1rem;
-    cursor: pointer; line-height: 1; padding: 0 .35rem;
+    background: transparent; border: 0; color: #aaa; font-size: 1.3rem;
+    cursor: pointer; line-height: 1; padding: 0 .4rem;
   }
   .mood-chip .chip-remove:hover { color: #fff; }
+  #mood-search {
+    width: 100%; box-sizing: border-box;
+    background: #15161A; border: 1px solid #2b3346; color: #ddd;
+    padding: .5rem .7rem; border-radius: 8px; min-height: 42px;
+  }
   .mood-suggestions {
     position: absolute; left: 0; right: 0; top: 100%;
     background: #1a1d24; border: 1px solid #2b3346; border-radius: 8px;

@@ -292,7 +292,7 @@ class vision_controller
         // For relations overlay: resolve linked mood title (mood_id stores the slug)
         $linkedMood = null;
         if (!empty($vision['mood_id'])) {
-            $ms = $db->prepare("SELECT slug, title FROM moods WHERE slug=? LIMIT 1");
+            $ms = $db->prepare("SELECT slug, title FROM mood_boards WHERE slug=? LIMIT 1");
             $ms->execute([$vision['mood_id']]);
             $linkedMood = $ms->fetch(PDO::FETCH_ASSOC) ?: null;
         }

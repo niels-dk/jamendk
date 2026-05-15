@@ -24,7 +24,7 @@ class home_controller
         include __DIR__ . '/../views/home.php';
         $content = ob_get_clean();
 
-        // dashboard/top pages don’t use the left board sidebar
+        // dashboard/top pages donï¿½t use the left board sidebar
         $noSidebar = true;
         include __DIR__ . '/../views/layout.php';
     }
@@ -42,7 +42,7 @@ class home_controller
     {
         global $db, $currentUserId;
 
-        // Labels available to the view (used for the “Boards ?” and title text)
+        // Labels available to the view (used for the ï¿½Boards ?ï¿½ and title text)
         $boardTypes = [
             'dream'  => '?? Dreams',
             'vision' => '?? Visions',
@@ -60,7 +60,7 @@ class home_controller
         }
 
         if (empty($currentUserId)) {
-            // If your auth layer sets this differently, keep it—this is a safe default.
+            // If your auth layer sets this differently, keep itï¿½this is a safe default.
             $currentUserId = 1;
         }
 
@@ -69,7 +69,7 @@ class home_controller
         $dreams = self::fetchBoards($db, $currentUserId, $type, $filter);
 
         // View vars
-        $title     = ucfirst($type) . 's – ' . ucfirst($filter);
+        $title     = ucfirst($type) . 's ï¿½ ' . ucfirst($filter);
         $boardType = $type;
 
         // ---- render view into $content, then include layout ----
@@ -77,7 +77,7 @@ class home_controller
         include __DIR__ . '/../views/dashboard.php';
         $content = ob_get_clean();
 
-        // Dashboard pages don’t use the left board sidebar
+        // Dashboard pages donï¿½t use the left board sidebar
         $noSidebar = true;
         include __DIR__ . '/../views/layout.php';
     }
@@ -93,8 +93,8 @@ class home_controller
 		int $userId,
 		string $type,
 		string $filter = 'active',
-		?int $limit = null,          // <— NEW (null = no limit)
-		?string $orderBy = null      // <— optional external sort
+		?int $limit = null,          // <ï¿½ NEW (null = no limit)
+		?string $orderBy = null      // <ï¿½ optional external sort
 	): array
 	{
 		// map type ? table (kept from your code)
@@ -145,6 +145,47 @@ class home_controller
 
 
 	
+	/**
+	 * Trip-ready visions: any vision where the user has marked at least one
+	 * piece of content as visible on the trip layer. The dashboard's Trips
+	 * section surfaces these so the user can jump to /trips/{slug}.
+	 */
+	private static function fetchTripVisions(PDO $db, int $userId): array
+	{
+		$sql = "
+			SELECT v.id, v.slug, v.title, v.description,
+				   v.start_date, v.end_date,
+				   v.created_at, v.updated_at,
+				   v.workflow_status,
+				   v.mood_id, v.show_mood_on_trip,
+				   mb.title AS mood_title,
+				   (SELECT COUNT(*) FROM vision_contacts
+					 WHERE vision_id = v.id AND show_on_trip = 1) AS contact_count,
+				   (SELECT 1 FROM vision_budget
+					 WHERE vision_id = v.id AND show_on_trip = 1
+					 LIMIT 1) AS has_budget
+			  FROM visions v
+			  LEFT JOIN mood_boards mb
+					 ON mb.slug = v.mood_id AND mb.deleted_at IS NULL
+			 WHERE v.user_id = ?
+			   AND v.archived = 0
+			   AND v.deleted_at IS NULL
+			   AND (
+					(v.show_mood_on_trip = 1 AND v.mood_id IS NOT NULL AND v.mood_id != '')
+					OR EXISTS (SELECT 1 FROM vision_contacts WHERE vision_id = v.id AND show_on_trip = 1)
+					OR EXISTS (SELECT 1 FROM vision_budget   WHERE vision_id = v.id AND show_on_trip = 1)
+			   )
+			 ORDER BY v.updated_at DESC
+		";
+		try {
+			$st = $db->prepare($sql);
+			$st->execute([$userId]);
+			return $st->fetchAll(PDO::FETCH_ASSOC) ?: [];
+		} catch (\Throwable $e) {
+			return [];
+		}
+	}
+
 	public static function dashboard_overview(): void
 	{
 		global $db, $currentUserId;
@@ -162,7 +203,11 @@ class home_controller
 		$boards = [];
 
 		foreach ($types as $type) {
-			$list = self::fetchBoards($db, (int)$currentUserId, $type, 'active');
+			if ($type === 'trip') {
+				$list = self::fetchTripVisions($db, (int)$currentUserId);
+			} else {
+				$list = self::fetchBoards($db, (int)$currentUserId, $type, 'active');
+			}
 
 			// Sorting
 			if ($sort === 'newest') {

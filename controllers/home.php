@@ -146,9 +146,15 @@ class home_controller
 
 	
 	/**
-	 * Trip-ready visions: any vision where the user has marked at least one
-	 * piece of content as visible on the trip layer. The dashboard's Trips
-	 * section surfaces these so the user can jump to /trips/{slug}.
+	 * Trip-ready visions: any vision that has enough content to publish.
+	 * Gate is intentionally lenient — a vision counts as trip-ready when:
+	 *   - it has a linked mood board (mood_id set), OR
+	 *   - any of its contacts has show_on_trip = 1, OR
+	 *   - it has a budget row with show_on_trip = 1.
+	 *
+	 * The per-section "Show on Trip layer" toggles still control WHAT
+	 * appears on the trip page itself; this method just decides which
+	 * visions get a card in the dashboard Trips section.
 	 */
 	private static function fetchTripVisions(PDO $db, int $userId): array
 	{
@@ -171,19 +177,15 @@ class home_controller
 			   AND v.archived = 0
 			   AND v.deleted_at IS NULL
 			   AND (
-					(v.show_mood_on_trip = 1 AND v.mood_id IS NOT NULL AND v.mood_id != '')
+					(v.mood_id IS NOT NULL AND v.mood_id != '')
 					OR EXISTS (SELECT 1 FROM vision_contacts WHERE vision_id = v.id AND show_on_trip = 1)
 					OR EXISTS (SELECT 1 FROM vision_budget   WHERE vision_id = v.id AND show_on_trip = 1)
 			   )
 			 ORDER BY v.updated_at DESC
 		";
-		try {
-			$st = $db->prepare($sql);
-			$st->execute([$userId]);
-			return $st->fetchAll(PDO::FETCH_ASSOC) ?: [];
-		} catch (\Throwable $e) {
-			return [];
-		}
+		$st = $db->prepare($sql);
+		$st->execute([$userId]);
+		return $st->fetchAll(PDO::FETCH_ASSOC) ?: [];
 	}
 
 	public static function dashboard_overview(): void

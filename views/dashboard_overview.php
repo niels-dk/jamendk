@@ -45,8 +45,9 @@ function dt($s){ return $s ? date('M j, Y', strtotime($s)) : ''; }
             <p>No trips ready yet.</p>
             <p style="opacity:.7;font-size:.9em;max-width:36rem;">
               A Trip is a shareable view generated from a Vision plus its Mood board.
-              Open any Vision, link a Mood board in <strong>Relations</strong>, and toggle
-              <strong>Show on Trip layer</strong> on the items you'd like to publish.
+              Open any Vision, link a Mood board in <strong>Relations</strong>, and the
+              Vision will appear here. Use the <strong>Show on Trip layer</strong>
+              toggles inside the Vision to choose which items publish.
             </p>
           </div>
         <?php else: ?>

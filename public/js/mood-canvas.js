@@ -770,7 +770,9 @@
     }
     if (connectDrag.tempLine && connectDrag.tempLine.parentNode) connectDrag.tempLine.parentNode.removeChild(connectDrag.tempLine);
     const fromId = connectDrag.fromId; connectDrag = null;
-    if (toId && toId !== fromId) createConnectorBetween(fromId, toId);
+    if (!toId || toId === fromId) return;
+    if (itemsById[toId]?.data?.locked) return; // can't connect to a locked item
+    createConnectorBetween(fromId, toId);
   }
   function onConnectDragMove(e) { updateConnectDrag(e.clientX, e.clientY); }
   function onConnectDragUp(e) {
@@ -854,6 +856,7 @@
   // ---------- delete ----------
   async function deleteItem(id) {
     const it = itemsById[id]; if (!it) return;
+    if (it.data?.locked) return; // locked items can't be deleted
     await apiDELETE(`${apiBase}/${id}/delete`).catch(console.warn);
     if (it.el?.parentNode) it.el.parentNode.removeChild(it.el);
     delete itemsById[id]; removeConnectorsAttachedTo(id);
@@ -912,6 +915,7 @@
     const newIds = [];
     for (const id of sourceIds) {
       const src = itemsById[id]?.data; if (!src || src.kind === 'connector') continue;
+      if (src.locked) continue; // locked items don't duplicate
       const body = {
         kind: src.kind,
         x: snap((src.x | 0) + 20),
@@ -931,16 +935,16 @@
   }
 
   // ---------- z-order ----------
-  function _itemZRange() {
-    let min = 0, max = 0;
+  function _itemListByZ() {
+    const arr = [];
     for (const id in itemsById) {
       const d = itemsById[id]?.data;
       if (!d || d.kind === 'connector') continue;
-      const z = clampInt(d.z);
-      if (z < min) min = z;
-      if (z > max) max = z;
+      arr.push({ id: Number(id), z: clampInt(d.z) });
     }
-    return { min, max };
+    // Stable order: by z then by id, so ties resolve consistently
+    arr.sort((a, b) => a.z - b.z || a.id - b.id);
+    return arr;
   }
   async function setItemZ(id, z) {
     const entry = itemsById[id]; if (!entry?.el || !entry.data) return;
@@ -948,21 +952,33 @@
     entry.el.style.zIndex = String(z);
     await apiPATCH(`${apiBase}/${id}`, { z }).catch(console.warn);
   }
+  // Move above the immediate-next item (or do nothing if already on top)
   async function zBringForward(id) {
-    const d = itemsById[id]?.data; if (!d) return;
-    await setItemZ(id, clampInt(d.z) + 1);
+    const list = _itemListByZ();
+    const idx = list.findIndex(x => x.id === id);
+    if (idx === -1 || idx === list.length - 1) return;
+    const above = list[idx + 1];
+    await setItemZ(id, above.z + 1);
   }
+  // Move below the immediate-previous item (or do nothing if already on bottom)
   async function zSendBack(id) {
-    const d = itemsById[id]?.data; if (!d) return;
-    await setItemZ(id, clampInt(d.z) - 1);
+    const list = _itemListByZ();
+    const idx = list.findIndex(x => x.id === id);
+    if (idx <= 0) return;
+    const below = list[idx - 1];
+    await setItemZ(id, below.z - 1);
   }
   async function zBringToFront(id) {
-    const r = _itemZRange();
-    await setItemZ(id, r.max + 1);
+    const list = _itemListByZ();
+    const top = list[list.length - 1];
+    if (!top || top.id === id) return;
+    await setItemZ(id, top.z + 1);
   }
   async function zSendToBack(id) {
-    const r = _itemZRange();
-    await setItemZ(id, r.min - 1);
+    const list = _itemListByZ();
+    const bot = list[0];
+    if (!bot || bot.id === id) return;
+    await setItemZ(id, bot.z - 1);
   }
 
   // ---------- lock ----------
@@ -1110,7 +1126,14 @@
       // If clicked item isn't in the multi-selection, single-select it
       if (!selectedIds.has(id)) setSingleSelection(id);
       const d = itemsById[id]?.data;
-      const lockedLabel = d?.locked ? 'Unlock' : 'Lock';
+
+      // Locked: only show the unlock action — everything else is blocked
+      if (d?.locked) {
+        const html = `<button data-cmd="lock">🔓 Unlock</button>`;
+        openCtxMenu(e.clientX, e.clientY, html, async () => toggleLock(id));
+        return;
+      }
+
       const html = `
         <button data-cmd="duplicate">Duplicate <kbd>Ctrl+D</kbd></button>
         <div class="menu-sep"></div>
@@ -1119,19 +1142,20 @@
         <button data-cmd="front">Bring to front</button>
         <button data-cmd="bottom">Send to back</button>
         <div class="menu-sep"></div>
-        <button data-cmd="lock">${lockedLabel}</button>
+        <button data-cmd="lock">🔒 Lock</button>
         <div class="menu-sep"></div>
         <button data-cmd="delete">Delete <kbd>Del</kbd></button>
       `;
       openCtxMenu(e.clientX, e.clientY, html, async (cmd) => {
-        const ids = Array.from(selectedIds);
+        // Only operate on the unlocked subset of the current selection
+        const ids = Array.from(selectedIds).filter(sid => !itemsById[sid]?.data?.locked);
         switch (cmd) {
           case 'duplicate': return duplicateSelection();
           case 'forward':   return Promise.all(ids.map(zBringForward));
           case 'back':      return Promise.all(ids.map(zSendBack));
           case 'front':     return Promise.all(ids.map(zBringToFront));
           case 'bottom':    return Promise.all(ids.map(zSendToBack));
-          case 'lock':      return Promise.all(ids.map(toggleLock));
+          case 'lock':      return Promise.all(Array.from(selectedIds).map(toggleLock));
           case 'delete':    return Promise.all(ids.map(deleteItem));
         }
       });
@@ -1258,8 +1282,9 @@
 
     // connector: drag from item A to B
     if (currentTool === 'connector' && isItem) {
-      e.preventDefault(); e.stopPropagation();
       const fromId = Number(itemEl.dataset.id);
+      if (itemsById[fromId]?.data?.locked) return; // can't connect from a locked item
+      e.preventDefault(); e.stopPropagation();
       beginConnectDrag(fromId, e.clientX, e.clientY);
       return;
     }

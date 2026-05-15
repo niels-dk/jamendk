@@ -46,9 +46,11 @@ class trip_controller
         // Anchors (no per-anchor flag — included whenever the vision has any)
         $anchors = vision_model::getAnchors($db, $visionId);
 
-        // Linked mood board + media gallery
+        // Linked mood board + canvas snapshot
         $mood = null;
         $moodMedia = [];
+        $canvasItems = [];      // visible items keyed by id
+        $canvasBounds = null;   // ['minX','minY','cw','ch']
         if ($sectionVisible('relations')
             && !empty($vision['mood_id'])
             && !empty($vision['show_mood_on_trip'])) {
@@ -59,6 +61,7 @@ class trip_controller
             $ms->execute([$vision['mood_id']]);
             $mood = $ms->fetch(PDO::FETCH_ASSOC) ?: null;
             if ($mood) {
+                // Media library (used as fallback / supplemental gallery)
                 $mm = $db->prepare("
                     SELECT vm.id, vm.uuid, vm.file_name, vm.mime_type,
                            vm.provider, vm.provider_id
@@ -69,6 +72,58 @@ class trip_controller
                 ");
                 $mm->execute([(int)$mood['id']]);
                 $moodMedia = $mm->fetchAll(PDO::FETCH_ASSOC);
+
+                // Canvas items (for the snapshot section)
+                $cs = $db->prepare("
+                    SELECT ci.id, ci.kind, ci.x, ci.y, ci.w, ci.h, ci.z, ci.rotation,
+                           ci.payload_json, ci.style_json,
+                           ci.media_id,
+                           vm.uuid AS media_uuid, vm.mime_type AS media_mime,
+                           vm.provider AS media_provider, vm.provider_id AS media_provider_id
+                      FROM canvas_items ci
+                      LEFT JOIN vision_media vm ON vm.id = ci.media_id
+                     WHERE ci.board_id = ? AND ci.hidden = 0
+                     ORDER BY ci.z ASC, ci.id ASC
+                ");
+                $cs->execute([(int)$mood['id']]);
+                $rawItems = $cs->fetchAll(PDO::FETCH_ASSOC);
+                foreach ($rawItems as $row) {
+                    $payload = $row['payload_json'] ? json_decode($row['payload_json'], true) : [];
+                    $style   = $row['style_json']   ? json_decode($row['style_json'],   true) : [];
+                    $canvasItems[(int)$row['id']] = [
+                        'id'       => (int)$row['id'],
+                        'kind'     => $row['kind'],
+                        'x'        => (int)$row['x'],
+                        'y'        => (int)$row['y'],
+                        'w'        => (int)$row['w'],
+                        'h'        => (int)$row['h'],
+                        'z'        => (int)$row['z'],
+                        'rotation' => (int)$row['rotation'],
+                        'payload'  => is_array($payload) ? $payload : [],
+                        'style'    => is_array($style)   ? $style   : [],
+                        'media'    => !empty($row['media_id']) ? [
+                            'uuid'        => $row['media_uuid'],
+                            'mime_type'   => $row['media_mime'],
+                            'provider'    => $row['media_provider'],
+                            'provider_id' => $row['media_provider_id'],
+                        ] : null,
+                    ];
+                }
+                // Compute bounding box across non-connector items
+                $minX = PHP_INT_MAX; $minY = PHP_INT_MAX;
+                $maxX = PHP_INT_MIN; $maxY = PHP_INT_MIN;
+                foreach ($canvasItems as $ci) {
+                    if ($ci['kind'] === 'connector') continue;
+                    $minX = min($minX, $ci['x']);
+                    $minY = min($minY, $ci['y']);
+                    $maxX = max($maxX, $ci['x'] + max(1, $ci['w']));
+                    $maxY = max($maxY, $ci['y'] + max(1, $ci['h']));
+                }
+                if ($minX !== PHP_INT_MAX) {
+                    $cw = max(1, $maxX - $minX);
+                    $ch = max(1, $maxY - $minY);
+                    $canvasBounds = ['minX' => $minX, 'minY' => $minY, 'cw' => $cw, 'ch' => $ch];
+                }
             }
         }
 

@@ -4,20 +4,6 @@
  *
  * Encapsulates CRUD operations for the `canvas_items` table.
  */
-class MoodCanvas {
-    public static function deleteItem($slug, $id) {
-        $db = db();
-        return $db->prepare("1DELETE FROM mood_board_items WHERE id=? AND board_id=(SELECT id FROM mood_boards WHERE slug=?)")
-                  ->execute([$id, $slug]);
-    }
-
-    public static function deleteArrow($slug, $id) {
-        $db = db();
-        return $db->prepare("DELETE FROM mood_board_arrows WHERE id=? AND board_id=(SELECT id FROM mood_boards WHERE slug=?)")
-                  ->execute([$id, $slug]);
-    }
-}
-
 class mood_canvas_model
 {
     public static function listItems(PDO $db, int $boardId): array {

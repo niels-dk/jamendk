@@ -65,12 +65,10 @@ function route(string $uri): void
 		'/api/moods/([A-Za-z0-9]{6,16})/canvas/items/([0-9]+)'        => ['canvas','updateItem'],
 		'/api/moods/([A-Za-z0-9]{6,16})/canvas/items/([0-9]+)/delete' => ['canvas','deleteItem'],
 		'/api/moods/([A-Za-z0-9]{6,16})/canvas/items/bulk'            => ['canvas','bulkUpdate'],
-		//'/api/moods/([A-Za-z0-9]{6,16})/arrows'             		  => ['canvas','saveArrow'], 
-		//'/api/moods/([A-Za-z0-9]{6,16})/arrows/([0-9]+):delete' 	  => ['canvas','deleteArrow'],
+		// Arrows/connectors are stored as canvas_items (kind='connector'),
+		// so delete uses the standard /canvas/items/{id}/delete route above.
 		'/api/moods/([A-Za-z0-9]{6,16})/arrows'                       => ['canvas','createArrow'], // POST
-		'/api/moods/([A-Za-z0-9]{6,16})/arrows/([0-9]+):delete'       => ['mood_arrows','delete'], // POST
-		'/api/moods/([A-Za-z0-9]{6,16})/items/([0-9]+):delete' 		  => ['mood_items','delete'],
-		
+
 		// Board-scoped media (Mood canvas)
 		'/api/moods/([A-Za-z0-9]{6,16})/media'						  => ['media','listForMood'], // GET
 

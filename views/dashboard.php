@@ -121,7 +121,7 @@ $currentTypeLabel = $boardLabels[$boardType] ?? 'Boards';
             <span class="board-tag board-tag-<?= $boardType ?>">
               <?= htmlspecialchars(mb_substr($boardLabels[$boardType] ?? '❓', 0, 2)) ?>
             </span>
-            <?= htmlspecialchars($d['title']) ?>
+            <?= htmlspecialchars($d['title'] ?: 'Untitled') ?>
           </a>
         </h3>
 
@@ -130,20 +130,6 @@ $currentTypeLabel = $boardLabels[$boardType] ?? 'Boards';
             <?= htmlspecialchars(strip_tags($d['description'])) ?>
           </div>
         <?php endif; ?>
-
-		<?php if (!empty($vision['anchors_summary'])): ?>
-		  <ul class="anchor-summary">
-			<?php foreach ($vision['anchors_summary'] as $pair): ?>
-			  <li><strong><?= htmlspecialchars($pair['key']) ?>:</strong> <?= htmlspecialchars($pair['value']) ?></li>
-			<?php endforeach; ?>
-		  </ul>
-		<?php endif; ?>
-
-		<ul class="anchor-summary">
-		  <?php foreach ($vision['anchors'] as $pair): ?>
-			<li><strong><?= htmlspecialchars($pair['key']) ?>:</strong> <?= htmlspecialchars($pair['value']) ?></li>
-		  <?php endforeach; ?>
-		</ul>
 
         <div class="card-chips">
           <?php foreach (($d['anchors'] ?? []) as $list): ?>

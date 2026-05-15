@@ -332,7 +332,7 @@ class media_controller
 		$groupId   = isset($_POST['group_id'])   ? (int)$_POST['group_id']   : 0;
 		$groupName = trim($_POST['group_name'] ?? '');
 
-		// Resolve acting user (don’t rely on $auth->id())
+		// Resolve acting user (donï¿½t rely on $auth->id())
 		$userId = self::resolve_user_id($db, $boardId, $visionId, $mediaId);
 		if (!$userId) {
 			http_response_code(401);
@@ -349,7 +349,7 @@ class media_controller
 				return;
 			}
 
-			// Look up by (user_id, slug) — global per user
+			// Look up by (user_id, slug) ï¿½ global per user
 			$st = $db->prepare("SELECT id FROM media_groups WHERE user_id=? AND slug=? LIMIT 1");
 			$st->execute([$userId, $slug]);
 			$gid = $st->fetchColumn();
@@ -430,39 +430,48 @@ class media_controller
     }
 
 	public static function listAll(): void {
-        global $db; // or inject PDO as in your project
+        global $db, $currentUserId;
+        $uid    = (int)($currentUserId ?? 0);
         $q      = isset($_GET['q']) ? trim($_GET['q']) : '';
         $limit  = isset($_GET['limit']) ? max(1, min(100, (int)$_GET['limit'])) : 40;
         $offset = isset($_GET['offset']) ? max(0, (int)$_GET['offset']) : 0;
         $type   = isset($_GET['type']) ? $_GET['type'] : 'all';
 
-        $where = [];
-        $args  = [];
+        // Filter to media that's attached to any of the current user's mood boards.
+        // This matches the user-visible promise of the "All Media Files" tab:
+        // every media file uploaded from any of their mood boards.
+        $where = ['mb.user_id = ?', 'mb.deleted_at IS NULL'];
+        $args  = [$uid];
 
         if ($q !== '') {
-            $where[] = '(file_name LIKE ? OR provider LIKE ? OR tags LIKE ?)';
+            $where[] = '(vm.file_name LIKE ? OR vm.provider LIKE ? OR vm.tags LIKE ?)';
             $args[] = "%$q%"; $args[] = "%$q%"; $args[] = "%$q%";
         }
         if ($type === 'image') {
-            $where[] = "mime_type LIKE 'image/%'";
+            $where[] = "vm.mime_type LIKE 'image/%'";
         } elseif ($type === 'video') {
-            $where[] = "mime_type LIKE 'video/%' OR provider = 'youtube'";
+            $where[] = "(vm.mime_type LIKE 'video/%' OR vm.provider = 'youtube')";
+        } elseif ($type === 'audio') {
+            $where[] = "vm.mime_type LIKE 'audio/%'";
+        } elseif ($type === 'pdf') {
+            $where[] = "vm.mime_type = 'application/pdf'";
         }
 
-        $sql = 'SELECT id, uuid, file_name, mime_type, provider, provider_id, created_at, tags
-                FROM vision_media';
-        if ($where) $sql .= ' WHERE ' . implode(' AND ', $where);
-        $sql .= ' ORDER BY id DESC LIMIT ? OFFSET ?';
+        $sql = "SELECT DISTINCT vm.id, vm.uuid, vm.file_name, vm.mime_type,
+                                vm.provider, vm.provider_id, vm.created_at, vm.tags
+                  FROM vision_media vm
+                  INNER JOIN mood_board_media mbm ON mbm.media_id = vm.id
+                  INNER JOIN mood_boards     mb  ON mb.id = mbm.board_id
+                 WHERE " . implode(' AND ', $where) . "
+                 ORDER BY vm.id DESC
+                 LIMIT ? OFFSET ?";
 
-        $pdo = $db; // adjust if you use a different PDO handle name
-        $st = $pdo->prepare($sql);
-
-        // bind with correct types
+        $st = $db->prepare($sql);
         $i = 1;
         foreach ($args as $v) {
-            $st->bindValue($i++, $v, PDO::PARAM_STR);
+            $st->bindValue($i++, $v, is_int($v) ? PDO::PARAM_INT : PDO::PARAM_STR);
         }
-        $st->bindValue($i++, $limit, PDO::PARAM_INT);
+        $st->bindValue($i++, $limit,  PDO::PARAM_INT);
         $st->bindValue($i++, $offset, PDO::PARAM_INT);
 
         $st->execute();
@@ -733,7 +742,7 @@ class media_controller
 
         // We support two storage backings:
         //  A) normalized tables: tags(id,name,user_id), media_tags(media_id,tag_id)
-        //  B) a 'tags' TEXT column on vision_media (CSV) if those tables don’t exist
+        //  B) a 'tags' TEXT column on vision_media (CSV) if those tables donï¿½t exist
         $hasTagsTables = false;
         try {
             $chkA = $db->query("SHOW TABLES LIKE 'tags'")->fetchColumn();
@@ -873,7 +882,7 @@ class media_controller
 		echo json_encode(['groups' => $rows ?: []]);
 	}
 
-    // controllers/media.php  — replace the whole group() method with this
+    // controllers/media.php  ï¿½ replace the whole group() method with this
 	public static function group(string $mediaId): void
 	{
 		header('Content-Type: application/json');
@@ -890,7 +899,7 @@ class media_controller
 		$media = media_model::findById($db, $mid);
 		if (!$media) { http_response_code(404); echo json_encode(['error'=>'Media not found']); return; }
 
-		// 1) Resolve owner (user_id) and scope (vision_id) — from the board you posted
+		// 1) Resolve owner (user_id) and scope (vision_id) ï¿½ from the board you posted
 		//    (this fixes the earlier crash that queried a non-existent `moods` table)
 		$userId   = null;
 		$visionId = null;

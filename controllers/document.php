@@ -275,13 +275,22 @@ class document_controller {
 		$raw = trim($_POST['group_id'] ?? '');
 		$groupId = ($raw === '') ? null : (int)$raw;
 
-		// Optional: validate group belongs to the same vision as the document
 		$doc = document_model::findByUuid($db, $uuid);
 		if (!$doc) { http_response_code(404); echo json_encode(['error'=>'Document not found']); return; }
 
+		// Validate against media_groups (the same table groups_list reads from).
+		// Group must belong to the vision's owner, and either be unscoped or scoped to this vision.
 		if (!is_null($groupId)) {
-			$st = $db->prepare("SELECT g.id FROM vision_doc_groups g WHERE g.id=? AND g.vision_id=?");
-			$st->execute([$groupId, (int)$doc['vision_id']]);
+			$vis = $db->prepare("SELECT user_id, id FROM visions WHERE id=? LIMIT 1");
+			$vis->execute([(int)$doc['vision_id']]);
+			$visRow = $vis->fetch(PDO::FETCH_ASSOC);
+			if (!$visRow) { http_response_code(404); echo json_encode(['error'=>'Vision not found']); return; }
+
+			$st = $db->prepare("SELECT id FROM media_groups
+								WHERE id = ? AND user_id = ?
+								  AND (vision_id IS NULL OR vision_id = ?)
+								LIMIT 1");
+			$st->execute([$groupId, (int)$visRow['user_id'], (int)$visRow['id']]);
 			if (!$st->fetch()) { http_response_code(422); echo json_encode(['error'=>'Invalid group for this vision']); return; }
 		}
 

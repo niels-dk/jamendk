@@ -44,6 +44,26 @@ class mood_controller
         if (!$board) { http_response_code(404); echo 'Mood board not found'; return; }
         $boardType = 'mood';
         $pageTitle = htmlspecialchars($board['title'] ?? 'Untitled Mood Board');
+
+        // Linked vision (if any)
+        $linkedVision = null;
+        if (!empty($board['vision_id'])) {
+            $vs = $db->prepare("SELECT slug, title FROM visions WHERE id=? AND deleted_at IS NULL LIMIT 1");
+            $vs->execute([(int)$board['vision_id']]);
+            $linkedVision = $vs->fetch(PDO::FETCH_ASSOC) ?: null;
+        }
+
+        // Canvas item counts grouped by kind (skip hidden)
+        $cs = $db->prepare("SELECT kind, COUNT(*) AS n
+                              FROM canvas_items
+                             WHERE board_id=? AND hidden=0
+                             GROUP BY kind");
+        $cs->execute([(int)$board['id']]);
+        $itemCounts = [];
+        foreach ($cs->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $itemCounts[$row['kind']] = (int)$row['n'];
+        }
+
         ob_start();
         include __DIR__ . '/../views/mood_show.php';
         $content = ob_get_clean();

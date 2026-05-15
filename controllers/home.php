@@ -158,6 +158,9 @@ class home_controller
 	 */
 	private static function fetchTripVisions(PDO $db, int $userId): array
 	{
+		// NOTE: explicit COLLATE on both sides of the slug join — mood_boards.slug
+		// and visions.mood_id were created with different collations on some
+		// installs, which would otherwise raise "Illegal mix of collations".
 		$sql = "
 			SELECT v.id, v.slug, v.title, v.description,
 				   v.start_date, v.end_date,
@@ -172,7 +175,9 @@ class home_controller
 					 LIMIT 1) AS has_budget
 			  FROM visions v
 			  LEFT JOIN mood_boards mb
-					 ON mb.slug = v.mood_id AND mb.deleted_at IS NULL
+					 ON mb.slug COLLATE utf8mb4_general_ci
+						= v.mood_id COLLATE utf8mb4_general_ci
+					AND mb.deleted_at IS NULL
 			 WHERE v.user_id = ?
 			   AND v.archived = 0
 			   AND v.deleted_at IS NULL

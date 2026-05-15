@@ -827,6 +827,89 @@ header nav { display: none; }
 /* Trix editor height for visions */
 .trix-vision { min-height: 160px; }
 
+/* ── Trix toolbar – dark mode ───────────────────────────────────── */
+trix-toolbar {
+  background: var(--bg-card, #15161A);
+  border: 1px solid var(--border, #2b3346);
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  padding: .4rem .5rem;
+  margin: 0;
+}
+trix-toolbar .trix-button-row {
+  display: flex; flex-wrap: wrap; align-items: center; gap: .35rem;
+}
+trix-toolbar .trix-button-group {
+  background: transparent;
+  border: 1px solid var(--border, #2b3346);
+  border-radius: 6px;
+  padding: .1rem;
+  margin: 0;
+}
+trix-toolbar .trix-button {
+  background: transparent;
+  border: 0;
+  color: var(--text-main, #ddd);
+  padding: .3rem .45rem;
+  border-radius: 4px;
+  min-width: 1.7rem; height: 1.7rem;
+  transition: background .12s, color .12s;
+}
+/* Invert the dark SVG icons so they show up on the dark theme */
+trix-toolbar .trix-button--icon::before {
+  filter: invert(.85);
+  opacity: 1;
+}
+trix-toolbar .trix-button:hover {
+  background: rgba(255,255,255,.06);
+  color: #fff;
+}
+trix-toolbar .trix-button[aria-pressed="true"] {
+  background: var(--accent, #3a76d2);
+  color: #fff;
+}
+trix-toolbar .trix-button[aria-pressed="true"]::before {
+  filter: invert(1);
+}
+trix-toolbar .trix-button[disabled],
+trix-toolbar .trix-button.trix-active[disabled] {
+  opacity: .3; cursor: default;
+}
+
+/* Editor surface joins flush with the toolbar */
+trix-editor.trix-vision,
+trix-editor.trix-content {
+  background: var(--bg-base, #0c0d11);
+  border: 1px solid var(--border, #2b3346);
+  border-top: none;
+  border-radius: 0 0 8px 8px;
+  color: var(--text-main, #ddd);
+  padding: .8rem;
+}
+
+/* Link dialog */
+trix-toolbar .trix-dialog {
+  background: var(--bg-card, #15161A);
+  border-top: 1px solid var(--border, #2b3346);
+  color: var(--text-main, #ddd);
+}
+trix-toolbar .trix-input--dialog {
+  background: var(--bg-base, #0c0d11);
+  border: 1px solid var(--border, #2b3346);
+  color: var(--text-main, #ddd);
+  padding: .4rem .5rem;
+  border-radius: 4px;
+}
+trix-toolbar .trix-dialog .trix-button {
+  background: transparent;
+  border: 1px solid var(--border, #2b3346);
+  color: var(--text-main, #ddd);
+  padding: .35rem .7rem;
+}
+trix-toolbar .trix-dialog .trix-button:hover {
+  background: rgba(255,255,255,.06);
+}
+
 /* Sidebar collapse & swipe */
 .sidebar { transition: width .18s ease; }
 .sidebar-collapse {

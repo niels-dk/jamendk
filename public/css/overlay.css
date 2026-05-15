@@ -46,7 +46,7 @@
   cursor: pointer;
 }
 
-/* Switch row clickable anywhere */
+/* Switch row – whole row is a <label> so clicking anywhere toggles */
 #overlay-shell .switch {
   display: grid;
   grid-template-columns: 1fr auto;
@@ -56,19 +56,24 @@
   margin: 6px 0;
 }
 #overlay-shell .switch input[type="checkbox"] {
-  appearance: none;
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+#overlay-shell .switch .knob {
+  display: inline-block;
   width: 42px;
   height: 24px;
   border-radius: 999px;
   background: #424654;
   position: relative;
-  outline: none;
   transition: background .18s ease;
 }
-#overlay-shell .switch input[type="checkbox"]:checked {
+#overlay-shell .switch input[type="checkbox"]:checked + .knob {
   background: #3a76d2;
 }
-#overlay-shell .switch input[type="checkbox"]::after {
+#overlay-shell .switch .knob::after {
   content: "";
   position: absolute;
   top: 3px;
@@ -79,6 +84,6 @@
   background: #fff;
   transition: transform .18s ease;
 }
-#overlay-shell .switch input[type="checkbox"]:checked::after {
+#overlay-shell .switch input[type="checkbox"]:checked + .knob::after {
   transform: translateX(18px);
 }

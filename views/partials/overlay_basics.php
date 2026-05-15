@@ -36,10 +36,11 @@ $endDate   = (string)($vision['end_date']   ?? '');
       $checked = !empty($flags[$section]) ? 'checked' : '';
       $label = ucfirst($section);
     ?>
-    <div class="switch switch-row">
-      <label class="switch-label" for="<?= $id ?>"><?= $label ?></label>
-      <input id="<?= $id ?>" class="switch-input" type="checkbox" name="<?= $section ?>" <?= $checked ?>>
-    </div>
+    <label class="switch switch-row">
+      <span class="switch-label"><?= $label ?></span>
+      <input class="switch-input" type="checkbox" name="<?= $section ?>" <?= $checked ?>>
+      <span class="knob" aria-hidden="true"></span>
+    </label>
   <?php endforeach; ?>
 </form>
 
@@ -63,7 +64,9 @@ $endDate   = (string)($vision['end_date']   ?? '');
       method:'POST',
       headers:{ 'X-Requested-With':'XMLHttpRequest', 'Content-Type':'application/x-www-form-urlencoded' },
       body: p.toString()
-    }).catch(()=>{});
+    }).then(r => r.json()).then(j => {
+      if (!j.success) console.error('Date save failed:', j);
+    }).catch(e => console.error('Date save error:', e));
   }
   [start, end].forEach(el => el && el.addEventListener('change', saveDates));
 

@@ -66,12 +66,15 @@
   width: 42px;
   height: 24px;
   border-radius: 999px;
-  background: #424654;
+  background: #2a2d35;
+  border: 1px solid #424654;
   position: relative;
-  transition: background .18s ease;
+  transition: background .18s ease, border-color .18s ease;
+  box-sizing: border-box;
 }
 #overlay-shell .switch input[type="checkbox"]:checked + .knob {
   background: #3a76d2;
+  border-color: #3a76d2;
 }
 #overlay-shell .switch .knob::after {
   content: "";

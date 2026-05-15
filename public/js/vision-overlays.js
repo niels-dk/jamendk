@@ -44,8 +44,19 @@ document.addEventListener('DOMContentLoaded', () => {
       cache[section] = {html, ts: now};
     }
     overlayContent.innerHTML = html;
+    executeInlineScripts(overlayContent);
     bindOverlay(section, slug);  // attach only the minimal wiring
     showOverlay(trigger);
+  }
+
+  // <script> tags inserted via innerHTML do not execute. Re-create them so they do.
+  function executeInlineScripts(container) {
+    container.querySelectorAll('script').forEach(oldScript => {
+      const newScript = document.createElement('script');
+      for (const attr of oldScript.attributes) newScript.setAttribute(attr.name, attr.value);
+      newScript.textContent = oldScript.textContent;
+      oldScript.parentNode.replaceChild(newScript, oldScript);
+    });
   }
 
   function showOverlay(trigger) {

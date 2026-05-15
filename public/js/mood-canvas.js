@@ -105,11 +105,15 @@
     const tf = `translate(${stageOffset.x}, ${stageOffset.y}) scale(${stageScale})`;
     svgBack.setAttribute('transform', tf);
     svgFront.setAttribute('transform', tf);
-	  	
+
 	window.__moodCanvasView = window.__moodCanvasView || { scale: 1, offset: {x:0,y:0} };
 	window.__moodCanvasView.scale  = stageScale;
 	window.__moodCanvasView.offset = { x: stageOffset.x, y: stageOffset.y };
 
+	// If a connector is selected, keep its toolbar anchored to the new midpoint
+	if (selectedConnectorId !== null && window.__mc_repositionConnToolbar) {
+	  window.__mc_repositionConnToolbar(selectedConnectorId);
+	}
   }
 
   function centerFromData(d) {
@@ -409,8 +413,8 @@
     line.setAttribute('stroke', '#888');
     line.setAttribute('stroke-width', '2');
     line.setAttribute('stroke-linecap', 'round');
-    line.setAttribute('marker-end', 'url(#arrowEnd)');
     line.setAttribute('pointer-events', 'none');
+    // marker-start / marker-end are managed by _applyConnectorStyle based on payload.arrows
     svgBack.appendChild(line);
     linesById[item.id] = line;
 
@@ -469,6 +473,10 @@
       if (line._hitLine) line._hitLine.setAttribute(k, v);
     });
     if (line._labelEl) _renderConnectorLabel(connectorId);
+    // Keep the floating toolbar anchored if this connector is selected
+    if (selectedConnectorId === connectorId && window.__mc_repositionConnToolbar) {
+      window.__mc_repositionConnToolbar(connectorId);
+    }
   }
 
   function refreshAttachedConnectors(itemId) {
@@ -885,6 +893,9 @@
     if (id !== null) {
       const line = linesById[id];
       if (line) { line.setAttribute('stroke', '#4a90e2'); line.setAttribute('stroke-width', '3'); }
+      window.__mc_showConnToolbar?.(id);
+    } else {
+      window.__mc_hideConnToolbar?.();
     }
   }
 
@@ -991,12 +1002,21 @@
   }
 
   // ---------- connector style + label ----------
+  const CONNECTOR_ARROWS = ['none', 'end', 'start', 'both'];
   function _applyConnectorStyle(id) {
     const line = linesById[id]; if (!line) return;
     const it = itemsById[id]?.data; if (!it) return;
+    // Dashed
     const dashed = !!it.payload?.dashed;
     if (dashed) line.setAttribute('stroke-dasharray', '6 4');
     else line.removeAttribute('stroke-dasharray');
+    // Arrow heads (default: 'end' for backwards compat)
+    let arrows = it.payload?.arrows;
+    if (!CONNECTOR_ARROWS.includes(arrows)) arrows = 'end';
+    if (arrows === 'end' || arrows === 'both') line.setAttribute('marker-end', 'url(#arrowEnd)');
+    else line.removeAttribute('marker-end');
+    if (arrows === 'start' || arrows === 'both') line.setAttribute('marker-start', 'url(#arrowEnd)');
+    else line.removeAttribute('marker-start');
   }
   async function setConnectorDashed(id, dashed) {
     const it = itemsById[id]?.data; if (!it) return;
@@ -1004,6 +1024,31 @@
     it.payload.dashed = !!dashed;
     _applyConnectorStyle(id);
     await apiPATCH(`${apiBase}/${id}`, { payload: { dashed: !!dashed } }).catch(console.warn);
+  }
+  async function setConnectorArrows(id, arrows) {
+    if (!CONNECTOR_ARROWS.includes(arrows)) arrows = 'end';
+    const it = itemsById[id]?.data; if (!it) return;
+    it.payload = it.payload || {};
+    it.payload.arrows = arrows;
+    _applyConnectorStyle(id);
+    await apiPATCH(`${apiBase}/${id}`, { payload: { arrows } }).catch(console.warn);
+  }
+  async function reverseConnector(id) {
+    const it = itemsById[id]?.data; if (!it) return;
+    const p = it.payload || {};
+    if (!p.a || !p.b) return;
+    const a = p.a, b = p.b;
+    it.payload = { ...p, a: b, b: a };
+    // The visible line cached _payload too
+    const line = linesById[id]; if (line) line._payload = it.payload;
+    // Re-wire connectorsByItem mapping
+    const aId = a.item, bId = b.item;
+    if (aId) connectorsByItem[aId]?.delete(id);
+    if (bId) connectorsByItem[bId]?.delete(id);
+    if (b.item) ensureSet(connectorsByItem, b.item).add(id);
+    if (a.item) ensureSet(connectorsByItem, a.item).add(id);
+    updateConnectorLine(id);
+    await apiPATCH(`${apiBase}/${id}`, { payload: { a: b, b: a } }).catch(console.warn);
   }
   function _renderConnectorLabel(id) {
     const it = itemsById[id]?.data; if (!it) return;
@@ -1111,6 +1156,160 @@
     closeCtxMenu();
     if (h) h(cmd);
   });
+
+  // ---------- floating connector toolbar (touch-first) ----------
+  const connToolbar = document.createElement('div');
+  connToolbar.id = 'canvasConnToolbar';
+  connToolbar.hidden = true;
+  document.body.appendChild(connToolbar);
+
+  (function injectConnToolbarStyles(){
+    if (document.getElementById('canvasConnToolbarStyles')) return;
+    const s = document.createElement('style'); s.id = 'canvasConnToolbarStyles';
+    s.textContent = `
+      #canvasConnToolbar {
+        position:fixed; z-index:9998;
+        display:flex; flex-wrap:wrap; align-items:center; gap:.2rem;
+        background:#1a1d24; border:1px solid #2b3346; border-radius:10px;
+        box-shadow:0 8px 24px rgba(0,0,0,.4);
+        padding:.3rem; transform:translate(-50%, 0);
+        max-width:96vw;
+      }
+      #canvasConnToolbar button {
+        min-width:40px; height:40px; padding:0 .35rem;
+        background:transparent; border:1px solid transparent; border-radius:6px;
+        color:#ddd; font: 14px/1 system-ui, sans-serif; cursor:pointer;
+        display:inline-flex; align-items:center; justify-content:center;
+      }
+      #canvasConnToolbar button:hover  { background:#2a2f3a; }
+      #canvasConnToolbar button.is-active {
+        background:#1f3a66; border-color:#3a76d2; color:#fff;
+      }
+      #canvasConnToolbar .sep {
+        width:1px; align-self:stretch; background:#2b3346; margin:.1rem .1rem;
+      }
+      #canvasConnToolbar .danger { color:#f08792; }
+      #canvasConnToolbar .danger:hover { background:#4a1626; }
+    `;
+    document.head.appendChild(s);
+  })();
+
+  function hideConnToolbar() { connToolbar.hidden = true; }
+
+  function renderConnToolbar(id) {
+    const d = itemsById[id]?.data; if (!d) return;
+    const arrows = (CONNECTOR_ARROWS.includes(d.payload?.arrows) ? d.payload.arrows : 'end');
+    const dashed = !!d.payload?.dashed;
+    const cls = (a) => arrows === a ? 'is-active' : '';
+    const dcls = (b) => b ? 'is-active' : '';
+    connToolbar.innerHTML = `
+      <button data-cmd="arrows-none"  class="${cls('none')}"  title="No arrows">—</button>
+      <button data-cmd="arrows-end"   class="${cls('end')}"   title="Arrow end">→</button>
+      <button data-cmd="arrows-start" class="${cls('start')}" title="Arrow start">←</button>
+      <button data-cmd="arrows-both"  class="${cls('both')}"  title="Both ends">↔</button>
+      <span class="sep"></span>
+      <button data-cmd="solid"  class="${dcls(!dashed)}" title="Solid line">──</button>
+      <button data-cmd="dashed" class="${dcls(dashed)}"  title="Dashed line">- -</button>
+      <span class="sep"></span>
+      <button data-cmd="reverse" title="Reverse direction">⇄</button>
+      <button data-cmd="label" title="Edit label">A</button>
+      <button data-cmd="delete" class="danger" title="Delete">×</button>
+    `;
+  }
+
+  function positionConnToolbar(id) {
+    const line = linesById[id]; if (!line) return;
+    // Midpoint in logical coords → viewport coords
+    const x1 = +line.getAttribute('x1') || 0;
+    const y1 = +line.getAttribute('y1') || 0;
+    const x2 = +line.getAttribute('x2') || 0;
+    const y2 = +line.getAttribute('y2') || 0;
+    const mx = (x1 + x2) / 2;
+    const my = (y1 + y2) / 2;
+    const rect = stage.getBoundingClientRect();
+    const cx = rect.left + mx * stageScale + stageOffset.x;
+    const cy = rect.top  + my * stageScale + stageOffset.y;
+    // Show first so we can measure
+    connToolbar.hidden = false;
+    const tw = connToolbar.offsetWidth || 360;
+    const th = connToolbar.offsetHeight || 48;
+    let left = cx;
+    let top  = cy + 24; // below the midpoint
+    // Clamp inside viewport (account for the translateX(-50%) we use on left)
+    const half = tw / 2;
+    if (left - half < 8)                      left = 8 + half;
+    if (left + half > window.innerWidth - 8)  left = window.innerWidth - 8 - half;
+    if (top + th > window.innerHeight - 8)    top  = cy - 24 - th; // flip above
+    if (top < 8)                              top  = 8;
+    connToolbar.style.left = `${left}px`;
+    connToolbar.style.top  = `${top}px`;
+  }
+
+  function showConnToolbar(id) {
+    renderConnToolbar(id);
+    positionConnToolbar(id);
+    connToolbar._connId = id;
+  }
+
+  connToolbar.addEventListener('click', async (e) => {
+    const btn = e.target.closest('button[data-cmd]');
+    if (!btn) return;
+    const id = connToolbar._connId; if (!id) return;
+    e.stopPropagation();
+    const cmd = btn.dataset.cmd;
+    if (cmd === 'arrows-none')  await setConnectorArrows(id, 'none');
+    else if (cmd === 'arrows-end')   await setConnectorArrows(id, 'end');
+    else if (cmd === 'arrows-start') await setConnectorArrows(id, 'start');
+    else if (cmd === 'arrows-both')  await setConnectorArrows(id, 'both');
+    else if (cmd === 'solid')   await setConnectorDashed(id, false);
+    else if (cmd === 'dashed')  await setConnectorDashed(id, true);
+    else if (cmd === 'reverse') await reverseConnector(id);
+    else if (cmd === 'label') {
+      const current = itemsById[id]?.data?.payload?.label || '';
+      const next = prompt('Connector label (leave empty to remove):', current);
+      if (next !== null) await setConnectorLabel(id, next.trim());
+    }
+    else if (cmd === 'delete') {
+      await deleteConnector(id);
+      hideConnToolbar();
+      return;
+    }
+    // Refresh active-state on the toolbar
+    renderConnToolbar(id);
+    positionConnToolbar(id);
+  });
+
+  // Close toolbar on outside interactions / view changes.
+  // Don't fight the connector's own hit-line click — those clicks reselect.
+  function _isConnectorHit(target) {
+    return target?.tagName?.toLowerCase?.() === 'line'
+      && target.getAttribute?.('pointer-events') === 'stroke';
+  }
+  document.addEventListener('mousedown', (e) => {
+    if (connToolbar.hidden) return;
+    if (connToolbar.contains(e.target)) return;
+    if (_isConnectorHit(e.target)) return;
+    hideConnToolbar();
+    selectConnector(null);
+  });
+  document.addEventListener('touchstart', (e) => {
+    if (connToolbar.hidden) return;
+    if (connToolbar.contains(e.target)) return;
+    if (_isConnectorHit(e.target)) return;
+    hideConnToolbar();
+    selectConnector(null);
+  }, { passive:true });
+  ['scroll','resize'].forEach(ev => window.addEventListener(ev, () => {
+    if (connToolbar._connId) positionConnToolbar(connToolbar._connId);
+  }, { passive:true }));
+
+  // Expose so selectConnector / updateConnectorLine / applyTransforms can drive the toolbar
+  window.__mc_showConnToolbar = showConnToolbar;
+  window.__mc_hideConnToolbar = hideConnToolbar;
+  window.__mc_repositionConnToolbar = (id) => {
+    if (connToolbar.hidden || connToolbar._connId !== id) return;
+    positionConnToolbar(id);
+  };
 
   // Right-click handler — covers items, connectors, and empty space
   stage.addEventListener('contextmenu', (e) => {

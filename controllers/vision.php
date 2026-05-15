@@ -289,7 +289,13 @@ class vision_controller
         $st = $db->prepare("SELECT * FROM vision_presentation WHERE vision_id=?");
         $st->execute([(int)$vision['id']]);
         $presentationFlags = $st->fetch(PDO::FETCH_ASSOC) ?: [];
-        // Pass anchor summary if needed (not used in overlays)
+        // For relations overlay: resolve linked mood title (mood_id stores the slug)
+        $linkedMood = null;
+        if (!empty($vision['mood_id'])) {
+            $ms = $db->prepare("SELECT slug, title FROM moods WHERE slug=? LIMIT 1");
+            $ms->execute([$vision['mood_id']]);
+            $linkedMood = $ms->fetch(PDO::FETCH_ASSOC) ?: null;
+        }
         $partial = __DIR__.'/../views/partials/overlay_'.$section.'.php';
         if (!file_exists($partial)) { http_response_code(404); echo 'Overlay not found'; return; }
         // include partial; it will echo HTML

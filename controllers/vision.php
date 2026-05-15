@@ -366,16 +366,16 @@ class vision_controller
 			$q = trim((string)($_GET['q'] ?? ''));
 			if ($q === '') { echo json_encode([]); return; }
 
-			// Adjust table/columns if yours differ
-			$st = $db->prepare("SELECT slug AS id, title FROM moods
-								 WHERE title LIKE ? OR slug LIKE ?
+			$st = $db->prepare("SELECT slug AS id, title FROM mood_boards
+								 WHERE deleted_at IS NULL
+								   AND (title LIKE ? OR slug LIKE ?)
 								 ORDER BY title LIMIT 10");
 			$like = '%' . $q . '%';
 			$st->execute([$like, $like]);
 			echo json_encode($st->fetchAll(PDO::FETCH_ASSOC));
 		} catch (Throwable $e) {
 			http_response_code(500);
-			echo json_encode(['error' => 'Search failed']);
+			echo json_encode(['error' => $e->getMessage()]);
 		}
 	}
 

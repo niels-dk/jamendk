@@ -103,9 +103,9 @@ $STATUSES = [
 
   /* Custom dropdown menu (replaces native select) */
   .doc-menu {
-    position:absolute; min-width:160px;
+    position:fixed; min-width:160px;
     background:#1a1d24; border:1px solid #2b3346; border-radius:8px;
-    box-shadow:0 8px 24px rgba(0,0,0,.4); z-index:1000;
+    box-shadow:0 8px 24px rgba(0,0,0,.4); z-index:2000;
     padding:.25rem; overflow:hidden;
   }
   .doc-menu button {
@@ -150,15 +150,23 @@ $STATUSES = [
     menu.innerHTML = '';
     menu._anchor = null;
   }
+
+  // If the overlay panel scrolls or the window resizes, reposition or close the menu
+  const overlayPanel = document.querySelector('#overlay-shell .overlay-panel');
+  ['scroll','resize'].forEach(ev => window.addEventListener(ev, closeMenu, { passive:true }));
+  if (overlayPanel) overlayPanel.addEventListener('scroll', closeMenu, { passive:true });
   function openMenuAt(anchor, html, handler) {
+    // Move menu to <body> so it isn't clipped by the overlay panel's scroll
+    if (menu.parentElement !== document.body) document.body.appendChild(menu);
     menu.innerHTML = html;
     menu.hidden = false;
     const r = anchor.getBoundingClientRect();
-    const top = window.scrollY + r.bottom + 4;
-    let left  = window.scrollX + r.left;
-    // keep within viewport
-    const mw = 220;
-    if (left + mw > window.scrollX + window.innerWidth - 8) left = window.scrollX + window.innerWidth - mw - 8;
+    // position:fixed → use viewport coords directly
+    let top = r.bottom + 4;
+    let left = r.left;
+    const mw = Math.max(160, menu.offsetWidth || 200);
+    if (left + mw > window.innerWidth - 8)  left = window.innerWidth - mw - 8;
+    if (top + 200 > window.innerHeight - 8) top = Math.max(8, r.top - 8 - 200);
     menu.style.top  = `${top}px`;
     menu.style.left = `${left}px`;
     menu._anchor    = anchor;

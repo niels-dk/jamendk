@@ -60,6 +60,8 @@ class vision_controller
 			return;
 		}
 
+		$anchors = vision_model::getAnchors($db, (int)$vision['id']);
+
 		// Page vars for the layout
 		$pageTitle = $vision['title'] ?: 'Vision';
 		$pageDescription = $vision['description'] ?: 'Vision';

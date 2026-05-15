@@ -755,5 +755,174 @@ class vision_controller
 		echo json_encode(['success'=>true]);
 	}
 
+	/* ──────────────────────────  Goals & Milestones  ────────────────────────── */
+
+	private static function normalizeGoalStatus($status): string
+	{
+		$allowed = ['not_started','in_progress','awaiting','done','cancelled'];
+		return in_array($status, $allowed, true) ? $status : 'not_started';
+	}
+
+	private static function saveMilestones(PDO $db, int $goalId, array $texts, array $dones): void
+	{
+		$db->prepare("DELETE FROM vision_goal_milestones WHERE goal_id=?")->execute([$goalId]);
+		if (!$texts) return;
+		$st = $db->prepare("INSERT INTO vision_goal_milestones (goal_id, text, done, sort_order) VALUES (?,?,?,?)");
+		foreach ($texts as $i => $t) {
+			$text = trim((string)$t);
+			if ($text === '') continue;
+			$done = !empty($dones[$i]) ? 1 : 0;
+			$st->execute([$goalId, $text, $done, $i]);
+		}
+	}
+
+	/** GET /api/visions/{slug}/goals */
+	public static function listGoals(string $slug): void
+	{
+		header('Content-Type: application/json');
+		global $db;
+		$vision = vision_model::get($db, $slug);
+		if (!$vision) { http_response_code(404); echo json_encode(['error'=>'Vision not found']); return; }
+
+		$sql = "SELECT g.id, g.title, g.description, g.status, g.priority,
+					   g.due_date, g.completed_at, g.created_at,
+					   COUNT(m.id) AS milestone_total,
+					   COALESCE(SUM(m.done), 0) AS milestone_done
+				  FROM vision_goals g
+				  LEFT JOIN vision_goal_milestones m ON m.goal_id = g.id
+				 WHERE g.vision_id = ?
+				 GROUP BY g.id
+				 ORDER BY (g.status IN ('done','cancelled')) ASC,
+						  g.priority ASC,
+						  (g.due_date IS NULL) ASC,
+						  g.due_date ASC,
+						  g.id ASC";
+		$st = $db->prepare($sql);
+		$st->execute([(int)$vision['id']]);
+		echo json_encode($st->fetchAll(PDO::FETCH_ASSOC));
+	}
+
+	/** GET /api/visions/{slug}/goals/{id}/get */
+	public static function getGoal(string $slug, string $goalId): void
+	{
+		header('Content-Type: application/json');
+		global $db;
+		$vision = vision_model::get($db, $slug);
+		if (!$vision) { http_response_code(404); echo json_encode(['error'=>'Vision not found']); return; }
+
+		$gid = (int)$goalId;
+		$g = $db->prepare("SELECT * FROM vision_goals WHERE id=? AND vision_id=?");
+		$g->execute([$gid, (int)$vision['id']]);
+		$goal = $g->fetch(PDO::FETCH_ASSOC);
+		if (!$goal) { http_response_code(404); echo json_encode(['error'=>'Goal not found']); return; }
+
+		$m = $db->prepare("SELECT id, text, done FROM vision_goal_milestones
+							WHERE goal_id=? ORDER BY sort_order, id");
+		$m->execute([$gid]);
+		$goal['milestones'] = $m->fetchAll(PDO::FETCH_ASSOC);
+		echo json_encode($goal);
+	}
+
+	/** POST /api/visions/{slug}/goals/create */
+	public static function createGoal(string $slug): void
+	{
+		header('Content-Type: application/json');
+		global $db;
+		$vision = vision_model::get($db, $slug);
+		if (!$vision) { http_response_code(404); echo json_encode(['error'=>'Vision not found']); return; }
+
+		$title = trim((string)($_POST['title'] ?? ''));
+		if ($title === '') { http_response_code(422); echo json_encode(['error'=>'Title required']); return; }
+
+		$status      = self::normalizeGoalStatus($_POST['status'] ?? 'not_started');
+		$priority    = max(1, min(5, (int)($_POST['priority'] ?? 3)));
+		$description = (string)($_POST['description'] ?? '');
+		$due         = trim((string)($_POST['due_date'] ?? ''));
+		$due         = $due === '' ? null : $due;
+		$completedAt = $status === 'done' ? date('Y-m-d H:i:s') : null;
+
+		$db->beginTransaction();
+		try {
+			$st = $db->prepare("INSERT INTO vision_goals
+				(vision_id, title, description, status, priority, due_date, completed_at)
+				VALUES (?,?,?,?,?,?,?)");
+			$st->execute([(int)$vision['id'], $title, $description, $status, $priority, $due, $completedAt]);
+			$goalId = (int)$db->lastInsertId();
+			self::saveMilestones(
+				$db, $goalId,
+				$_POST['milestone_texts'] ?? [],
+				$_POST['milestone_dones'] ?? []
+			);
+			$db->commit();
+			echo json_encode(['success'=>true, 'goal_id'=>$goalId]);
+		} catch (\Throwable $e) {
+			$db->rollBack();
+			http_response_code(500); echo json_encode(['error'=>$e->getMessage()]);
+		}
+	}
+
+	/** POST /api/visions/{slug}/goals/{id} */
+	public static function updateGoal(string $slug, string $goalId): void
+	{
+		header('Content-Type: application/json');
+		global $db;
+		$vision = vision_model::get($db, $slug);
+		if (!$vision) { http_response_code(404); echo json_encode(['error'=>'Vision not found']); return; }
+
+		$gid = (int)$goalId;
+		$chk = $db->prepare("SELECT status, completed_at FROM vision_goals WHERE id=? AND vision_id=?");
+		$chk->execute([$gid, (int)$vision['id']]);
+		$existing = $chk->fetch(PDO::FETCH_ASSOC);
+		if (!$existing) { http_response_code(404); echo json_encode(['error'=>'Goal not found']); return; }
+
+		$title = trim((string)($_POST['title'] ?? ''));
+		if ($title === '') { http_response_code(422); echo json_encode(['error'=>'Title required']); return; }
+
+		$status      = self::normalizeGoalStatus($_POST['status'] ?? 'not_started');
+		$priority    = max(1, min(5, (int)($_POST['priority'] ?? 3)));
+		$description = (string)($_POST['description'] ?? '');
+		$due         = trim((string)($_POST['due_date'] ?? ''));
+		$due         = $due === '' ? null : $due;
+
+		// Manage completed_at on transitions
+		$completedAt = $existing['completed_at'];
+		if ($status === 'done' && $existing['status'] !== 'done')      $completedAt = date('Y-m-d H:i:s');
+		elseif ($status !== 'done' && $existing['status'] === 'done')  $completedAt = null;
+
+		$db->beginTransaction();
+		try {
+			$st = $db->prepare("UPDATE vision_goals
+				   SET title=?, description=?, status=?, priority=?, due_date=?, completed_at=?
+				 WHERE id=?");
+			$st->execute([$title, $description, $status, $priority, $due, $completedAt, $gid]);
+			self::saveMilestones(
+				$db, $gid,
+				$_POST['milestone_texts'] ?? [],
+				$_POST['milestone_dones'] ?? []
+			);
+			$db->commit();
+			echo json_encode(['success'=>true]);
+		} catch (\Throwable $e) {
+			$db->rollBack();
+			http_response_code(500); echo json_encode(['error'=>$e->getMessage()]);
+		}
+	}
+
+	/** DELETE /api/visions/{slug}/goals/{id}/delete */
+	public static function deleteGoal(string $slug, string $goalId): void
+	{
+		header('Content-Type: application/json');
+		global $db;
+		$vision = vision_model::get($db, $slug);
+		if (!$vision) { http_response_code(404); echo json_encode(['error'=>'Vision not found']); return; }
+
+		$gid = (int)$goalId;
+		$chk = $db->prepare("SELECT id FROM vision_goals WHERE id=? AND vision_id=?");
+		$chk->execute([$gid, (int)$vision['id']]);
+		if (!$chk->fetch()) { http_response_code(404); echo json_encode(['error'=>'Goal not found']); return; }
+
+		$db->prepare("DELETE FROM vision_goals WHERE id=?")->execute([$gid]); // milestones cascade
+		echo json_encode(['success'=>true]);
+	}
 
 }

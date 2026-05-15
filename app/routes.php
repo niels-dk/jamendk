@@ -37,7 +37,7 @@ function route(string $uri): void
         '/api/visions/([A-Za-z0-9]{6,16})/groups:create' => ['document','groups_create'], // POST
         '/api/documents/([a-f0-9]{32})/group'     => ['document','update_group'],  // POST
 		
-		// Tags & Groups (global � not under /visions/{slug})
+		// Tags & Groups (global � not under /visions/{slug})
 		'/api/tags'                    => ['media','tags_list'],      // GET
 		//'/api/media/([0-9]+)/tags'     => ['media','update_tags'],    // POST
 		//'/api/groups'                  => ['media','groups_list'],    // GET
@@ -91,7 +91,7 @@ function route(string $uri): void
         '/api/tags'                                => ['media','tags_list'],     // GET
         //'/api/media/([0-9]+)/tags'                 => ['media','update_tags'],   // POST
 
-		// Global Media API (search/list) � used by mood-canvas-media.js overlay
+		// Global Media API (search/list) � used by mood-canvas-media.js overlay
 		'/api/media'                   => ['media','listAll'],   // GET  ?q=&limit=&offset=&type=
 		
         // ── General Dashboard ─────────────────────────────────────────────────
@@ -168,6 +168,12 @@ function route(string $uri): void
         '/api/visions/update-basics'               => ['vision', 'updateBasics'],
         '/visions/([A-Za-z0-9]{6,16})/overlay/([a-z]+)'
                                                    => ['vision', 'overlay'],
+        // Goals & Milestones (must come before generic /api/visions/{slug}/{section})
+        '/api/visions/([A-Za-z0-9]{6,16})/goals'                 => ['vision', 'listGoals'],
+        '/api/visions/([A-Za-z0-9]{6,16})/goals/create'          => ['vision', 'createGoal'],
+        '/api/visions/([A-Za-z0-9]{6,16})/goals/([0-9]+)'        => ['vision', 'updateGoal'],
+        '/api/visions/([A-Za-z0-9]{6,16})/goals/([0-9]+)/get'    => ['vision', 'getGoal'],
+        '/api/visions/([A-Za-z0-9]{6,16})/goals/([0-9]+)/delete' => ['vision', 'deleteGoal'],
         '/api/visions/([A-Za-z0-9]{6,16})/([a-z]+)'
                                                    => ['vision', 'saveSection'],
     ];

@@ -305,13 +305,14 @@
   // ---------- renderers ----------
   function renderItem(item) {
 	  const el = document.createElement('div');
-	  el.className = `canvas-item kind-${item.kind}`;
+	  el.className = `canvas-item kind-${item.kind}` + (item.locked ? ' locked' : '');
 	  el.dataset.id = String(item.id);
 	  el.dataset.kind = item.kind;
 	  el.style.cssText = [
 		'position:absolute','box-sizing:border-box','user-select:none',
 		`left:${clampInt(item.x)}px`, `top:${clampInt(item.y)}px`,
 		`width:${Math.max(1, clampInt(item.w))}px`, `height:${Math.max(1, clampInt(item.h))}px`,
+		`z-index:${clampInt(item.z)}`,
 		'border:1px solid #999','background:#f9f9f9','padding:0','color:#000',
 		'overflow:visible' // keep resize handles/outline visible
 	  ].join(';');
@@ -445,6 +446,8 @@
     if (aId) ensureSet(connectorsByItem, aId).add(item.id);
     if (bId) ensureSet(connectorsByItem, bId).add(item.id);
     updateConnectorLine(item.id);
+    _applyConnectorStyle(item.id);
+    _renderConnectorLabel(item.id);
   }
 
   function updateConnectorLine(connectorId) {
@@ -465,6 +468,7 @@
       line.setAttribute(k, v);
       if (line._hitLine) line._hitLine.setAttribute(k, v);
     });
+    if (line._labelEl) _renderConnectorLabel(connectorId);
   }
 
   function refreshAttachedConnectors(itemId) {
@@ -684,6 +688,7 @@
     const handle = e.target.dataset.handle;
     if (handle === 'center') return; // handled by startMoveCenter
     const id = Number(el.dataset.id);
+    if (itemsById[id]?.data?.locked) return; // locked items don't resize
     const box = {
       x: parseInt(el.style.left, 10),
       y: parseInt(el.style.top, 10),
@@ -815,10 +820,14 @@
     const id = Number(itemEl.dataset.id);
     if (!selectedIds.has(id)) setSingleSelection(id);
     const mouse = logicalFromClient(clientX, clientY);
-    draggingGroup = Array.from(selectedIds).map(sid => {
-      const d = itemsById[sid].data;
-      return { id:sid, dx: mouse.x - d.x, dy: mouse.y - d.y };
-    });
+    // Skip locked items when building the drag list (selection still updated)
+    draggingGroup = Array.from(selectedIds)
+      .filter(sid => !itemsById[sid]?.data?.locked)
+      .map(sid => {
+        const d = itemsById[sid].data;
+        return { id:sid, dx: mouse.x - d.x, dy: mouse.y - d.y };
+      });
+    if (!draggingGroup.length) { draggingGroup = null; return; }
     document.addEventListener('mousemove', onGroupDragMove);
     document.addEventListener('mouseup', onGroupDragUp);
   }
@@ -855,6 +864,7 @@
     const line = linesById[id]; if (!line) return;
     if (line.parentNode) line.parentNode.removeChild(line);
     if (line._hitLine?.parentNode) line._hitLine.parentNode.removeChild(line._hitLine);
+    if (line._labelEl?.parentNode) line._labelEl.parentNode.removeChild(line._labelEl);
     delete linesById[id];
     Object.keys(connectorsByItem).forEach(k => connectorsByItem[k]?.delete(id));
     delete itemsById[id];
@@ -881,6 +891,7 @@
     if (!selectedIds.size) return;
     selectedIds.forEach(id => {
       const entry = itemsById[id]; if (!entry?.el || !entry.data) return;
+      if (entry.data.locked) return; // locked items don't move
       const d = entry.data;
       d.x = (d.x | 0) + dx;
       d.y = (d.y | 0) + dy;
@@ -918,6 +929,269 @@
       newIds.forEach(addToSelection);
     }
   }
+
+  // ---------- z-order ----------
+  function _itemZRange() {
+    let min = 0, max = 0;
+    for (const id in itemsById) {
+      const d = itemsById[id]?.data;
+      if (!d || d.kind === 'connector') continue;
+      const z = clampInt(d.z);
+      if (z < min) min = z;
+      if (z > max) max = z;
+    }
+    return { min, max };
+  }
+  async function setItemZ(id, z) {
+    const entry = itemsById[id]; if (!entry?.el || !entry.data) return;
+    entry.data.z = z;
+    entry.el.style.zIndex = String(z);
+    await apiPATCH(`${apiBase}/${id}`, { z }).catch(console.warn);
+  }
+  async function zBringForward(id) {
+    const d = itemsById[id]?.data; if (!d) return;
+    await setItemZ(id, clampInt(d.z) + 1);
+  }
+  async function zSendBack(id) {
+    const d = itemsById[id]?.data; if (!d) return;
+    await setItemZ(id, clampInt(d.z) - 1);
+  }
+  async function zBringToFront(id) {
+    const r = _itemZRange();
+    await setItemZ(id, r.max + 1);
+  }
+  async function zSendToBack(id) {
+    const r = _itemZRange();
+    await setItemZ(id, r.min - 1);
+  }
+
+  // ---------- lock ----------
+  async function toggleLock(id) {
+    const entry = itemsById[id]; if (!entry?.el || !entry.data) return;
+    const next = !entry.data.locked;
+    entry.data.locked = next;
+    entry.el.classList.toggle('locked', next);
+    await apiPATCH(`${apiBase}/${id}`, { locked: next ? 1 : 0 }).catch(console.warn);
+  }
+
+  // ---------- connector style + label ----------
+  function _applyConnectorStyle(id) {
+    const line = linesById[id]; if (!line) return;
+    const it = itemsById[id]?.data; if (!it) return;
+    const dashed = !!it.payload?.dashed;
+    if (dashed) line.setAttribute('stroke-dasharray', '6 4');
+    else line.removeAttribute('stroke-dasharray');
+  }
+  async function setConnectorDashed(id, dashed) {
+    const it = itemsById[id]?.data; if (!it) return;
+    it.payload = it.payload || {};
+    it.payload.dashed = !!dashed;
+    _applyConnectorStyle(id);
+    await apiPATCH(`${apiBase}/${id}`, { payload: { dashed: !!dashed } }).catch(console.warn);
+  }
+  function _renderConnectorLabel(id) {
+    const it = itemsById[id]?.data; if (!it) return;
+    const line = linesById[id]; if (!line) return;
+    let label = line._labelEl;
+    const text = (it.payload?.label || '').trim();
+    if (!text) {
+      if (label?.parentNode) label.parentNode.removeChild(label);
+      line._labelEl = null;
+      return;
+    }
+    if (!label) {
+      label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      label.setAttribute('text-anchor', 'middle');
+      label.setAttribute('dominant-baseline', 'middle');
+      label.setAttribute('fill', '#ddd');
+      label.setAttribute('font-size', '12');
+      label.setAttribute('paint-order', 'stroke');
+      label.setAttribute('stroke', '#15161A');
+      label.setAttribute('stroke-width', '4');
+      label.style.pointerEvents = 'none';
+      svgBack.appendChild(label);
+      line._labelEl = label;
+    }
+    const x1 = +line.getAttribute('x1') || 0;
+    const y1 = +line.getAttribute('y1') || 0;
+    const x2 = +line.getAttribute('x2') || 0;
+    const y2 = +line.getAttribute('y2') || 0;
+    label.setAttribute('x', String((x1 + x2) / 2));
+    label.setAttribute('y', String((y1 + y2) / 2));
+    label.textContent = text;
+  }
+  async function setConnectorLabel(id, label) {
+    const it = itemsById[id]?.data; if (!it) return;
+    it.payload = it.payload || {};
+    it.payload.label = label || '';
+    _renderConnectorLabel(id);
+    await apiPATCH(`${apiBase}/${id}`, { payload: { label: label || '' } }).catch(console.warn);
+  }
+
+  // ---------- right-click context menu ----------
+  const ctxMenu = document.createElement('div');
+  ctxMenu.id = 'canvasCtxMenu';
+  ctxMenu.hidden = true;
+  document.body.appendChild(ctxMenu);
+
+  // Inject menu styles once
+  (function injectCtxStyles(){
+    if (document.getElementById('canvasCtxMenuStyles')) return;
+    const s = document.createElement('style'); s.id = 'canvasCtxMenuStyles';
+    s.textContent = `
+      #canvasCtxMenu {
+        position:fixed; min-width:180px;
+        background:#1a1d24; border:1px solid #2b3346; border-radius:8px;
+        box-shadow:0 8px 24px rgba(0,0,0,.4);
+        z-index:9999; padding:.25rem; overflow:hidden;
+        font: 13px/1.3 system-ui, sans-serif; color:#ddd;
+      }
+      #canvasCtxMenu button {
+        display:flex; align-items:center; justify-content:space-between; gap:.6rem;
+        width:100%; text-align:left; background:transparent; border:0;
+        color:#ddd; padding:.4rem .6rem; border-radius:6px; cursor:pointer;
+        font: inherit;
+      }
+      #canvasCtxMenu button:hover { background:#2a2f3a; }
+      #canvasCtxMenu button.is-active { background:#1f3a66; color:#fff; }
+      #canvasCtxMenu button kbd {
+        opacity:.55; font-size:.85em; font-family:monospace;
+      }
+      #canvasCtxMenu .menu-sep { height:1px; background:#2b3346; margin:.25rem 0; }
+      .canvas-item.locked { outline:1px dashed rgba(255,200,80,.5); }
+      .canvas-item.locked::after {
+        content:"🔒"; position:absolute; top:2px; right:4px;
+        font-size:11px; opacity:.85; pointer-events:none;
+      }
+    `;
+    document.head.appendChild(s);
+  })();
+
+  function closeCtxMenu() { ctxMenu.hidden = true; ctxMenu.innerHTML = ''; }
+  function openCtxMenu(clientX, clientY, html, handler) {
+    ctxMenu.innerHTML = html;
+    ctxMenu.hidden = false;
+    // Position with viewport coords; keep on-screen
+    const r = ctxMenu.getBoundingClientRect();
+    let x = clientX, y = clientY;
+    if (x + r.width > window.innerWidth - 8) x = window.innerWidth - r.width - 8;
+    if (y + r.height > window.innerHeight - 8) y = window.innerHeight - r.height - 8;
+    ctxMenu.style.left = `${x}px`;
+    ctxMenu.style.top  = `${y}px`;
+    ctxMenu._handler = handler;
+  }
+
+  document.addEventListener('click', (e) => {
+    if (!ctxMenu.hidden && !ctxMenu.contains(e.target)) closeCtxMenu();
+  });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeCtxMenu(); });
+  ['scroll','resize'].forEach(ev => window.addEventListener(ev, closeCtxMenu, { passive:true }));
+
+  ctxMenu.addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-cmd]');
+    if (!btn) return;
+    const cmd = btn.dataset.cmd;
+    const h = ctxMenu._handler;
+    closeCtxMenu();
+    if (h) h(cmd);
+  });
+
+  // Right-click handler — covers items, connectors, and empty space
+  stage.addEventListener('contextmenu', (e) => {
+    // Allow native menu inside text-editing fields
+    if (isTypingTarget(e.target)) return;
+    e.preventDefault();
+
+    const itemEl = getItemFromTarget(e.target);
+    const hitConnector = e.target.tagName === 'line' && e.target.getAttribute('pointer-events') === 'stroke';
+
+    if (itemEl) {
+      const id = Number(itemEl.dataset.id);
+      // If clicked item isn't in the multi-selection, single-select it
+      if (!selectedIds.has(id)) setSingleSelection(id);
+      const d = itemsById[id]?.data;
+      const lockedLabel = d?.locked ? 'Unlock' : 'Lock';
+      const html = `
+        <button data-cmd="duplicate">Duplicate <kbd>Ctrl+D</kbd></button>
+        <div class="menu-sep"></div>
+        <button data-cmd="forward">Bring forward</button>
+        <button data-cmd="back">Send back</button>
+        <button data-cmd="front">Bring to front</button>
+        <button data-cmd="bottom">Send to back</button>
+        <div class="menu-sep"></div>
+        <button data-cmd="lock">${lockedLabel}</button>
+        <div class="menu-sep"></div>
+        <button data-cmd="delete">Delete <kbd>Del</kbd></button>
+      `;
+      openCtxMenu(e.clientX, e.clientY, html, async (cmd) => {
+        const ids = Array.from(selectedIds);
+        switch (cmd) {
+          case 'duplicate': return duplicateSelection();
+          case 'forward':   return Promise.all(ids.map(zBringForward));
+          case 'back':      return Promise.all(ids.map(zSendBack));
+          case 'front':     return Promise.all(ids.map(zBringToFront));
+          case 'bottom':    return Promise.all(ids.map(zSendToBack));
+          case 'lock':      return Promise.all(ids.map(toggleLock));
+          case 'delete':    return Promise.all(ids.map(deleteItem));
+        }
+      });
+      return;
+    }
+
+    if (hitConnector) {
+      const cid = Number(e.target.parentNode?.querySelector?.('line[stroke-width="2"]')?.dataset?.id
+                       || e.target.dataset?.id
+                       || selectedConnectorId);
+      // Find the visible line that owns this hit — by walking siblings
+      const visibleLine = (function(){
+        for (const id in linesById) {
+          if (linesById[id]._hitLine === e.target) return Number(id);
+        }
+        return null;
+      })();
+      const targetId = visibleLine ?? cid;
+      if (!targetId) return;
+      selectConnector(targetId);
+      const d = itemsById[targetId]?.data;
+      const dashed = !!d?.payload?.dashed;
+      const html = `
+        <button data-cmd="style-solid"  ${!dashed ? 'class="is-active"' : ''}>Solid line</button>
+        <button data-cmd="style-dashed" ${ dashed ? 'class="is-active"' : ''}>Dashed line</button>
+        <div class="menu-sep"></div>
+        <button data-cmd="label">Edit label…</button>
+        <div class="menu-sep"></div>
+        <button data-cmd="delete">Delete <kbd>Del</kbd></button>
+      `;
+      openCtxMenu(e.clientX, e.clientY, html, async (cmd) => {
+        switch (cmd) {
+          case 'style-solid':  return setConnectorDashed(targetId, false);
+          case 'style-dashed': return setConnectorDashed(targetId, true);
+          case 'label': {
+            const current = d?.payload?.label || '';
+            const next = prompt('Connector label (leave empty to remove):', current);
+            if (next === null) return;
+            return setConnectorLabel(targetId, next.trim());
+          }
+          case 'delete': return deleteConnector(targetId);
+        }
+      });
+      return;
+    }
+
+    // Empty canvas: simple "select all"
+    const html = `
+      <button data-cmd="select-all">Select all <kbd>Ctrl+A</kbd></button>
+    `;
+    openCtxMenu(e.clientX, e.clientY, html, (cmd) => {
+      if (cmd === 'select-all') {
+        clearSelection();
+        for (const id in itemsById) {
+          const d = itemsById[id]?.data;
+          if (d && d.kind !== 'connector') addToSelection(Number(id));
+        }
+      }
+    });
+  });
 
   // ---------- toolbar ----------
   (toolbar || document).addEventListener('click', (e) => {

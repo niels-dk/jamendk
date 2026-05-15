@@ -39,7 +39,6 @@ $endDate   = (string)($vision['end_date']   ?? '');
     <div class="switch switch-row">
       <label class="switch-label" for="<?= $id ?>"><?= $label ?></label>
       <input id="<?= $id ?>" class="switch-input" type="checkbox" name="<?= $section ?>" <?= $checked ?>>
-      <span class="knob" aria-hidden="true"></span>
     </div>
   <?php endforeach; ?>
 </form>
@@ -53,14 +52,14 @@ $endDate   = (string)($vision['end_date']   ?? '');
   const start  = form.querySelector('#start-date');
   const end    = form.querySelector('#end-date');
 
-  // ——— Dates: auto-save to /visions/update-basics
+  // ——— Dates: auto-save
   function saveDates() {
     const p = new URLSearchParams();
     p.set('vision_id', form.querySelector('[name="vision_id"]').value);
     p.set('start_date', start.value.trim());
     p.set('end_date',   end.value.trim());
 
-    fetch(form.action, {
+    fetch('/api/visions/update-basics', {
       method:'POST',
       headers:{ 'X-Requested-With':'XMLHttpRequest', 'Content-Type':'application/x-www-form-urlencoded' },
       body: p.toString()

@@ -308,19 +308,27 @@ class vision_controller
         // differentiate by section
         switch ($section) {
             case 'basics':
-                // Reuse updateBasics for date/flags
-                $_POST['vision_id']=$id;
-                // accept JSON body too
-                if ($_SERVER['CONTENT_TYPE'] === 'application/json') {
-                    $body=json_decode(file_get_contents('php://input'),true) ?: [];
-                    $_POST['start_date'] = $body['start_date'] ?? null;
-                    $_POST['end_date']   = $body['end_date'] ?? null;
-                    foreach (['relations','goals','budget','roles','contacts','documents','workflow'] as $flag) {
-                        if (isset($body[$flag])) {
-                            $_POST['show_'.$flag] = $body[$flag] ? '1' : null;
-                        }
+                $flag    = trim((string)($_POST['flag'] ?? ''));
+                $enabled = (int)($_POST['enabled'] ?? 0);
+                $allowed = ['relations','goals','budget','roles','contacts','documents','workflow'];
+                if ($flag !== '' && in_array($flag, $allowed, true)) {
+                    $st = $db->prepare("SELECT vision_id FROM vision_presentation WHERE vision_id=?");
+                    $st->execute([$id]);
+                    if ($st->fetch()) {
+                        $db->prepare("UPDATE vision_presentation SET `$flag`=? WHERE vision_id=?")
+                           ->execute([$enabled, $id]);
+                    } else {
+                        $cols = ['vision_id' => $id];
+                        foreach ($allowed as $f) $cols[$f] = ($f === $flag) ? $enabled : 1;
+                        $placeholders = implode(',', array_fill(0, count($cols), '?'));
+                        $colNames = implode(',', array_map(fn($c) => "`$c`", array_keys($cols)));
+                        $db->prepare("INSERT INTO vision_presentation ($colNames) VALUES ($placeholders)")
+                           ->execute(array_values($cols));
                     }
+                    echo json_encode(['success' => true]);
+                    return;
                 }
+                $_POST['vision_id'] = $id;
                 self::updateBasics();
                 break;
 			case 'documents':

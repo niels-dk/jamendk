@@ -11,10 +11,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const SKIP_SECTIONS = new Set(['budget', 'contacts', 'relations', 'basics', 'documents']);
   // ───────────────────────────────────────────────────────────────────────────
 
-  // Cache: section -> {html, ts}
-  const cache = {};
-  const TTL = 60000; // 60s
-
   // Find nav links with data-overlay
   document.querySelectorAll('[data-overlay]').forEach(link => {
     link.addEventListener('click', e => {
@@ -26,23 +22,15 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // Open overlay
+  // Open overlay – always fetch fresh so values reflect latest DB state
   async function openOverlay(slug, section, trigger) {
-    // fetch from cache or server
-    const now = Date.now();
-    let html;
-    if (cache[section] && now - cache[section].ts < TTL) {
-      html = cache[section].html;
-    } else {
-      const res = await fetch(`/visions/${slug}/overlay/${section}`);
-      if (!res.ok) {
-        overlayContent.innerHTML = `<p>Error loading overlay.</p>`;
-        showOverlay();
-        return;
-      }
-      html = await res.text();
-      cache[section] = {html, ts: now};
+    const res = await fetch(`/visions/${slug}/overlay/${section}`, { cache: 'no-store' });
+    if (!res.ok) {
+      overlayContent.innerHTML = `<p>Error loading overlay.</p>`;
+      showOverlay();
+      return;
     }
+    const html = await res.text();
     overlayContent.innerHTML = html;
     executeInlineScripts(overlayContent);
     bindOverlay(section, slug);  // attach only the minimal wiring

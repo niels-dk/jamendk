@@ -60,16 +60,22 @@
   // caches
   let TAGS_CACHE   = null;
   let GROUPS_CACHE = null;
-	
-  // Try data-tab first; if not found, fall back to data-scope attributes
-	btnBoard?.addEventListener('click', () => {
-	  setActive('board');
-	  reloadMedia();
-	});
-	btnAll?.addEventListener('click', () => {
-	  setActive('all');
-	  reloadMedia();
-	});
+
+  // Tab buttons: prefer data-tab markup, fall back to legacy data-scope
+  const btnBoard = document.querySelector('[data-tab="board"]')
+                || document.querySelector('[data-scope="board"]');
+  const btnAll   = document.querySelector('[data-tab="all"]')
+                || document.querySelector('[data-scope="vision"]')
+                || document.querySelector('[data-scope="all"]');
+
+  btnBoard?.addEventListener('click', () => {
+    setActive('board');
+    reloadMedia();
+  });
+  btnAll?.addEventListener('click', () => {
+    setActive('all');
+    reloadMedia();
+  });
 
 	// Keep using #media-search, but fall back to the camelCase ID if present
 	const search =

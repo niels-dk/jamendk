@@ -225,51 +225,56 @@ class vision_controller
     {
         header('Content-Type: application/json');
         global $db;
-        $vision = vision_model::get($db, $slug);
-        if (!$vision) { http_response_code(404); echo json_encode(['error'=>'Vision not found']); return; }
-        $payload = json_decode(file_get_contents('php://input'), true) ?: [];
-        $update=[];
-        $result=['title'=>false,'description'=>false,'anchors'=>false,'statusChanged'=>false];
+        try {
+            $vision = vision_model::get($db, $slug);
+            if (!$vision) { http_response_code(404); echo json_encode(['error'=>'Vision not found']); return; }
+            $payload = json_decode(file_get_contents('php://input'), true) ?: [];
+            $update=[];
+            $result=['title'=>false,'description'=>false,'anchors'=>false,'statusChanged'=>false];
 
-        // Title
-        if (array_key_exists('title', $payload)) {
-            $t=trim((string)$payload['title']);
-            $update['title'] = $t === '' ? null : $t;
-            $result['title']=true;
-        }
-        // Description
-        if (array_key_exists('description',$payload)) {
-            $desc=trim((string)$payload['description']);
-            if ($desc==='') { $update['description']=null; }
-            else {
-                $allowed='<b><i><ul><ol><li><a><p><h1><h2><h3><br>';
-                $update['description'] = strip_tags($desc,$allowed);
+            // Title
+            if (array_key_exists('title', $payload)) {
+                $t=trim((string)$payload['title']);
+                $update['title'] = $t === '' ? null : $t;
+                $result['title']=true;
             }
-            $result['description']=true;
-        }
-        if ($update) vision_model::partialUpdate($db, (int)$vision['id'], $update);
+            // Description
+            if (array_key_exists('description',$payload)) {
+                $desc=trim((string)$payload['description']);
+                if ($desc==='') { $update['description']=null; }
+                else {
+                    $allowed='<b><i><ul><ol><li><a><p><h1><h2><h3><br>';
+                    $update['description'] = strip_tags($desc,$allowed);
+                }
+                $result['description']=true;
+            }
+            if ($update) vision_model::partialUpdate($db, (int)$vision['id'], $update);
 
-        // Anchors
-        if (isset($payload['anchors']) && is_array($payload['anchors'])) {
-            $kv=[];
-            foreach ($payload['anchors'] as $row) {
-                $key=trim((string)($row['key'] ?? ''));
-                $val=trim((string)($row['value'] ?? ''));
-                if ($key!=='' && $val!=='') $kv[]=['key'=>$key,'value'=>$val];
+            // Anchors
+            if (isset($payload['anchors']) && is_array($payload['anchors'])) {
+                $kv=[];
+                foreach ($payload['anchors'] as $row) {
+                    $key=trim((string)($row['key'] ?? ''));
+                    $val=trim((string)($row['value'] ?? ''));
+                    if ($key!=='' && $val!=='') $kv[]=['key'=>$key,'value'=>$val];
+                }
+                vision_model::replaceAnchors($db, (int)$vision['id'], $kv);
+                $result['anchors']=true;
             }
-            vision_model::replaceAnchors($db, (int)$vision['id'], $kv);
-            $result['anchors']=true;
-        }
-        // Draft -> active flip
-        if (($vision['status'] ?? 'draft')==='draft') {
-            $newTitle = $update['title'] ?? $vision['title'];
-            $newDesc  = $update['description'] ?? $vision['description'];
-            if ($newTitle || $newDesc) {
-                vision_model::partialUpdate($db, (int)$vision['id'], ['status'=>'active']);
-                $result['statusChanged']=true;
+            // Draft -> active flip
+            if (($vision['status'] ?? 'draft')==='draft') {
+                $newTitle = $update['title'] ?? $vision['title'];
+                $newDesc  = $update['description'] ?? $vision['description'];
+                if ($newTitle || $newDesc) {
+                    vision_model::partialUpdate($db, (int)$vision['id'], ['status'=>'active']);
+                    $result['statusChanged']=true;
+                }
             }
+            echo json_encode(['ok'=>true,'result'=>$result]);
+        } catch (\Throwable $e) {
+            http_response_code(500);
+            echo json_encode(['ok'=>false,'error'=>$e->getMessage()]);
         }
-        echo json_encode(['ok'=>true,'result'=>$result]);
     }
 
     /** GET /visions/{slug}/overlay/{section} – return HTML partial */

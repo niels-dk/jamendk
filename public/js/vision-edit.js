@@ -77,7 +77,8 @@ document.addEventListener('DOMContentLoaded', () => {
         headers: {'Content-Type':'application/json'},
         body: JSON.stringify(payload)
       });
-      const json = await res.json();
+      let json;
+      try { json = await res.json(); } catch(_) { throw new Error(`Server error ${res.status}`); }
       if (!json.ok) {
         alert(json.error || 'Save failed');
         saveBtn.textContent = orig;

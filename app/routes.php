@@ -161,6 +161,9 @@ function route(string $uri): void
         '/moods/([A-Za-z0-9]{6,16})/delete'        => ['mood', 'destroy'],
         '/moods/([A-Za-z0-9]{6,16})/restore'       => ['mood', 'restore'],
 		*/
+        // ── Trips (shareable read-only view of a Vision) ─────────────────────
+        '/trips/([A-Za-z0-9]{6,16})'               => ['trip', 'show'],
+
         // ── Vision AJAX (kept as-is) ──────────────────────────────────────────
         '/api/visions/([A-Za-z0-9]{6,16})/save'    => ['vision', 'ajax_save'],
         '/api/visions/update-basics'               => ['vision', 'updateBasics'],

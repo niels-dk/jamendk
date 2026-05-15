@@ -8,7 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ───────────────────────────────────────────────────────────────────────────
   // NEW: overlays that use custom endpoints → no generic autosave
-  const SKIP_SECTIONS = new Set(['budget', 'contacts', 'relations', 'basics', 'documents']);
+  const SKIP_SECTIONS = new Set(['budget', 'contacts', 'relations', 'basics', 'documents', 'workflow']);
   // ───────────────────────────────────────────────────────────────────────────
 
   // Find nav links with data-overlay

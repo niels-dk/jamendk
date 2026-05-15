@@ -321,6 +321,33 @@ class vision_controller
         $id=(int)$vision['id'];
         // differentiate by section
         switch ($section) {
+            case 'workflow':
+                $status = trim((string)($_POST['status'] ?? ''));
+                $notes  = (string)($_POST['notes']  ?? '');
+                $show   = !empty($_POST['show_workflow']) ? 1 : 0;
+                $allowedStatus = ['not_started','in_progress','complete'];
+                if (!in_array($status, $allowedStatus, true)) $status = 'not_started';
+                try {
+                    $db->prepare("UPDATE visions SET workflow_status=?, workflow_notes=?, updated_at=NOW() WHERE id=?")
+                       ->execute([$status, $notes, $id]);
+                    // mirror visibility flag into vision_presentation.workflow
+                    $st = $db->prepare("SELECT vision_id FROM vision_presentation WHERE vision_id=?");
+                    $st->execute([$id]);
+                    if ($st->fetch()) {
+                        $db->prepare("UPDATE vision_presentation SET `workflow`=? WHERE vision_id=?")
+                           ->execute([$show, $id]);
+                    } else {
+                        $db->prepare("INSERT INTO vision_presentation
+                            (vision_id, relations, goals, budget, roles, contacts, documents, workflow)
+                            VALUES (?, 1, 1, 1, 1, 1, 1, ?)")
+                           ->execute([$id, $show]);
+                    }
+                    echo json_encode(['success' => true]);
+                } catch (\Throwable $e) {
+                    http_response_code(500);
+                    echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+                }
+                return;
             case 'basics':
                 $flag    = trim((string)($_POST['flag'] ?? ''));
                 $enabled = (int)($_POST['enabled'] ?? 0);

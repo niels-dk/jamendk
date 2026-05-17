@@ -157,6 +157,7 @@ $currentTypeLabel = $boardLabels[$boardType] ?? 'Boards';
             : 'Created ' . date('Y-m-d', strtotime($d['created_at'])) ?>
         </small>
 
+		  <?php if ($boardType !== 'trip'): ?>
 		  <button class="menu-toggle" aria-label="Actions">&#8942;</button> <!-- ? -->
         <div class="card-menu">
           <ul class="menu">
@@ -172,6 +173,7 @@ $currentTypeLabel = $boardLabels[$boardType] ?? 'Boards';
             <?php endif; ?>
           </ul>
         </div>
+		  <?php endif; ?>
       </div>
     <?php endforeach; ?>
   </div>

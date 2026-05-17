@@ -65,8 +65,12 @@ class home_controller
         }
 
         // Pull boards for the requested type + filter.
-        // Keep the result in $dreams because the existing dashboard view expects that variable.
-        $dreams = self::fetchBoards($db, $currentUserId, $type, $filter);
+        // Trips are derived from visions, so route them through fetchTripVisions.
+        if ($type === 'trip') {
+            $dreams = self::fetchTripVisions($db, (int)$currentUserId, $filter);
+        } else {
+            $dreams = self::fetchBoards($db, (int)$currentUserId, $type, $filter);
+        }
 
         // View vars
         $title     = ucfirst($type) . 's � ' . ucfirst($filter);
@@ -168,25 +172,31 @@ class home_controller
 
 	
 	/**
-	 * Trip-ready visions: any vision that has enough content to publish.
-	 * Gate is intentionally lenient — a vision counts as trip-ready when:
-	 *   - it has a linked mood board (mood_id set), OR
-	 *   - any of its contacts has show_on_trip = 1, OR
-	 *   - it has a budget row with show_on_trip = 1.
+	 * Trip-ready visions: every non-archived, non-deleted vision is treated
+	 * as a trip. The trip page itself renders only what's flagged visible
+	 * via the per-section Show on Trip layer toggles, so empty trips
+	 * degrade gracefully.
 	 *
-	 * The per-section "Show on Trip layer" toggles still control WHAT
-	 * appears on the trip page itself; this method just decides which
-	 * visions get a card in the dashboard Trips section.
+	 * Filter mirrors the vision's lifecycle:
+	 *   active   → archived=0, deleted_at IS NULL  (default)
+	 *   archived → archived=1, deleted_at IS NULL
+	 *   trash    → deleted_at IS NOT NULL
 	 */
-	private static function fetchTripVisions(PDO $db, int $userId): array
+	private static function fetchTripVisions(PDO $db, int $userId, string $filter = 'active'): array
 	{
+		switch ($filter) {
+			case 'archived': $stateSql = 'v.archived = 1 AND v.deleted_at IS NULL'; break;
+			case 'trash':    $stateSql = 'v.deleted_at IS NOT NULL'; break;
+			default:         $stateSql = 'v.archived = 0 AND v.deleted_at IS NULL'; break;
+		}
+
 		// NOTE: explicit COLLATE on both sides of the slug join — mood_boards.slug
 		// and visions.mood_id were created with different collations on some
 		// installs, which would otherwise raise "Illegal mix of collations".
 		$sql = "
 			SELECT v.id, v.slug, v.title, v.description,
 				   v.start_date, v.end_date,
-				   v.created_at, v.updated_at,
+				   v.created_at, v.updated_at, v.deleted_at,
 				   v.workflow_status,
 				   v.mood_id, v.show_mood_on_trip,
 				   mb.title AS mood_title,
@@ -201,13 +211,7 @@ class home_controller
 						= v.mood_id COLLATE utf8mb4_general_ci
 					AND mb.deleted_at IS NULL
 			 WHERE v.user_id = ?
-			   AND v.archived = 0
-			   AND v.deleted_at IS NULL
-			   AND (
-					(v.mood_id IS NOT NULL AND v.mood_id != '')
-					OR EXISTS (SELECT 1 FROM vision_contacts WHERE vision_id = v.id AND show_on_trip = 1)
-					OR EXISTS (SELECT 1 FROM vision_budget   WHERE vision_id = v.id AND show_on_trip = 1)
-			   )
+			   AND $stateSql
 			 ORDER BY v.updated_at DESC
 		";
 		$st = $db->prepare($sql);

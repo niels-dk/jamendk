@@ -34,9 +34,7 @@ function dt($s){ return $s ? date('M j, Y', strtotime($s)) : ''; }
 
       <div class="dash__section-head">
         <h2 class="dash__section-title"><?= human($type) ?></h2>
-        <?php if ($type !== 'trip'): ?>
-          <a class="dash__seeall" href="/dashboard/<?= $type ?>">See all</a>
-        <?php endif; ?>
+        <a class="dash__seeall" href="/dashboard/<?= $type ?>">See all</a>
       </div>
 
       <?php if (!$items): ?>

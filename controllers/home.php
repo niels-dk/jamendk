@@ -114,6 +114,19 @@ class home_controller
 			case 'active':   $where .= " AND $table.archived = 0 AND $table.deleted_at IS NULL"; break;
 			case 'archived': $where .= " AND $table.archived = 1 AND $table.deleted_at IS NULL"; break;
 			case 'trash':    $where .= " AND $table.deleted_at IS NOT NULL"; break;
+			case 'promoted':
+				// Dreams that have been promoted to a vision (derived state).
+				// Only meaningful for type='dream' — for other types this
+				// degrades into the active filter without throwing.
+				if ($type === 'dream') {
+					$where .= " AND $table.deleted_at IS NULL
+								AND EXISTS (SELECT 1 FROM visions v
+											 WHERE v.dream_id = $table.id
+											   AND v.deleted_at IS NULL)";
+				} else {
+					$where .= " AND $table.archived = 0 AND $table.deleted_at IS NULL";
+				}
+				break;
 			default:         $where .= " AND $table.archived = 0 AND $table.deleted_at IS NULL"; break;
 		}
 
@@ -131,8 +144,17 @@ class home_controller
 			}
 		}
 
-		// Build SQL
-		$sql = "SELECT * FROM `$table` WHERE $where ORDER BY $orderBy";
+		// Build SELECT — for dreams, attach a derived is_promoted flag so the
+		// dashboard cards can show a "Promoted ✓" badge without an N+1 query.
+		$select = "`$table`.*";
+		if ($type === 'dream') {
+			$select .= ", (SELECT 1 FROM visions v
+							WHERE v.dream_id = $table.id
+							  AND v.deleted_at IS NULL
+							LIMIT 1) AS is_promoted";
+		}
+
+		$sql = "SELECT $select FROM `$table` WHERE $where ORDER BY $orderBy";
 		if ($limit !== null) {
 			$sql .= " LIMIT " . (int)$limit;   // integer cast to avoid injection
 		}

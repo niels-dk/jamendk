@@ -64,6 +64,15 @@ function dt($s){ return $s ? date('M j, Y', strtotime($s)) : ''; }
                 <a href="/<?= $type ?>s/<?= t($row['slug'] ?? '') ?>">
                   <?= t($row['title'] ?? 'Untitled') ?>
                 </a>
+                <?php if ($type === 'dream' && !empty($row['is_promoted'])): ?>
+                  <span title="Promoted to a Vision"
+                        style="display:inline-block;margin-left:.4rem;padding:.05rem .4rem;
+                               border-radius:999px;background:rgba(58,118,210,.18);
+                               border:1px solid rgba(58,118,210,.45);color:#a8c4ee;
+                               font-size:.7rem;vertical-align:middle;font-weight:600;">
+                    ✨ Promoted
+                  </span>
+                <?php endif; ?>
               </h3>
 
               <?php if ($type === 'trip'): ?>

@@ -99,6 +99,9 @@ $currentTypeLabel = $boardLabels[$boardType] ?? 'Boards';
       <a href="/dashboard/<?= $boardType ?>" role="menuitem">Active</a>
       <a href="/dashboard/<?= $boardType ?>/archived" role="menuitem">Archived</a>
       <a href="/dashboard/<?= $boardType ?>/trash" role="menuitem">Trash</a>
+      <?php if ($boardType === 'dream'): ?>
+        <a href="/dashboard/<?= $boardType ?>/promoted" role="menuitem">Promoted</a>
+      <?php endif; ?>
     </div>
   </span>
 </h1>
@@ -123,6 +126,15 @@ $currentTypeLabel = $boardLabels[$boardType] ?? 'Boards';
             </span>
             <?= htmlspecialchars($d['title'] ?: 'Untitled') ?>
           </a>
+          <?php if ($boardType === 'dream' && !empty($d['is_promoted'])): ?>
+            <span title="Promoted to a Vision"
+                  style="display:inline-block;margin-left:.4rem;padding:.05rem .4rem;
+                         border-radius:999px;background:rgba(58,118,210,.18);
+                         border:1px solid rgba(58,118,210,.45);color:#a8c4ee;
+                         font-size:.7rem;vertical-align:middle;font-weight:600;">
+              ✨ Promoted
+            </span>
+          <?php endif; ?>
         </h3>
 
         <?php if (!empty($d['description'])): ?>

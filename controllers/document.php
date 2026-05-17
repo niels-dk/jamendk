@@ -328,6 +328,25 @@ class document_controller {
 		echo json_encode(['success'=>true, 'status'=>$status, 'updated_at'=>date('Y-m-d H:i:s')]);
 	}
 
+	/** POST /api/documents/{uuid}/trip  body: show_on_trip=0|1 */
+	public static function update_trip(string $uuid): void {
+		header('Content-Type: application/json');
+		global $db;
+
+		$doc = document_model::findByUuid($db, $uuid);
+		if (!$doc) { http_response_code(404); echo json_encode(['error'=>'Not found']); return; }
+
+		$on = !empty($_POST['show_on_trip']) ? 1 : 0;
+		try {
+			$db->prepare("UPDATE vision_documents SET show_on_trip=? WHERE uuid=?")
+			   ->execute([$on, $uuid]);
+			echo json_encode(['success'=>true, 'show_on_trip'=>$on]);
+		} catch (\Throwable $e) {
+			http_response_code(500);
+			echo json_encode(['error'=>$e->getMessage()]);
+		}
+	}
+
 
     /** GET /documents/{uuid}/download */
     public static function download(string $uuid): void {

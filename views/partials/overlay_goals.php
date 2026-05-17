@@ -47,6 +47,12 @@ $slug = htmlspecialchars($vision['slug'] ?? '', ENT_QUOTES);
         </div>
       </div>
 
+      <label class="switch switch-row" style="margin-top:.6rem;">
+        <span class="switch-label">Show on Trip layer</span>
+        <input class="switch-input" type="checkbox" name="show_on_trip" checked>
+        <span class="knob" aria-hidden="true"></span>
+      </label>
+
       <h4 style="margin-top:1rem;">Milestones</h4>
       <div id="milestonesWrap"></div>
       <button type="button" id="btnAddMilestone" class="btn btn-secondary">+ Add milestone</button>
@@ -223,6 +229,7 @@ $slug = htmlspecialchars($vision['slug'] ?? '', ENT_QUOTES);
     fd.append('status',      form.status.value);
     fd.append('priority',    form.priority.value);
     fd.append('due_date',    form.due_date.value);
+    fd.append('show_on_trip', form.show_on_trip.checked ? '1' : '0');
     msWrap.querySelectorAll('.milestone-row').forEach(row => {
       const t = row.querySelector('.ms-text').value;
       const d = row.querySelector('.ms-done').checked ? '1' : '';
@@ -314,6 +321,8 @@ $slug = htmlspecialchars($vision['slug'] ?? '', ENT_QUOTES);
       form.status.value      = g.status || 'not_started';
       form.priority.value    = g.priority || 3;
       form.due_date.value    = g.due_date || '';
+      // Per-goal trip visibility (defaults to checked for new goals; respects DB for existing)
+      form.show_on_trip.checked = (g.show_on_trip == null) ? true : !!+g.show_on_trip;
       (g.milestones || []).forEach(m => addMsRow(m.text, !!+m.done));
       delBtn.hidden = false;
       showForm();

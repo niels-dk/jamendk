@@ -207,7 +207,8 @@ class home_controller
 		switch ($filter) {
 			case 'archived': $stateSql = 'v.archived = 1 AND v.deleted_at IS NULL'; break;
 			case 'trash':    $stateSql = 'v.deleted_at IS NOT NULL'; break;
-			default:         $stateSql = 'v.archived = 0 AND v.deleted_at IS NULL'; break;
+			// Active trips: published master switch must be on
+			default:         $stateSql = 'v.archived = 0 AND v.deleted_at IS NULL AND v.trip_enabled = 1'; break;
 		}
 
 		// NOTE: explicit COLLATE on both sides of the slug join — mood_boards.slug

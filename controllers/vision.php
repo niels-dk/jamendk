@@ -360,6 +360,13 @@ class vision_controller
             case 'basics':
                 $flag    = trim((string)($_POST['flag'] ?? ''));
                 $enabled = (int)($_POST['enabled'] ?? 0);
+                // Master switch: enables/disables the entire trip view
+                if ($flag === 'trip_enabled') {
+                    $db->prepare("UPDATE visions SET trip_enabled=? WHERE id=?")
+                       ->execute([$enabled ? 1 : 0, $id]);
+                    echo json_encode(['success' => true]);
+                    return;
+                }
                 $allowed = ['relations','goals','budget','roles','contacts','documents','workflow'];
                 if ($flag !== '' && in_array($flag, $allowed, true)) {
                     $st = $db->prepare("SELECT vision_id FROM vision_presentation WHERE vision_id=?");
@@ -849,13 +856,16 @@ class vision_controller
 		$due         = trim((string)($_POST['due_date'] ?? ''));
 		$due         = $due === '' ? null : $due;
 		$completedAt = $status === 'done' ? date('Y-m-d H:i:s') : null;
+		$showOnTrip  = array_key_exists('show_on_trip', $_POST)
+			? (!empty($_POST['show_on_trip']) ? 1 : 0)
+			: 1; // default visible
 
 		$db->beginTransaction();
 		try {
 			$st = $db->prepare("INSERT INTO vision_goals
-				(vision_id, title, description, status, priority, due_date, completed_at)
-				VALUES (?,?,?,?,?,?,?)");
-			$st->execute([(int)$vision['id'], $title, $description, $status, $priority, $due, $completedAt]);
+				(vision_id, title, description, status, priority, due_date, completed_at, show_on_trip)
+				VALUES (?,?,?,?,?,?,?,?)");
+			$st->execute([(int)$vision['id'], $title, $description, $status, $priority, $due, $completedAt, $showOnTrip]);
 			$goalId = (int)$db->lastInsertId();
 			self::saveMilestones(
 				$db, $goalId,
@@ -892,6 +902,9 @@ class vision_controller
 		$description = (string)($_POST['description'] ?? '');
 		$due         = trim((string)($_POST['due_date'] ?? ''));
 		$due         = $due === '' ? null : $due;
+		$showOnTrip  = array_key_exists('show_on_trip', $_POST)
+			? (!empty($_POST['show_on_trip']) ? 1 : 0)
+			: 1;
 
 		// Manage completed_at on transitions
 		$completedAt = $existing['completed_at'];
@@ -901,9 +914,9 @@ class vision_controller
 		$db->beginTransaction();
 		try {
 			$st = $db->prepare("UPDATE vision_goals
-				   SET title=?, description=?, status=?, priority=?, due_date=?, completed_at=?
+				   SET title=?, description=?, status=?, priority=?, due_date=?, completed_at=?, show_on_trip=?
 				 WHERE id=?");
-			$st->execute([$title, $description, $status, $priority, $due, $completedAt, $gid]);
+			$st->execute([$title, $description, $status, $priority, $due, $completedAt, $showOnTrip, $gid]);
 			self::saveMilestones(
 				$db, $gid,
 				$_POST['milestone_texts'] ?? [],

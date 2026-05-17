@@ -33,6 +33,7 @@ function route(string $uri): void
         '/api/visions/([A-Za-z0-9]{6,16})/documents'        => ['document','upload'],
 
         '/api/documents/([a-f0-9]{32})/status' => ['document','update_status'],
+        '/api/documents/([a-f0-9]{32})/trip'   => ['document','update_trip'],
         '/api/visions/([A-Za-z0-9]{6,16})/groups' => ['document','groups_list'],   // GET
         '/api/visions/([A-Za-z0-9]{6,16})/groups:create' => ['document','groups_create'], // POST
         '/api/documents/([a-f0-9]{32})/group'     => ['document','update_group'],  // POST

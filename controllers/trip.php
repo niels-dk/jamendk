@@ -31,6 +31,15 @@ class trip_controller
         }
         $visionId = (int)$vision['id'];
 
+        // Master switch: if the owner hasn't published the trip, short-circuit
+        // with a friendly "not published" page rather than rendering content.
+        $tripEnabled = !empty($vision['trip_enabled']);
+        if (!$tripEnabled) {
+            $title = $vision['title'] ?: 'Trip';
+            include __DIR__ . '/../views/trip_disabled.php';
+            return;
+        }
+
         // Source dream lineage (visions promoted from a dream)
         $sourceDream = null;
         if (!empty($vision['dream_id'])) {
@@ -137,12 +146,15 @@ class trip_controller
         }
 
         // Goals + milestones (skip cancelled; sort by active → priority → due date)
+        // Per-goal Show on Trip flag filters items out at this point.
         $goals = [];
         if ($sectionVisible('goals')) {
             $gs = $db->prepare("
                 SELECT id, title, description, status, priority, due_date, completed_at
                   FROM vision_goals
-                 WHERE vision_id = ? AND status != 'cancelled'
+                 WHERE vision_id = ?
+                   AND status != 'cancelled'
+                   AND show_on_trip = 1
                  ORDER BY (status='done') ASC,
                           priority ASC,
                           (due_date IS NULL) ASC,
@@ -205,10 +217,15 @@ class trip_controller
             $contacts = $cs->fetchAll(PDO::FETCH_ASSOC);
         }
 
-        // Documents (section flag only — no per-doc trip flag yet)
+        // Documents — section flag gates the block, per-doc show_on_trip
+        // (default 1) filters which rows appear.
         $documents = [];
         if ($sectionVisible('documents')) {
-            $documents = document_model::allForVision($db, $visionId);
+            $all = document_model::allForVision($db, $visionId);
+            $documents = array_values(array_filter($all, function ($d) {
+                // Default visible if the column doesn't exist or is null
+                return !array_key_exists('show_on_trip', $d) || (int)$d['show_on_trip'] === 1;
+            }));
         }
 
         // Workflow (status + notes)

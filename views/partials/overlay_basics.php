@@ -1,22 +1,21 @@
 <?php
 // views/partials/overlay_basics.php
-// Expects: $vision (id, start_date, end_date, slug), $presentationFlags (assoc)
-// We keep your default flags and render the same “Show on public view” switches.
+// Expects: $vision (id, start_date, end_date, slug, trip_enabled), $presentationFlags (assoc)
 
 $defaults = [
   'relations'=>1,'goals'=>1,'budget'=>1,'roles'=>0,'contacts'=>1,'documents'=>1,'workflow'=>1
 ];
 $flags = array_replace($defaults, $presentationFlags ?? []);
 
-$visionId  = (int)($vision['id'] ?? 0);
-$visionSlug = htmlspecialchars($vision['slug'] ?? '', ENT_QUOTES);
-$startDate = (string)($vision['start_date'] ?? '');
-$endDate   = (string)($vision['end_date']   ?? '');
+$visionId    = (int)($vision['id'] ?? 0);
+$visionSlug  = htmlspecialchars($vision['slug'] ?? '', ENT_QUOTES);
+$startDate   = (string)($vision['start_date'] ?? '');
+$endDate     = (string)($vision['end_date']   ?? '');
+$tripEnabled = !empty($vision['trip_enabled']);
 ?>
 
 <div class="overlay-header">
   <h2>Vision Basics</h2>
-  <!--button class="close-overlay" aria-label="Close" title="Close">×</button-->
 </div>
 
 <form id="basicsForm" class="overlay-form" action="/visions/update-basics" method="post" data-slug="<?= $visionSlug ?>">
@@ -28,7 +27,23 @@ $endDate   = (string)($vision['end_date']   ?? '');
   <label for="end-date">End date</label>
   <input id="end-date" type="date" name="end_date" value="<?= htmlspecialchars($endDate, ENT_QUOTES) ?>">
 
-  <h4>Show on public view</h4>
+  <h4 style="margin-top:1.2rem;">Trip publishing</h4>
+
+  <label class="switch switch-row" title="Master switch — when off, the trip page is not available.">
+    <span class="switch-label">
+      <strong>Publish as Trip</strong>
+      <span style="display:block;opacity:.6;font-size:.8em;margin-top:.1rem;">
+        Master switch — when off, /trips/<?= $visionSlug ?> shows "not published".
+      </span>
+    </span>
+    <input class="switch-input" type="checkbox" name="trip_enabled" <?= $tripEnabled ? 'checked' : '' ?>>
+    <span class="knob" aria-hidden="true"></span>
+  </label>
+
+  <h4 style="margin-top:1.2rem;">Show on Trip layer</h4>
+  <p style="opacity:.6;font-size:.85em;margin:0 0 .6rem;">
+    Choose which sections appear when this trip is published.
+  </p>
 
   <?php foreach ($defaults as $section => $_): ?>
     <?php
@@ -36,7 +51,7 @@ $endDate   = (string)($vision['end_date']   ?? '');
       $checked = !empty($flags[$section]) ? 'checked' : '';
       $label = ucfirst($section);
     ?>
-    <label class="switch switch-row">
+    <label class="switch switch-row" style="opacity:<?= $tripEnabled ? '1' : '.45' ?>;">
       <span class="switch-label"><?= $label ?></span>
       <input class="switch-input" type="checkbox" name="<?= $section ?>" <?= $checked ?>>
       <span class="knob" aria-hidden="true"></span>
@@ -85,10 +100,23 @@ $endDate   = (string)($vision['end_date']   ?? '');
     }).catch(()=>{});
   }
 
+  // Visually dim section toggles when the master switch is off
+  function refreshSectionDim() {
+    const master = form.querySelector('[name="trip_enabled"]');
+    const on = master ? master.checked : true;
+    form.querySelectorAll('.switch.switch-row').forEach(row => {
+      const cb = row.querySelector('input[type="checkbox"]');
+      if (!cb || cb.name === 'trip_enabled') return;
+      row.style.opacity = on ? '1' : '.45';
+    });
+  }
+
   form.querySelectorAll('.switch-input').forEach(cb => {
     cb.addEventListener('change', () => {
-      // name is the section key: relations/goals/budget/roles/contacts/documents/workflow
+      // name is the flag key: trip_enabled OR a section
+      // (relations/goals/budget/roles/contacts/documents/workflow)
       saveFlag(cb.name, cb.checked);
+      if (cb.name === 'trip_enabled') refreshSectionDim();
     });
   });
 })();

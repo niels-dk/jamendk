@@ -26,6 +26,7 @@ $STATUSES = [
         $statusKey   = $doc['status'] ?? 'draft';
         $statusLabel = $STATUSES[$statusKey] ?? ucfirst($statusKey);
       ?>
+      <?php $onTrip = !array_key_exists('show_on_trip', $doc) || (int)$doc['show_on_trip'] === 1; ?>
       <div class="doc-row" data-uuid="<?= htmlspecialchars($doc['uuid'], ENT_QUOTES) ?>">
         <div class="doc-main">
           <div class="doc-name" title="<?= htmlspecialchars($doc['file_name'], ENT_QUOTES) ?>">
@@ -38,6 +39,11 @@ $STATUSES = [
             <span class="group-pill js-group" data-current="<?= isset($doc['group_id']) ? (int)$doc['group_id'] : '' ?>">
               <?= !empty($doc['group_name']) ? htmlspecialchars($doc['group_name']) : '— No group —' ?>
             </span>
+            <button type="button" class="trip-pill js-trip"
+                    data-on="<?= $onTrip ? '1' : '0' ?>"
+                    title="Click to toggle visibility on the Trip layer">
+              <?= $onTrip ? '👁 On trip' : '🚫 Off trip' ?>
+            </button>
             <span class="doc-date"><?= date('Y-m-d H:i', strtotime($doc['created_at'])) ?></span>
           </div>
         </div>
@@ -100,6 +106,16 @@ $STATUSES = [
     background:#15161A; border:1px solid #2b3346; color:#bbb;
   }
   #docsWrap .group-pill:hover { background:#1e2230; }
+
+  /* Trip-visibility pill (per document) */
+  #docsWrap .trip-pill {
+    display:inline-block; padding:.15rem .55rem;
+    border-radius:999px; font-size:.78rem; cursor:pointer;
+    border:1px solid transparent; font: inherit;
+  }
+  #docsWrap .trip-pill[data-on="1"] { background:#15263a; color:#8fb1d8; border-color:#1f3a5a; }
+  #docsWrap .trip-pill[data-on="0"] { background:#2a1f1f; color:#a06868; border-color:#4a2a2a; }
+  #docsWrap .trip-pill:hover { filter:brightness(1.15); }
 
   /* Custom dropdown menu (replaces native select) */
   .doc-menu {
@@ -183,11 +199,29 @@ $STATUSES = [
   list.addEventListener('click', async e => {
     const sPill = e.target.closest('.js-status');
     const gPill = e.target.closest('.js-group');
-    if (!sPill && !gPill) return;
+    const tPill = e.target.closest('.js-trip');
+    if (!sPill && !gPill && !tPill) return;
     e.stopPropagation();
 
     const row  = e.target.closest('.doc-row');
     const uuid = row.dataset.uuid;
+
+    if (tPill) {
+      const next = tPill.dataset.on === '1' ? 0 : 1;
+      const fd = new URLSearchParams(); fd.set('show_on_trip', String(next));
+      try {
+        const res = await fetch(`/api/documents/${uuid}/trip`, {
+          method:'POST',
+          headers:{'Content-Type':'application/x-www-form-urlencoded'},
+          body: fd.toString()
+        });
+        const j = await res.json();
+        if (!res.ok || !j.success) { alert(j.error || 'Update failed'); return; }
+        tPill.dataset.on = String(next);
+        tPill.textContent = next ? '👁 On trip' : '🚫 Off trip';
+      } catch { alert('Network error'); }
+      return;
+    }
 
     if (sPill) {
       const current = sPill.dataset.status;

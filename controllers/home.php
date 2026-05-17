@@ -114,14 +114,31 @@ class home_controller
 		// WHERE by filter
 		$where  = "$table.user_id = ?";
 		$params = [$userId];
+
+		// Dreams that have been promoted to a vision are excluded from Active
+		// — they've "graduated" and live in the Promoted filter (and under
+		// Visions). Archived/Trash still include them since those are
+		// orthogonal lifecycle states.
+		$dreamPromotedFilter = ($type === 'dream')
+			? " AND NOT EXISTS (SELECT 1 FROM visions v
+								WHERE v.dream_id = $table.id
+								  AND v.deleted_at IS NULL)"
+			: '';
+
 		switch ($filter) {
-			case 'active':   $where .= " AND $table.archived = 0 AND $table.deleted_at IS NULL"; break;
-			case 'archived': $where .= " AND $table.archived = 1 AND $table.deleted_at IS NULL"; break;
-			case 'trash':    $where .= " AND $table.deleted_at IS NOT NULL"; break;
+			case 'active':
+				$where .= " AND $table.archived = 0 AND $table.deleted_at IS NULL"
+					   . $dreamPromotedFilter;
+				break;
+			case 'archived':
+				$where .= " AND $table.archived = 1 AND $table.deleted_at IS NULL";
+				break;
+			case 'trash':
+				$where .= " AND $table.deleted_at IS NOT NULL";
+				break;
 			case 'promoted':
-				// Dreams that have been promoted to a vision (derived state).
-				// Only meaningful for type='dream' — for other types this
-				// degrades into the active filter without throwing.
+				// Dreams with a linked vision (derived). Only meaningful for
+				// type='dream'; otherwise degrade to plain Active.
 				if ($type === 'dream') {
 					$where .= " AND $table.deleted_at IS NULL
 								AND EXISTS (SELECT 1 FROM visions v
@@ -131,7 +148,10 @@ class home_controller
 					$where .= " AND $table.archived = 0 AND $table.deleted_at IS NULL";
 				}
 				break;
-			default:         $where .= " AND $table.archived = 0 AND $table.deleted_at IS NULL"; break;
+			default:
+				$where .= " AND $table.archived = 0 AND $table.deleted_at IS NULL"
+					   . $dreamPromotedFilter;
+				break;
 		}
 
 		// Resolve ORDER BY only if not provided from the caller

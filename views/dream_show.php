@@ -66,6 +66,25 @@ ob_start();
 
   <p style="margin-top:1.4rem"><small>Created <?= $dream['created_at'] ?></small></p>
 
+  <?php if (!empty($linkedVision)): ?>
+    <div style="margin:.9rem 0; padding:.7rem .9rem; border-radius:8px;
+                background:rgba(58,118,210,.12); border:1px solid rgba(58,118,210,.35);">
+      <strong>✨ Promoted to Vision</strong>
+      <a href="/visions/<?= htmlspecialchars($linkedVision['slug']) ?>" style="margin-left:.4rem;">
+        <?= htmlspecialchars($linkedVision['title'] ?: 'Untitled vision') ?>
+      </a>
+    </div>
+    <a class="btn primary" href="/visions/<?= htmlspecialchars($linkedVision['slug']) ?>/edit">Open Vision</a>
+  <?php else: ?>
+    <form method="post" action="/dreams/<?= htmlspecialchars($dream['slug']) ?>/promote"
+          style="display:inline-block; margin:0 .6rem 0 0;">
+      <button class="btn primary" type="submit"
+              title="Create a Vision from this Dream, copying title, description and anchors">
+        ✨ Promote to Vision
+      </button>
+    </form>
+  <?php endif; ?>
+
   <a class="btn" href="/dreams/<?= $dream['slug'] ?>/edit">Edit Dream</a>
   <a class="btn" href="/dashboard/dream" style="margin-left:.6rem">Back to dashboard</a>
 </div>

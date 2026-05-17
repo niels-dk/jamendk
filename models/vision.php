@@ -139,7 +139,7 @@
         public static function partialUpdate(PDO $db, int $id, array $fields): void
         {
             if (!$fields) return;
-            $allowed = ['title','description','status','start_date','end_date'];
+            $allowed = ['title','description','status','start_date','end_date','dream_id'];
             $set = [];
             $vals = [];
             foreach ($fields as $k => $v) {

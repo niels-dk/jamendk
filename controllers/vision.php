@@ -46,7 +46,7 @@ class vision_controller
 
 		// Fetch by slug (exclude deleted)
 		$stmt = $db->prepare("
-			SELECT id, slug, title, description, created_at, updated_at, archived, deleted_at
+			SELECT id, slug, title, description, created_at, updated_at, archived, deleted_at, dream_id
 			FROM visions
 			WHERE slug = ? AND deleted_at IS NULL
 			LIMIT 1
@@ -61,6 +61,15 @@ class vision_controller
 		}
 
 		$anchors = vision_model::getAnchors($db, (int)$vision['id']);
+
+		// Source dream, if this vision was promoted from one
+		$sourceDream = null;
+		if (!empty($vision['dream_id'])) {
+			$ds = $db->prepare("SELECT slug, title FROM dream_boards
+								  WHERE id = ? AND deleted_at IS NULL LIMIT 1");
+			$ds->execute([(int)$vision['dream_id']]);
+			$sourceDream = $ds->fetch(PDO::FETCH_ASSOC) ?: null;
+		}
 
 		// Page vars for the layout
 		$pageTitle = $vision['title'] ?: 'Vision';

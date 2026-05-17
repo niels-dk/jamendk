@@ -18,6 +18,18 @@ $anchors = $anchors ?? [];
 <h1><?= e($vision['title'] ?? 'Vision') ?></h1>
 
 <div class="card" style="padding:1.25rem 1.25rem 1rem; max-width:1200px;">
+
+  <?php if (!empty($sourceDream)): ?>
+    <div style="margin-bottom:.9rem; padding:.5rem .8rem; border-radius:8px;
+                background:rgba(58,118,210,.1); border:1px solid rgba(58,118,210,.3);
+                font-size:.9em; opacity:.95;">
+      🌕 From Dream:
+      <a href="/dreams/<?= htmlspecialchars($sourceDream['slug']) ?>" style="margin-left:.25rem;">
+        <?= htmlspecialchars($sourceDream['title'] ?: 'Untitled') ?>
+      </a>
+    </div>
+  <?php endif; ?>
+
   <div class="prose" style="margin-bottom:1rem; color:#c7d2df;">
     <?php if (!empty($vision['description'])): ?>
       <?= $vision['description'] ?>

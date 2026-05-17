@@ -31,6 +31,15 @@ class trip_controller
         }
         $visionId = (int)$vision['id'];
 
+        // Source dream lineage (visions promoted from a dream)
+        $sourceDream = null;
+        if (!empty($vision['dream_id'])) {
+            $ds = $db->prepare("SELECT slug, title FROM dream_boards
+                                  WHERE id = ? AND deleted_at IS NULL LIMIT 1");
+            $ds->execute([(int)$vision['dream_id']]);
+            $sourceDream = $ds->fetch(PDO::FETCH_ASSOC) ?: null;
+        }
+
         // Section-level visibility (vision_presentation row, with sensible defaults)
         $defaults = [
             'relations' => 1, 'goals' => 1, 'budget' => 1, 'roles' => 0,

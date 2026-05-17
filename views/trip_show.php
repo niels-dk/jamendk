@@ -315,6 +315,9 @@ $pctOf = function (int $v, int $base): string {
             <?= tr_e($STATUS_LABELS[$workflow['status']] ?? $workflow['status']) ?>
           </span>
         <?php endif; ?>
+        <?php if (!empty($sourceDream)): ?>
+          <span>From Dream: <?= tr_e($sourceDream['title'] ?: 'Untitled') ?></span>
+        <?php endif; ?>
       </div>
       <?php if (!empty($vision['description'])): ?>
         <div class="hero-desc"><?= $vision['description'] ?></div>

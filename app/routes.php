@@ -123,6 +123,7 @@ function route(string $uri): void
         '/dreams/([A-Za-z0-9]{6,16})/unarchive'    => ['dream', 'unarchive'],
         '/dreams/([A-Za-z0-9]{6,16})/delete'       => ['dream', 'destroy'],
         '/dreams/([A-Za-z0-9]{6,16})/restore'      => ['dream', 'restore'],
+        '/dreams/([A-Za-z0-9]{6,16})/promote'      => ['dream', 'promote'],
 
         // ── Visions CRUD ──────────────────────────────────────────────────────
         '/visions/new'                             => ['vision', 'create'],

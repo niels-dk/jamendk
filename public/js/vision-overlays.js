@@ -4,7 +4,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const overlayPanel   = overlayShell?.querySelector('.overlay-panel');
   const overlayContent = document.getElementById('overlay-content');
   const overlayClose   = overlayShell?.querySelector('.close-overlay');
+  const overlayBackdrop= overlayShell?.querySelector('.overlay-backdrop');
   if (!overlayShell || !overlayContent || !overlayClose) return;
+
+  // Backdrop click → close (skip if shell is hidden or click bubbled from panel)
+  overlayBackdrop?.addEventListener('click', () => {
+    if (!overlayShell.classList.contains('overlay-hidden')) closeOverlay();
+  });
 
   // ───────────────────────────────────────────────────────────────────────────
   // NEW: overlays that use custom endpoints → no generic autosave
@@ -22,6 +28,10 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
+  // Track whether we auto-collapsed the sidebar for this overlay session,
+  // so we can restore it when the overlay closes.
+  let _autoCollapsedSidebar = false;
+
   // Open overlay – always fetch fresh so values reflect latest DB state
   async function openOverlay(slug, section, trigger) {
     const res = await fetch(`/visions/${slug}/overlay/${section}`, { cache: 'no-store' });
@@ -34,9 +44,12 @@ document.addEventListener('DOMContentLoaded', () => {
     overlayContent.innerHTML = html;
     executeInlineScripts(overlayContent);
     bindOverlay(section, slug);  // attach only the minimal wiring
-    // On small screens, the left sidebar would overlap the overlay — collapse it
-    if (window.innerWidth <= 760) {
-      document.querySelector('.sidebar')?.classList.add('collapsed');
+    // On small screens, the left sidebar would overlap the overlay — collapse it.
+    // Remember whether we did so we can re-expand on close.
+    const sidebar = document.querySelector('.sidebar');
+    if (sidebar && window.innerWidth <= 760 && !sidebar.classList.contains('collapsed')) {
+      sidebar.classList.add('collapsed');
+      _autoCollapsedSidebar = true;
     }
     showOverlay(trigger);
   }
@@ -67,6 +80,12 @@ document.addEventListener('DOMContentLoaded', () => {
     overlayShell.classList.add('overlay-hidden');
     document.body.style.overflow = '';
     document.removeEventListener('keydown', escClose);
+    // Restore the sidebar if we collapsed it on open, so the user can
+    // jump to another section without hunting for the toggle arrow.
+    if (_autoCollapsedSidebar) {
+      document.querySelector('.sidebar')?.classList.remove('collapsed');
+      _autoCollapsedSidebar = false;
+    }
     if (trigger) trigger.focus();
   }
 

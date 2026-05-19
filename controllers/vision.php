@@ -99,6 +99,26 @@ class vision_controller
         foreach ($map as $k => $vals) {
             foreach ($vals as $v) $kv[] = ['key'=>$k,'value'=>$v];
         }
+
+        // Sidebar counts/state — surfaced as small badges next to each item so
+        // users can see what's populated without opening every overlay.
+        $vid = (int)$vision['id'];
+        $sidebarBadges = [
+            'relations' => !empty($vision['mood_id']) ? 1 : 0,
+            'goals'     => 0,
+            'budget'    => 0,
+            'roles'     => 0,
+            'contacts'  => 0,
+            'documents' => 0,
+            'workflow'  => (!empty($vision['workflow_status']) && $vision['workflow_status'] !== 'not_started') ? 1 : 0,
+        ];
+        try {
+            $sidebarBadges['goals']     = (int)$db->query("SELECT COUNT(*) FROM vision_goals WHERE vision_id=$vid AND status != 'cancelled'")->fetchColumn();
+            $sidebarBadges['contacts']  = (int)$db->query("SELECT COUNT(*) FROM vision_contacts WHERE vision_id=$vid")->fetchColumn();
+            $sidebarBadges['documents'] = (int)$db->query("SELECT COUNT(*) FROM vision_documents WHERE vision_id=$vid")->fetchColumn();
+            $sidebarBadges['budget']    = (int)$db->query("SELECT COUNT(*) FROM vision_budget WHERE vision_id=$vid")->fetchColumn();
+        } catch (\Throwable $e) { /* tables may not exist yet — keep zeros */ }
+
         ob_start();
         include __DIR__.'/../views/vision_form.php';
         $content = ob_get_clean();

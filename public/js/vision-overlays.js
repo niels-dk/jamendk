@@ -34,6 +34,10 @@ document.addEventListener('DOMContentLoaded', () => {
     overlayContent.innerHTML = html;
     executeInlineScripts(overlayContent);
     bindOverlay(section, slug);  // attach only the minimal wiring
+    // On small screens, the left sidebar would overlap the overlay — collapse it
+    if (window.innerWidth <= 760) {
+      document.querySelector('.sidebar')?.classList.add('collapsed');
+    }
     showOverlay(trigger);
   }
 

@@ -19,9 +19,9 @@
   height: 100%;
 }
 
-/* Side panel */
+/* Side panel — narrow drawer on desktop, full-screen on phones */
 #overlay-shell .overlay-panel {
-  width: min(560px, 100%);
+  width: min(420px, 100%);
   height: 100%;
   background: #15161A;
   color: #ddd;
@@ -29,8 +29,13 @@
   box-shadow: -12px 0 24px rgba(0,0,0,.4);
   padding: 20px 0 0 0;
   position: relative;
-	width:400px;
-	border:0px red solid;
+}
+
+/* Phones: take the full viewport so content isn't clipped or cramped */
+@media (max-width: 540px) {
+  #overlay-shell .overlay-panel { width: 100%; }
+  /* No backdrop sliver on the left — let the panel cover everything */
+  #overlay-shell { grid-template-columns: 0 1fr; }
 }
 
 /* Close button */

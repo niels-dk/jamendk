@@ -19,12 +19,72 @@ class home_controller
 {
     public static function index()
     {
+        global $db, $currentUserId;
+        if (empty($currentUserId)) { $currentUserId = 1; }
+        $uid = (int)$currentUserId;
+
+        // Counts (active only, with the same dream-promotion exclusion as the dashboard)
+        $stats = [
+            'dreams'  => 0, 'visions' => 0, 'moods' => 0, 'trips' => 0,
+        ];
+        try {
+            $st = $db->prepare("
+                SELECT
+                  (SELECT COUNT(*) FROM dream_boards d
+                    WHERE d.user_id=? AND d.archived=0 AND d.deleted_at IS NULL
+                      AND NOT EXISTS (SELECT 1 FROM visions v
+                                       WHERE v.dream_id = d.id AND v.deleted_at IS NULL)
+                  ) AS dreams,
+                  (SELECT COUNT(*) FROM visions v
+                    WHERE v.user_id=? AND v.archived=0 AND v.deleted_at IS NULL
+                  ) AS visions,
+                  (SELECT COUNT(*) FROM mood_boards m
+                    WHERE m.user_id=? AND m.archived=0 AND m.deleted_at IS NULL
+                  ) AS moods,
+                  (SELECT COUNT(*) FROM visions v
+                    WHERE v.user_id=? AND v.archived=0 AND v.deleted_at IS NULL
+                      AND v.trip_enabled = 1
+                  ) AS trips
+            ");
+            $st->execute([$uid, $uid, $uid, $uid]);
+            $r = $st->fetch(PDO::FETCH_ASSOC) ?: [];
+            $stats = [
+                'dreams'  => (int)($r['dreams']  ?? 0),
+                'visions' => (int)($r['visions'] ?? 0),
+                'moods'   => (int)($r['moods']   ?? 0),
+                'trips'   => (int)($r['trips']   ?? 0),
+            ];
+        } catch (\Throwable $e) { /* keep zeros */ }
+
+        // Recent boards (top 3 across dream/vision/mood, latest updated first)
+        $recentBoards = [];
+        try {
+            $rb = $db->prepare("
+                SELECT 'dream'  AS type, slug, title, updated_at FROM dream_boards
+                 WHERE user_id=? AND archived=0 AND deleted_at IS NULL
+                   AND NOT EXISTS (SELECT 1 FROM visions v
+                                    WHERE v.dream_id = dream_boards.id AND v.deleted_at IS NULL)
+                UNION ALL
+                SELECT 'vision' AS type, slug, title, updated_at FROM visions
+                 WHERE user_id=? AND archived=0 AND deleted_at IS NULL
+                UNION ALL
+                SELECT 'mood'   AS type, slug, title, updated_at FROM mood_boards
+                 WHERE user_id=? AND archived=0 AND deleted_at IS NULL
+                ORDER BY updated_at DESC
+                LIMIT 3
+            ");
+            $rb->execute([$uid, $uid, $uid]);
+            $recentBoards = $rb->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        } catch (\Throwable $e) { /* keep empty */ }
+
+        $hasActivity = ($stats['dreams'] + $stats['visions'] + $stats['moods']) > 0;
+
         $title = 'Welcome to Jamen';
         ob_start();
         include __DIR__ . '/../views/home.php';
         $content = ob_get_clean();
 
-        // dashboard/top pages don�t use the left board sidebar
+        // dashboard/top pages don't use the left board sidebar
         $noSidebar = true;
         include __DIR__ . '/../views/layout.php';
     }

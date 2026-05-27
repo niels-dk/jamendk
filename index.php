@@ -23,6 +23,8 @@ if (preg_match('#^/(public|storage)/#', $reqPath) && is_file($full)) {
 }
 
 require_once __DIR__.'/app/config.php';
+require_once __DIR__.'/app/helpers.php';
+require_once __DIR__.'/app/auth.php';
 require_once __DIR__.'/app/routes.php';
 
 $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);

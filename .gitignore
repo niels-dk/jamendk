@@ -1,30 +1,22 @@
-<<<<<<< HEAD
-# https://git-scm.com/docs/gitignore
-# https://help.github.com/articles/ignoring-files
-# Example.gitignore files : https://github.com/github/gitignore
+# See https://git-scm.com/docs/gitignore
 _notes/
 /bower_components/
 /node_modules/
-=======
-# the composer package lock file and install directory
-# Commit your application's lock file http://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file
-# You may choose to ignore a library lock file http://getcomposer.org/doc/02-libraries.md#lock-file
-# /composer.lock
-/fuel/vendor
 
-# the fuelphp document
-/docs/
+# Secrets / local environment
+/app/config.php
+/.env
+/.env.*
 
-# you may install these packages with `oil package`.
-# http://fuelphp.com/docs/packages/oil/package.html
-# /fuel/packages/auth/
-# /fuel/packages/email/
-# /fuel/packages/oil/
-# /fuel/packages/orm/
-# /fuel/packages/parser/
+# Logs, caches, dynamic state
+*.log
+/storage/cache/
+/storage/logs/
+.dh-diag/
 
-# dynamically generated files
-/fuel/app/logs/*/*/*
-/fuel/app/cache/*/*
-/fuel/app/config/crypt.php
->>>>>>> 8ae83adc250aaa70a1e8f96790566658acd08de9
+# Editor & OS junk
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/

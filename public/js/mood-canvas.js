@@ -137,12 +137,12 @@
   }
 
   /**
-   * Return the point on item d's bounding-box edge where the line from
-   * d's centre toward (tx, ty) exits. Used so connector endpoints sit on
-   * the items' edges rather than at their centres — the arrow head then
-   * lands outside the item's own background and stays visible.
+   * Return the point a small `margin` outside item d's bounding-box edge,
+   * along the line from d's centre toward (tx, ty). Used so connector
+   * endpoints (and their arrow heads) sit in the empty space outside the
+   * item rather than under its background.
    */
-  function edgePointToward(d, tx, ty) {
+  function edgePointToward(d, tx, ty, margin = 8) {
     const cx = (Number(d.x)||0) + (Number(d.w)||0)/2;
     const cy = (Number(d.y)||0) + (Number(d.h)||0)/2;
     const dx = tx - cx, dy = ty - cy;
@@ -152,7 +152,14 @@
     const tX = dx === 0 ? Infinity : hw / Math.abs(dx);
     const tY = dy === 0 ? Infinity : hh / Math.abs(dy);
     const t  = Math.min(tX, tY);
-    return { x: cx + dx * t, y: cy + dy * t };
+    // Edge point
+    const ex = cx + dx * t;
+    const ey = cy + dy * t;
+    // Push outward by `margin` along the unit direction so the arrow head
+    // lands in the gap between items rather than under the item itself.
+    const len = Math.sqrt(dx * dx + dy * dy);
+    const ux = dx / len, uy = dy / len;
+    return { x: ex + ux * margin, y: ey + uy * margin };
   }
   const ensureSet = (map, key) => (map[key] || (map[key] = new Set()));
 

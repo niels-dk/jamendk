@@ -73,13 +73,27 @@
 
   function ensureArrowMarker() {
     if (svgEl.querySelector('#arrowEnd')) return;
-    const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
-    // context-stroke makes the marker follow the line's stroke color
-    defs.innerHTML = `
-      <marker id="arrowEnd" viewBox="0 0 10 10" refX="9" refY="5"
-              markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-        <path d="M0,0 L10,5 L0,10 z" fill="context-stroke" stroke="none"></path>
-      </marker>`;
+    const NS = 'http://www.w3.org/2000/svg';
+    // NOTE: build the marker with createElementNS — setting innerHTML on an
+    // SVG element doesn't reliably create SVG-namespaced children in every
+    // browser. Static fill (#888) instead of context-stroke for the widest
+    // browser support; we swap the line's stroke colour for selected state
+    // but the arrow head stays gray (good enough, always visible).
+    const defs   = document.createElementNS(NS, 'defs');
+    const marker = document.createElementNS(NS, 'marker');
+    marker.setAttribute('id', 'arrowEnd');
+    marker.setAttribute('viewBox', '0 0 10 10');
+    marker.setAttribute('refX', '9');
+    marker.setAttribute('refY', '5');
+    marker.setAttribute('markerWidth', '7');
+    marker.setAttribute('markerHeight', '7');
+    marker.setAttribute('orient', 'auto-start-reverse');
+    const path = document.createElementNS(NS, 'path');
+    path.setAttribute('d', 'M0,0 L10,5 L0,10 z');
+    path.setAttribute('fill', '#888');
+    path.setAttribute('stroke', 'none');
+    marker.appendChild(path);
+    defs.appendChild(marker);
     svgEl.insertBefore(defs, svgEl.firstChild);
   }
 
@@ -120,6 +134,25 @@
     const cx = (Number(d.x)||0) + (Number(d.w)||0)/2;
     const cy = (Number(d.y)||0) + (Number(d.h)||0)/2;
     return { cx, cy };
+  }
+
+  /**
+   * Return the point on item d's bounding-box edge where the line from
+   * d's centre toward (tx, ty) exits. Used so connector endpoints sit on
+   * the items' edges rather than at their centres — the arrow head then
+   * lands outside the item's own background and stays visible.
+   */
+  function edgePointToward(d, tx, ty) {
+    const cx = (Number(d.x)||0) + (Number(d.w)||0)/2;
+    const cy = (Number(d.y)||0) + (Number(d.h)||0)/2;
+    const dx = tx - cx, dy = ty - cy;
+    if (dx === 0 && dy === 0) return { x: cx, y: cy };
+    const hw = Math.max(1, (Number(d.w)||1) / 2);
+    const hh = Math.max(1, (Number(d.h)||1) / 2);
+    const tX = dx === 0 ? Infinity : hw / Math.abs(dx);
+    const tY = dy === 0 ? Infinity : hh / Math.abs(dy);
+    const t  = Math.min(tX, tY);
+    return { x: cx + dx * t, y: cy + dy * t };
   }
   const ensureSet = (map, key) => (map[key] || (map[key] = new Set()));
 
@@ -449,8 +482,13 @@
       });
       return;
     }
+    // Endpoints sit on each item's edge (not centre) so the arrow heads
+    // — placed by marker-end / marker-start — land outside the items'
+    // own backgrounds and remain visible.
     const ca = centerFromData(a), cb = centerFromData(b);
-    const coords = { x1: String(ca.cx), y1: String(ca.cy), x2: String(cb.cx), y2: String(cb.cy) };
+    const pa = edgePointToward(a, cb.cx, cb.cy);
+    const pb = edgePointToward(b, ca.cx, ca.cy);
+    const coords = { x1: String(pa.x), y1: String(pa.y), x2: String(pb.x), y2: String(pb.y) };
     Object.entries(coords).forEach(([k, v]) => {
       line.setAttribute(k, v);
       if (line._hitLine) line._hitLine.setAttribute(k, v);

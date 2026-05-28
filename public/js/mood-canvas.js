@@ -906,7 +906,7 @@
     const line = linesById[id]; if (!line) return;
     if (line.parentNode) line.parentNode.removeChild(line);
     if (line._hitLine?.parentNode) line._hitLine.parentNode.removeChild(line._hitLine);
-    if (line._labelEl?.parentNode) line._labelEl.parentNode.removeChild(line._labelEl);
+    if (line._labelGroup?.parentNode) line._labelGroup.parentNode.removeChild(line._labelGroup);
     delete linesById[id];
     Object.keys(connectorsByItem).forEach(k => connectorsByItem[k]?.delete(id));
     delete itemsById[id];
@@ -1084,33 +1084,70 @@
   function _renderConnectorLabel(id) {
     const it = itemsById[id]?.data; if (!it) return;
     const line = linesById[id]; if (!line) return;
-    let label = line._labelEl;
     const text = (it.payload?.label || '').trim();
+
+    // No label → remove any existing group and bail.
     if (!text) {
-      if (label?.parentNode) label.parentNode.removeChild(label);
-      line._labelEl = null;
+      if (line._labelGroup?.parentNode) line._labelGroup.parentNode.removeChild(line._labelGroup);
+      line._labelGroup = null;
+      line._labelEl    = null;
+      line._labelRect  = null;
       return;
     }
-    if (!label) {
-      label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+
+    const NS = 'http://www.w3.org/2000/svg';
+
+    // Lazy-create the group {rect, text} the first time
+    if (!line._labelGroup) {
+      const group = document.createElementNS(NS, 'g');
+      group.style.pointerEvents = 'none';
+
+      const rect = document.createElementNS(NS, 'rect');
+      rect.setAttribute('rx', '6');
+      rect.setAttribute('ry', '6');
+      rect.setAttribute('fill', '#1a1d24');
+      rect.setAttribute('stroke', '#3a76d2');
+      rect.setAttribute('stroke-width', '1');
+
+      const label = document.createElementNS(NS, 'text');
       label.setAttribute('text-anchor', 'middle');
       label.setAttribute('dominant-baseline', 'middle');
       label.setAttribute('fill', '#ddd');
       label.setAttribute('font-size', '12');
-      label.setAttribute('paint-order', 'stroke');
-      label.setAttribute('stroke', '#15161A');
-      label.setAttribute('stroke-width', '4');
-      label.style.pointerEvents = 'none';
-      svgBack.appendChild(label);
-      line._labelEl = label;
+      label.setAttribute('font-family', 'system-ui, -apple-system, sans-serif');
+
+      group.appendChild(rect);
+      group.appendChild(label);
+      svgBack.appendChild(group);
+
+      line._labelGroup = group;
+      line._labelRect  = rect;
+      line._labelEl    = label;
     }
+
+    const label = line._labelEl;
+    const rect  = line._labelRect;
+
     const x1 = +line.getAttribute('x1') || 0;
     const y1 = +line.getAttribute('y1') || 0;
     const x2 = +line.getAttribute('x2') || 0;
     const y2 = +line.getAttribute('y2') || 0;
-    label.setAttribute('x', String((x1 + x2) / 2));
-    label.setAttribute('y', String((y1 + y2) / 2));
+    const mx = (x1 + x2) / 2;
+    const my = (y1 + y2) / 2;
+
+    label.setAttribute('x', String(mx));
+    label.setAttribute('y', String(my));
     label.textContent = text;
+
+    // Measure the text once it's in the DOM and size the rect around it.
+    try {
+      const bbox = label.getBBox();
+      const padX = 8, padY = 4;
+      rect.setAttribute('x',      String(bbox.x - padX));
+      rect.setAttribute('y',      String(bbox.y - padY));
+      rect.setAttribute('width',  String(bbox.width + padX * 2));
+      rect.setAttribute('height', String(bbox.height + padY * 2));
+    } catch (e) { /* getBBox fails if the SVG isn't laid out yet — retry on next frame */ }
   }
   async function setConnectorLabel(id, label) {
     const it = itemsById[id]?.data; if (!it) return;
@@ -1375,6 +1412,13 @@
         color:#fff; background:#7a2030; border-color:#a01a36;
       }
       #canvasConnToolbar .danger:hover { background:#a01a36; }
+      #canvasConnToolbar .close {
+        width:32px; min-width:32px; height:32px;
+        border-radius:50%; padding:0;
+        background:rgba(255,255,255,.06); color:#aaa;
+        font-size:13px;
+      }
+      #canvasConnToolbar .close:hover { background:rgba(255,255,255,.12); color:#fff; }
     `;
     document.head.appendChild(s);
   })();
@@ -1388,6 +1432,8 @@
     const cls = (a) => arrows === a ? 'is-active' : '';
     const dcls = (b) => b ? 'is-active' : '';
     connToolbar.innerHTML = `
+      <button data-cmd="close" class="close" title="Close">✕</button>
+      <span class="sep"></span>
       <button data-cmd="arrows-none"  class="${cls('none')}"  title="No arrow">—</button>
       <button data-cmd="arrows-end"   class="${cls('end')}"   title="Arrow at end (one way)">→</button>
       <button data-cmd="arrows-start" class="${cls('start')}" title="Arrow at start (other way)">←</button>
@@ -1415,18 +1461,39 @@
     const rect = stage.getBoundingClientRect();
     const cx = rect.left + mx * stageScale + stageOffset.x;
     const cy = rect.top  + my * stageScale + stageOffset.y;
+
     // Show first so we can measure
     connToolbar.hidden = false;
     const tw = connToolbar.offsetWidth || 360;
     const th = connToolbar.offsetHeight || 48;
-    let left = cx;
-    let top  = cy + 24; // below the midpoint
-    // Clamp inside viewport (account for the translateX(-50%) we use on left)
+
+    // Offset PERPENDICULAR to the line direction so the toolbar never sits
+    // ON TOP of the items the connector joins. Horizontal-ish line → toolbar
+    // goes below the midpoint. Vertical-ish line → toolbar goes to the right
+    // (or left if there isn't room).
+    const dx = x2 - x1, dy = y2 - y1;
+    const horizontal = Math.abs(dx) >= Math.abs(dy);
+    const gap = 30;
+    let left, top;
+    if (horizontal) {
+      left = cx;
+      top  = cy + gap;                     // below
+      if (top + th > window.innerHeight - 8) top = cy - gap - th; // flip above
+    } else {
+      // Vertical-ish: side-offset
+      left = cx + gap + tw / 2;            // right of midpoint
+      top  = cy - th / 2;
+      if (left + tw / 2 > window.innerWidth - 8) {
+        left = cx - gap - tw / 2;          // flip to left
+      }
+    }
+
+    // Clamp inside viewport (translateX(-50%) is applied via CSS)
     const half = tw / 2;
     if (left - half < 8)                      left = 8 + half;
     if (left + half > window.innerWidth - 8)  left = window.innerWidth - 8 - half;
-    if (top + th > window.innerHeight - 8)    top  = cy - 24 - th; // flip above
     if (top < 8)                              top  = 8;
+    if (top + th > window.innerHeight - 8)    top  = window.innerHeight - 8 - th;
     connToolbar.style.left = `${left}px`;
     connToolbar.style.top  = `${top}px`;
   }
@@ -1443,6 +1510,11 @@
     const id = connToolbar._connId; if (!id) return;
     e.stopPropagation();
     const cmd = btn.dataset.cmd;
+    if (cmd === 'close') {
+      hideConnToolbar();
+      selectConnector(null);
+      return;
+    }
     if (cmd === 'arrows-none')  await setConnectorArrows(id, 'none');
     else if (cmd === 'arrows-end')   await setConnectorArrows(id, 'end');
     else if (cmd === 'arrows-start') await setConnectorArrows(id, 'start');

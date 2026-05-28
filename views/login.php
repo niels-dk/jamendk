@@ -15,6 +15,9 @@ ob_start();
 
   <form method="post" style="display:flex;flex-direction:column;gap:.8rem;">
     <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
+    <?php if (!empty($next)): ?>
+      <input type="hidden" name="next" value="<?= htmlspecialchars($next) ?>">
+    <?php endif; ?>
 
     <label style="display:flex;flex-direction:column;gap:.3rem;">
       <span style="font-size:.85rem;opacity:.8;">Email</span>
@@ -39,7 +42,9 @@ ob_start();
   </form>
 
   <p style="margin-top:1.4rem;color:#8593a6;font-size:.9rem;text-align:center;">
-    New here? <a href="/register" style="color:#8fb1d8;">Create a Creator account</a>
+    New here?
+    <a href="/register<?= !empty($next) ? '?next=' . urlencode($next) : '' ?>"
+       style="color:#8fb1d8;">Create a Creator account</a>
   </p>
 </div>
 <?php

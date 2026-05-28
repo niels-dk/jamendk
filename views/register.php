@@ -18,6 +18,9 @@ ob_start();
 
   <form method="post" style="display:flex;flex-direction:column;gap:.8rem;">
     <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
+    <?php if (!empty($next)): ?>
+      <input type="hidden" name="next" value="<?= htmlspecialchars($next) ?>">
+    <?php endif; ?>
 
     <label style="display:flex;flex-direction:column;gap:.3rem;">
       <span style="font-size:.85rem;opacity:.8;">Name</span>
@@ -52,7 +55,9 @@ ob_start();
   </form>
 
   <p style="margin-top:1.4rem;color:#8593a6;font-size:.9rem;text-align:center;">
-    Already have an account? <a href="/login" style="color:#8fb1d8;">Sign in</a>
+    Already have an account?
+    <a href="/login<?= !empty($next) ? '?next=' . urlencode($next) : '' ?>"
+       style="color:#8fb1d8;">Sign in</a>
   </p>
 </div>
 <?php

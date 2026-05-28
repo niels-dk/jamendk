@@ -17,15 +17,11 @@ class dream_controller
      */
     public static function show(string $slug): void
 	{
+		require_login();
 		global $db;
 
 		$dream = dream_model::get($db, $slug);
-
-		if (!$dream) {
-			http_response_code(404);
-			echo 'Dream not found';
-			return;
-		}
+		require_owner($dream);
 
 		$anchors = dream_model::getAnchors($db, $dream['id']);
 
@@ -65,10 +61,11 @@ class dream_controller
 	 */
 	public static function promote(string $slug): void
 	{
+		require_login();
 		global $db, $currentUserId;
 
 		$dream = dream_model::get($db, $slug);
-		if (!$dream) { http_response_code(404); echo 'Dream not found'; return; }
+		require_owner($dream);
 
 		// Idempotent — if already promoted, just bounce to the existing vision.
 		$existing = self::findLinkedVision($db, (int)$dream['id']);
@@ -128,6 +125,7 @@ class dream_controller
      */
    public static function create(): void
 	{
+		require_login();
 		$title = 'New Dream';
 
 		ob_start();
@@ -140,18 +138,18 @@ class dream_controller
 
 
 
-    // Handles POST /api/dreams/store.php
+    // Handles POST /dreams/store
     public static function store()
     {
-        $user = auth_user();
-        $db   = get_db();
+        api_require_login();
+        global $db, $currentUserId;
 
         // Basic fields
         $title       = $_POST['title'] ?? '';
         $description = $_POST['description'] ?? '';
 
-        // 1) Create the dream
-        $dreamId = dream_model::create($db, $user->id, $title, $description);
+        // 1) Create the dream owned by the current user
+        $dreamId = dream_model::create($db, (int)$currentUserId, $title, $description);
 
         // 2) Persist anchors if any
         foreach (['locations','brands','people','seasons'] as $type) {
@@ -180,14 +178,11 @@ class dream_controller
      */
     public static function edit(string $slug): void
     {
+        require_login();
         global $db;
         $dream = dream_model::get($db, $slug);
-        if (!$dream) {
-            http_response_code(404);
-            echo 'Dream not found';
-            return;
-        }
-		
+        require_owner($dream);
+
 		// FETCH ANCHORS HERE:
         $anchors = dream_model::getAnchors($db, $dream['id']);
 		$noSidebar = true;
@@ -199,17 +194,10 @@ class dream_controller
      */
     public static function archive(string $slug): void
     {
-        global $db, $currentUserId;
+        require_login();
+        global $db;
         $dream = dream_model::findBySlug($db, $slug);
-
-        if (!$dream || $dream['user_id'] != $currentUserId) {
-            http_response_code(403);
-			var_dump($dream);
-var_dump($currentUserId);
-exit;
-            echo 'Forbidden';
-            return;
-        }
+        require_owner($dream);
 
         dream_model::setArchived($db, $dream['id'], true);
 
@@ -222,13 +210,10 @@ exit;
      */
     public static function unarchive(string $slug): void
     {
-        global $db, $currentUserId;
+        require_login();
+        global $db;
         $d = dream_model::findBySlug($db, $slug);
-        if (!$d || $d['user_id'] != $currentUserId) {
-            http_response_code(403);
-            echo 'Forbidden';
-            return;
-        }
+        require_owner($d);
         dream_model::setArchived($db, $d['id'], false);
         header('Location: /dashboard/archived');
         exit;
@@ -239,13 +224,10 @@ exit;
      */
     public static function destroy(string $slug): void
     {
-        global $db, $currentUserId;
+        require_login();
+        global $db;
         $d = dream_model::findBySlug($db, $slug);
-        if (!$d || $d['user_id'] != $currentUserId) {
-            http_response_code(403);
-            echo 'Forbidden';
-            return;
-        }
+        require_owner($d);
         dream_model::softDelete($db, $d['id']);
         header('Location: /dashboard');
         exit;
@@ -256,13 +238,10 @@ exit;
      */
     public static function restore(string $slug): void
     {
-        global $db, $currentUserId;
+        require_login();
+        global $db;
         $d = dream_model::findBySlug($db, $slug);
-        if (!$d || $d['user_id'] != $currentUserId) {
-            http_response_code(403);
-            echo 'Forbidden';
-            return;
-        }
+        require_owner($d);
         dream_model::restore($db, $d['id']);
         header('Location: /dashboard/trash');
         exit;

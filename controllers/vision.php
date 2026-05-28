@@ -9,9 +9,9 @@ class vision_controller
     /** GET /visions/new – create draft and redirect */
     public static function create(): void
     {
+        require_login();
         global $db, $currentUserId;
-        $userId = $currentUserId ?: 1;
-        $draft  = vision_model::createDraft($db, $userId);
+        $draft  = vision_model::createDraft($db, (int)$currentUserId);
         header("Location: /visions/{$draft['slug']}/edit");
         exit;
     }
@@ -19,11 +19,11 @@ class vision_controller
     /** POST /visions/store – legacy create (active) */
     public static function store(): void
     {
+        require_login();
         global $db, $currentUserId;
-        $userId = $currentUserId ?: 1;
         $title = trim($_POST['title'] ?? '');
         $desc  = $_POST['description'] ?? '';
-        $id    = vision_model::create($db, $userId, $title ?: null, $desc ?: null);
+        $id    = vision_model::create($db, (int)$currentUserId, $title ?: null, $desc ?: null);
         // save anchors (legacy)
         $anchors = $_POST['anchors'] ?? [];
         $kv = [];
@@ -36,29 +36,22 @@ class vision_controller
         exit;
     }
 
-    /** GET /visions/{slug} – show vision */
+    /** GET /visions/{slug} – show vision (owner-only) */
     public static function show(string $slug): void
 	{
+		require_login();
 		global $db, $currentUserId;
-
-		// Allow public show page for now (mirror your Dream show behavior).
-		// If you want auth-only, add a check here.
 
 		// Fetch by slug (exclude deleted)
 		$stmt = $db->prepare("
-			SELECT id, slug, title, description, created_at, updated_at, archived, deleted_at, dream_id
+			SELECT id, slug, title, description, created_at, updated_at, archived, deleted_at, dream_id, user_id
 			FROM visions
 			WHERE slug = ? AND deleted_at IS NULL
 			LIMIT 1
 		");
 		$stmt->execute([$slug]);
 		$vision = $stmt->fetch(PDO::FETCH_ASSOC);
-
-		if (!$vision) {
-			http_response_code(404);
-			echo 'Vision not found';
-			return;
-		}
+		require_owner($vision);
 
 		$anchors = vision_model::getAnchors($db, (int)$vision['id']);
 
@@ -87,9 +80,10 @@ class vision_controller
     /** GET /visions/{slug}/edit – edit form */
     public static function edit(string $slug): void
     {
+        require_login();
         global $db;
         $vision = vision_model::get($db, $slug);
-        if (!$vision) { http_response_code(404); echo 'Vision not found'; return; }
+        require_owner($vision);
         $st = $db->prepare("SELECT * FROM vision_presentation WHERE vision_id=?");
         $st->execute([(int)$vision['id']]);
         $presentationFlags = $st->fetch(PDO::FETCH_ASSOC) ?: [];
@@ -150,33 +144,37 @@ class vision_controller
     /** archive/unarchive/delete/restore */
     public static function archive(string $slug): void
     {
+        require_login();
         global $db;
         $v = vision_model::get($db, $slug);
-        if (!$v) { http_response_code(404); echo 'Vision not found'; return; }
+        require_owner($v);
         vision_model::setArchived($db, (int)$v['id'], true);
         header('Location: /dashboard/vision'); exit;
     }
     public static function unarchive(string $slug): void
     {
+        require_login();
         global $db;
         $v = vision_model::get($db, $slug);
-        if (!$v) { http_response_code(404); echo 'Vision not found'; return; }
+        require_owner($v);
         vision_model::setArchived($db, (int)$v['id'], false);
         header('Location: /dashboard/vision/archived'); exit;
     }
     public static function destroy(string $slug): void
     {
+        require_login();
         global $db;
         $v = vision_model::get($db, $slug);
-        if (!$v) { http_response_code(404); echo 'Vision not found'; return; }
+        require_owner($v);
         vision_model::softDelete($db, (int)$v['id']);
         header('Location: /dashboard/vision'); exit;
     }
     public static function restore(string $slug): void
     {
+        require_login();
         global $db;
         $v = vision_model::get($db, $slug);
-        if (!$v) { http_response_code(404); echo 'Vision not found'; return; }
+        require_owner($v);
         vision_model::restore($db, (int)$v['id']);
         header('Location: /dashboard/vision/trash'); exit;
     }
@@ -184,11 +182,12 @@ class vision_controller
     /** POST /api/visions/update-basics (legacy basics save) */
     public static function updateBasics(): void
 	{
+		api_require_login();
 		// Supports both AJAX (JSON) and normal form post (redirect kept as-is if you already do that).
 		header('Content-Type: application/json');
 
 		try {
-			global $db;
+			global $db, $currentUserId;
 
 			// Accept either vision_id (int) or slug (string)
 			$visionId = isset($_POST['vision_id']) ? (int)$_POST['vision_id'] : 0;
@@ -202,6 +201,16 @@ class vision_controller
 			if (!$visionId) {
 				http_response_code(400);
 				echo json_encode(['success' => false, 'error' => 'Missing Vision ID/slug']);
+				return;
+			}
+
+			// Verify ownership before any mutation
+			$own = $db->prepare("SELECT user_id FROM visions WHERE id = ? LIMIT 1");
+			$own->execute([$visionId]);
+			$ownerId = (int)($own->fetchColumn() ?: 0);
+			if ($ownerId !== (int)$currentUserId) {
+				http_response_code(404);
+				echo json_encode(['success' => false, 'error' => 'Not found']);
 				return;
 			}
 
@@ -258,7 +267,7 @@ class vision_controller
         global $db;
         try {
             $vision = vision_model::get($db, $slug);
-            if (!$vision) { http_response_code(404); echo json_encode(['error'=>'Vision not found']); return; }
+            api_require_owner($vision);
             $payload = json_decode(file_get_contents('php://input'), true) ?: [];
             $update=[];
             $result=['title'=>false,'description'=>false,'anchors'=>false,'statusChanged'=>false];
@@ -311,9 +320,10 @@ class vision_controller
     /** GET /visions/{slug}/overlay/{section} – return HTML partial */
     public static function overlay(string $slug, string $section): void
     {
+        require_login();
         global $db;
         $vision = vision_model::get($db, $slug);
-        if (!$vision) { http_response_code(404); echo 'Vision not found'; return; }
+        require_owner($vision);
         // load presentation flags so basics overlay can pre-check toggles
         $st = $db->prepare("SELECT * FROM vision_presentation WHERE vision_id=?");
         $st->execute([(int)$vision['id']]);
@@ -346,7 +356,7 @@ class vision_controller
         header('Content-Type: application/json');
         global $db;
         $vision = vision_model::get($db, $slug);
-        if (!$vision) { http_response_code(404); echo json_encode(['error'=>'Vision not found']); return; }
+        api_require_owner($vision);
         $id=(int)$vision['id'];
         // differentiate by section
         switch ($section) {
@@ -431,18 +441,20 @@ class vision_controller
 	/** GET /api/moods/search?q=... */
 	public static function searchMoods(): void
 	{
+		api_require_login();
 		header('Content-Type: application/json');
 		try {
-			global $db;
+			global $db, $currentUserId;
 			$q = trim((string)($_GET['q'] ?? ''));
 			if ($q === '') { echo json_encode([]); return; }
 
 			$st = $db->prepare("SELECT slug AS id, title FROM mood_boards
-								 WHERE deleted_at IS NULL
+								 WHERE user_id = ?
+								   AND deleted_at IS NULL
 								   AND (title LIKE ? OR slug LIKE ?)
 								 ORDER BY title LIMIT 10");
 			$like = '%' . $q . '%';
-			$st->execute([$like, $like]);
+			$st->execute([(int)$currentUserId, $like, $like]);
 			echo json_encode($st->fetchAll(PDO::FETCH_ASSOC));
 		} catch (Throwable $e) {
 			http_response_code(500);
@@ -463,7 +475,7 @@ class vision_controller
 			} else {
 				$vision = self::findVisionBySlug($db, $slug);
 			}
-			if (!$vision) { http_response_code(404); echo json_encode(['error'=>'Vision not found']); return; }
+			api_require_owner($vision);
 
 			$data   = $_POST ?: json_decode(file_get_contents('php://input'), true) ?: [];
 			$moodId = isset($data['mood_id']) ? trim((string)$data['mood_id']) : null;
@@ -499,7 +511,7 @@ class vision_controller
 				? vision_model::get($db, $slug)
 				: self::findVisionBySlug($db, $slug);
 
-			if (!$vision) { http_response_code(404); echo json_encode(['error'=>'Vision not found']); return; }
+			api_require_owner($vision);
 
 			$st = $db->prepare("UPDATE visions
 								   SET mood_id=NULL, show_mood_on_dashboard=0, show_mood_on_trip=0
@@ -520,7 +532,7 @@ class vision_controller
 		global $db;
 
 		$vision = vision_model::get($db, $slug);
-		if (!$vision) { http_response_code(404); echo json_encode(['error' => 'Vision not found']); return; }
+		api_require_owner($vision);
 
 		$st = $db->prepare("SELECT currency, amount_cents, show_on_dashboard, show_on_trip
 							FROM vision_budget WHERE vision_id = ?");
@@ -543,7 +555,7 @@ class vision_controller
 		global $db;
 
 		$vision = vision_model::get($db, $slug);
-		if (!$vision) { http_response_code(404); echo json_encode(['error' => 'Vision not found']); return; }
+		api_require_owner($vision);
 
 		$cur   = strtoupper(trim($_POST['currency'] ?? ''));
 		$cents = (int)($_POST['amount_cents'] ?? -1);
@@ -600,7 +612,7 @@ class vision_controller
 		header('Content-Type: application/json');
 		global $db;
 		$vision = self::findVisionBySlug($db, $slug);
-		if (!$vision) { http_response_code(404); echo json_encode(['error'=>'Vision not found']); return; }
+		api_require_owner($vision);
 
 		// Aggregate Name, Company, Email into columns for list view.  Other keys remain unaggregated.
 		$sql = "
@@ -626,7 +638,7 @@ class vision_controller
 		header('Content-Type: application/json');
 		global $db;
 		$vision = self::findVisionBySlug($db, $slug);
-		if (!$vision) { http_response_code(404); echo json_encode(['error'=>'Vision not found']); return; }
+		api_require_owner($vision);
 
 		$vcIdNum = (int)$vcId;
 		$pivot = $db->prepare("SELECT id FROM vision_contacts WHERE id=? AND vision_id=?");
@@ -655,7 +667,7 @@ class vision_controller
 		global $db;
 
 		$vision = self::findVisionBySlug($db, $slug);
-		if (!$vision) { http_response_code(404); echo json_encode(['error'=>'Vision not found']); return; }
+		api_require_owner($vision);
 
 		// Expected arrays: keys[], values[]; flags: is_current, is_main, show_on_dashboard, show_on_trip
 		$keys = $_POST['keys']   ?? [];
@@ -714,7 +726,7 @@ class vision_controller
 		global $db;
 
 		$vision = self::findVisionBySlug($db, $slug);
-		if (!$vision) { http_response_code(404); echo json_encode(['error'=>'Vision not found']); return; }
+		api_require_owner($vision);
 
 		$vcIdNum = (int)$vcId;
 		$check   = $db->prepare("SELECT vision_id FROM vision_contacts WHERE id=?");
@@ -779,7 +791,7 @@ class vision_controller
 		header('Content-Type: application/json');
 		global $db;
 		$vision = self::findVisionBySlug($db, $slug);
-		if (!$vision) { http_response_code(404); echo json_encode(['error'=>'Vision not found']); return; }
+		api_require_owner($vision);
 
 		$vcIdNum = (int)$vcId;
 		// Ensure contact belongs to this vision
@@ -818,7 +830,7 @@ class vision_controller
 		header('Content-Type: application/json');
 		global $db;
 		$vision = vision_model::get($db, $slug);
-		if (!$vision) { http_response_code(404); echo json_encode(['error'=>'Vision not found']); return; }
+		api_require_owner($vision);
 
 		$sql = "SELECT g.id, g.title, g.description, g.status, g.priority,
 					   g.due_date, g.completed_at, g.created_at,
@@ -844,7 +856,7 @@ class vision_controller
 		header('Content-Type: application/json');
 		global $db;
 		$vision = vision_model::get($db, $slug);
-		if (!$vision) { http_response_code(404); echo json_encode(['error'=>'Vision not found']); return; }
+		api_require_owner($vision);
 
 		$gid = (int)$goalId;
 		$g = $db->prepare("SELECT * FROM vision_goals WHERE id=? AND vision_id=?");
@@ -865,7 +877,7 @@ class vision_controller
 		header('Content-Type: application/json');
 		global $db;
 		$vision = vision_model::get($db, $slug);
-		if (!$vision) { http_response_code(404); echo json_encode(['error'=>'Vision not found']); return; }
+		api_require_owner($vision);
 
 		$title = trim((string)($_POST['title'] ?? ''));
 		if ($title === '') { http_response_code(422); echo json_encode(['error'=>'Title required']); return; }
@@ -906,7 +918,7 @@ class vision_controller
 		header('Content-Type: application/json');
 		global $db;
 		$vision = vision_model::get($db, $slug);
-		if (!$vision) { http_response_code(404); echo json_encode(['error'=>'Vision not found']); return; }
+		api_require_owner($vision);
 
 		$gid = (int)$goalId;
 		$chk = $db->prepare("SELECT status, completed_at FROM vision_goals WHERE id=? AND vision_id=?");
@@ -956,7 +968,7 @@ class vision_controller
 		header('Content-Type: application/json');
 		global $db;
 		$vision = vision_model::get($db, $slug);
-		if (!$vision) { http_response_code(404); echo json_encode(['error'=>'Vision not found']); return; }
+		api_require_owner($vision);
 
 		$gid = (int)$goalId;
 		$chk = $db->prepare("SELECT id FROM vision_goals WHERE id=? AND vision_id=?");

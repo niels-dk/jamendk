@@ -45,4 +45,62 @@ function current_user(): ?array
 {
     return is_logged_in() && !empty($_SESSION['user']) ? $_SESSION['user'] : null;
 }
+
+/**
+ * Guard for HTML pages: send anonymous visitors to /login and remember
+ * where they were trying to go so we can bounce them back after sign-in.
+ */
+function require_login(): void
+{
+    if (is_logged_in()) return;
+    $next = $_SERVER['REQUEST_URI'] ?? '/';
+    redirect('/login?next=' . urlencode($next));
+}
+
+/**
+ * Guard for JSON / API endpoints: return 401 JSON when not authenticated.
+ */
+function api_require_login(): void
+{
+    if (is_logged_in()) return;
+    http_response_code(401);
+    header('Content-Type: application/json');
+    echo json_encode(['error' => 'Authentication required']);
+    exit;
+}
+
+/** Does the current user own this row? */
+function is_owner(?array $row, string $key = 'user_id'): bool
+{
+    global $currentUserId;
+    if (!$row || !$currentUserId) return false;
+    return (int)($row[$key] ?? 0) === (int)$currentUserId;
+}
+
+/**
+ * Guard for HTML pages that operate on a specific record:
+ *   - if anonymous → redirect to /login
+ *   - if logged in but not the owner → 404 (don't leak existence)
+ */
+function require_owner(?array $row, string $key = 'user_id'): void
+{
+    require_login();
+    if (!$row || !is_owner($row, $key)) {
+        http_response_code(404);
+        echo 'Not found';
+        exit;
+    }
+}
+
+/** JSON-flavored ownership check for API endpoints. */
+function api_require_owner(?array $row, string $key = 'user_id'): void
+{
+    api_require_login();
+    if (!$row || !is_owner($row, $key)) {
+        http_response_code(404);
+        header('Content-Type: application/json');
+        echo json_encode(['error' => 'Not found']);
+        exit;
+    }
+}
 ?>

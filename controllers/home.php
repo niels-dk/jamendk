@@ -19,14 +19,25 @@ class home_controller
 {
     public static function index()
     {
-        global $db, $currentUserId;
-        if (empty($currentUserId)) { $currentUserId = 1; }
-        $uid = (int)$currentUserId;
+        global $db, $currentUserId, $isAuthenticated;
+        $uid = $isAuthenticated ? (int)$currentUserId : 0;
 
         // Counts (active only, with the same dream-promotion exclusion as the dashboard)
         $stats = [
             'dreams'  => 0, 'visions' => 0, 'moods' => 0, 'trips' => 0,
         ];
+        if (!$uid) {
+            // Anonymous: skip the queries entirely
+            $recentBoards = [];
+            $hasActivity  = false;
+            $title = 'Welcome to Jamen';
+            ob_start();
+            include __DIR__ . '/../views/home.php';
+            $content = ob_get_clean();
+            $noSidebar = true;
+            include __DIR__ . '/../views/layout.php';
+            return;
+        }
         try {
             $st = $db->prepare("
                 SELECT
@@ -100,6 +111,7 @@ class home_controller
 
     private static function loadDashboard(string $type, string $filter): void
     {
+        require_login();
         global $db, $currentUserId;
 
         // Labels available to the view (used for the �Boards ?� and title text)
@@ -117,11 +129,6 @@ class home_controller
             http_response_code(404);
             echo 'Board type not found';
             return;
-        }
-
-        if (empty($currentUserId)) {
-            // If your auth layer sets this differently, keep it�this is a safe default.
-            $currentUserId = 1;
         }
 
         // Pull boards for the requested type + filter.
@@ -302,9 +309,8 @@ class home_controller
 
 	public static function dashboard_overview(): void
 	{
+		require_login();
 		global $db, $currentUserId;
-
-		if (empty($currentUserId)) { $currentUserId = 1; }
 
 		// Sorting mode (latest|newest|favorites)
 		$sort = isset($_GET['sort']) ? strtolower(trim($_GET['sort'])) : 'latest';

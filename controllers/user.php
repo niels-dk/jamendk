@@ -7,6 +7,8 @@ class user_controller
     public static function login(): void
     {
         $error = null;
+        // Remember where the user was trying to go (set as ?next=)
+        $next = self::safeNext($_REQUEST['next'] ?? '');
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!csrf_check($_POST['csrf_token'] ?? null)) {
                 $error = 'Your session expired. Please try again.';
@@ -17,7 +19,7 @@ class user_controller
                     $error = 'Please enter both email and password.';
                 } else if ($user = User::authenticate($email, $pass)) {
                     self::loginUser($user);
-                    redirect('dashboard');
+                    redirect($next ?: 'dashboard');
                 } else {
                     $error = 'Invalid email or password.';
                 }
@@ -32,6 +34,7 @@ class user_controller
         $error = null;
         $name  = '';
         $email = '';
+        $next  = self::safeNext($_REQUEST['next'] ?? '');
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!csrf_check($_POST['csrf_token'] ?? null)) {
                 $error = 'Your session expired. Please try again.';
@@ -55,10 +58,10 @@ class user_controller
                         $user = User::find($newId);
                         if ($user) {
                             self::loginUser($user);
-                            redirect('dashboard');
+                            redirect($next ?: 'dashboard');
                         }
                         $error = 'Account created — please sign in.';
-                        redirect('login');
+                        redirect('login' . ($next ? '?next=' . urlencode($next) : ''));
                     }
                 }
             }
@@ -78,6 +81,19 @@ class user_controller
         }
         session_destroy();
         redirect('');
+    }
+
+    /**
+     * Validate a ?next= redirect target. Accepts only relative URLs starting
+     * with "/" (no protocol, no //host) so attackers can't bounce sign-ins
+     * off our site to phishing pages.
+     */
+    private static function safeNext(string $raw): string
+    {
+        $raw = trim($raw);
+        if ($raw === '' || $raw === '/') return '';
+        if ($raw[0] !== '/' || (isset($raw[1]) && $raw[1] === '/')) return '';
+        return $raw;
     }
 
     /** Internal: write a successful sign-in into the session. */

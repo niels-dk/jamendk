@@ -9,11 +9,15 @@ function make_slug(int $len = 12): string
     );
 }
 
-/** Redirect to a relative path. Accepts '/foo' or 'foo'. */
+/** Redirect to a relative path. Sends an absolute URL for RFC compliance. */
 function redirect(string $path): void
 {
     if ($path === '' || $path[0] !== '/') $path = '/' . $path;
-    header('Location: ' . $path);
+    // Discard any buffered output so the Location header can land.
+    while (ob_get_level() > 0) ob_end_clean();
+    $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+    $host   = $_SERVER['HTTP_HOST'] ?? 'localhost';
+    header('Location: ' . $scheme . '://' . $host . $path);
     exit;
 }
 
@@ -103,4 +107,3 @@ function api_require_owner(?array $row, string $key = 'user_id'): void
         exit;
     }
 }
-?>

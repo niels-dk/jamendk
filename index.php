@@ -1,4 +1,8 @@
 <?php
+// Buffer all output so headers can always be sent late (defensive against
+// stray whitespace / BOMs in included files breaking redirects).
+ob_start();
+
 //  ───  DEBUG ONLY  ───────────────────────────────────────────────
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);

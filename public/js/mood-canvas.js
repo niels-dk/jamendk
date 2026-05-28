@@ -1142,11 +1142,13 @@
     // Measure the text once it's in the DOM and size the rect around it.
     try {
       const bbox = label.getBBox();
-      const padX = 8, padY = 4;
+      const padX = 5, padY = 1;
       rect.setAttribute('x',      String(bbox.x - padX));
       rect.setAttribute('y',      String(bbox.y - padY));
       rect.setAttribute('width',  String(bbox.width + padX * 2));
       rect.setAttribute('height', String(bbox.height + padY * 2));
+      rect.setAttribute('rx',     '4');
+      rect.setAttribute('ry',     '4');
     } catch (e) { /* getBBox fails if the SVG isn't laid out yet — retry on next frame */ }
   }
   async function setConnectorLabel(id, label) {
@@ -1507,14 +1509,15 @@
   connToolbar.addEventListener('click', async (e) => {
     const btn = e.target.closest('button[data-cmd]');
     if (!btn) return;
-    const id = connToolbar._connId; if (!id) return;
     e.stopPropagation();
     const cmd = btn.dataset.cmd;
+    // Close needs to work whether or not a connector is currently bound
     if (cmd === 'close') {
       hideConnToolbar();
       selectConnector(null);
       return;
     }
+    const id = connToolbar._connId; if (!id) return;
     if (cmd === 'arrows-none')  await setConnectorArrows(id, 'none');
     else if (cmd === 'arrows-end')   await setConnectorArrows(id, 'end');
     else if (cmd === 'arrows-start') await setConnectorArrows(id, 'start');

@@ -50,7 +50,7 @@ window.boardSlug = <?= json_encode($board['slug'] ?? '') ?>;
 //console.log(window.boardSlug);
 </script>
 <!-- core js -->
-<script src="/public/js/mood-canvas.js?v=10"></script>
+<script src="/public/js/mood-canvas.js?v=11"></script>
 
 <script src="/public/js/mood-canvas-highlight.js"></script>
 <script src="/public/js/mood-canvas-media.js"></script>

@@ -456,10 +456,13 @@
       e.stopPropagation();
       if (currentTool === 'delete') {
         deleteConnector(Number(item.id));
-      } else if (currentTool === 'select') {
-        clearSelection();
-        selectConnector(Number(item.id));
+        return;
       }
+      // Any other tool: tap-to-select. Opens the floating toolbar which
+      // hosts the Delete button — so users don't have to switch to a
+      // specific tool just to remove or restyle a connector.
+      clearSelection();
+      selectConnector(Number(item.id));
     });
 
     const aId = item.payload?.a?.item, bId = item.payload?.b?.item;
@@ -1337,11 +1340,16 @@
     s.textContent = `
       #canvasConnToolbar {
         position:fixed; z-index:9998;
-        display:flex; flex-wrap:wrap; align-items:center; gap:.2rem;
-        background:#1a1d24; border:1px solid #2b3346; border-radius:10px;
-        box-shadow:0 8px 24px rgba(0,0,0,.4);
-        padding:.3rem; transform:translate(-50%, 0);
+        display:flex; flex-wrap:wrap; align-items:center; gap:.25rem;
+        background:#1a1d24; border:1px solid #3a76d2; border-radius:10px;
+        box-shadow:0 10px 28px rgba(0,0,0,.5), 0 0 0 3px rgba(58,118,210,.15);
+        padding:.35rem; transform:translate(-50%, 0);
         max-width:96vw;
+        animation: connToolbarPop .12s ease-out;
+      }
+      @keyframes connToolbarPop {
+        from { opacity:0; transform:translate(-50%, -4px); }
+        to   { opacity:1; transform:translate(-50%, 0); }
       }
       #canvasConnToolbar button {
         min-width:40px; height:40px; padding:0 .35rem;
@@ -1356,8 +1364,10 @@
       #canvasConnToolbar .sep {
         width:1px; align-self:stretch; background:#2b3346; margin:.1rem .1rem;
       }
-      #canvasConnToolbar .danger { color:#f08792; }
-      #canvasConnToolbar .danger:hover { background:#4a1626; }
+      #canvasConnToolbar .danger {
+        color:#fff; background:#7a2030; border-color:#a01a36;
+      }
+      #canvasConnToolbar .danger:hover { background:#a01a36; }
     `;
     document.head.appendChild(s);
   })();
@@ -1371,17 +1381,18 @@
     const cls = (a) => arrows === a ? 'is-active' : '';
     const dcls = (b) => b ? 'is-active' : '';
     connToolbar.innerHTML = `
-      <button data-cmd="arrows-none"  class="${cls('none')}"  title="No arrows">—</button>
-      <button data-cmd="arrows-end"   class="${cls('end')}"   title="Arrow end">→</button>
-      <button data-cmd="arrows-start" class="${cls('start')}" title="Arrow start">←</button>
-      <button data-cmd="arrows-both"  class="${cls('both')}"  title="Both ends">↔</button>
+      <button data-cmd="arrows-none"  class="${cls('none')}"  title="No arrow">—</button>
+      <button data-cmd="arrows-end"   class="${cls('end')}"   title="Arrow at end (one way)">→</button>
+      <button data-cmd="arrows-start" class="${cls('start')}" title="Arrow at start (other way)">←</button>
+      <button data-cmd="arrows-both"  class="${cls('both')}"  title="Both ends (bidirectional)">↔</button>
       <span class="sep"></span>
       <button data-cmd="solid"  class="${dcls(!dashed)}" title="Solid line">──</button>
       <button data-cmd="dashed" class="${dcls(dashed)}"  title="Dashed line">- -</button>
       <span class="sep"></span>
-      <button data-cmd="reverse" title="Reverse direction">⇄</button>
+      <button data-cmd="reverse" title="Swap from / to">⇄</button>
       <button data-cmd="label" title="Edit label">A</button>
-      <button data-cmd="delete" class="danger" title="Delete">×</button>
+      <button data-cmd="delete" class="danger" title="Delete connector"
+              style="min-width:auto;padding:0 .7rem;">× Delete</button>
     `;
   }
 

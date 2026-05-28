@@ -162,7 +162,7 @@ class dream_model
 	public static function get(PDO $db, string $slug): ?array
 	{
 		$stmt = $db->prepare("
-			SELECT id, slug, title, description, created_at
+			SELECT id, slug, title, description, created_at, updated_at, user_id, archived, deleted_at
 			FROM dream_boards
 			WHERE slug = ?
 			  AND deleted_at IS NULL

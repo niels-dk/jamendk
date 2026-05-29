@@ -60,7 +60,18 @@
   const clampInt = (v) => (Number.isFinite(v) ? (v | 0) : 0);
   const snap     = (n) => snapToGrid ? Math.round(n / 8) * 8 : n;
 
-  const isEmptySpace = (t) => (t === stage || t === content);
+  // Empty space = the stage, the content layer, or the SVG overlay/background
+  // (now that the SVG sits BEHIND content, empty clicks land on it). A
+  // connector <line> is NOT empty space, and neither is any .canvas-item.
+  const isEmptySpace = (t) => {
+    if (!t) return false;
+    if (t === stage || t === content || t === svgEl || t === svgBack || t === svgFront) return true;
+    const tag = (t.tagName || '').toLowerCase();
+    if (tag === 'line' || tag === 'text' || tag === 'rect') return false; // connector parts / labels
+    if (t.closest && t.closest('.canvas-item')) return false;
+    if (t.closest && (t.closest('#overlayBack') || t.closest('#canvasOverlay'))) return true;
+    return false;
+  };
   const getItemFromTarget = (t) => t?.closest?.('.canvas-item') || null;
 
   function logicalFromClient(clientX, clientY) {
@@ -823,6 +834,8 @@
   // ---------- group drag / marquee ----------
   let marqueeAdditive = false;
   function beginMarquee(clientX, clientY, additive) {
+    // Defensive: clear any stray marquee node/state before starting a new one
+    stage.querySelectorAll('.marquee').forEach(n => n.remove());
     marqueeAdditive = !!additive;
     marqueeStart = logicalFromClient(clientX, clientY);
     marquee = document.createElement('div'); marquee.className = 'marquee';
@@ -1158,9 +1171,6 @@
     rect.setAttribute('y',      String(my - H / 2));
     rect.setAttribute('width',  String(W));
     rect.setAttribute('height', String(H));
-
-    // TEMP diagnostic — remove once the label sizing is confirmed good.
-    console.log('[conn-label v14]', { text, estW: Math.round(estW), W: Math.round(W), H, mx: Math.round(mx), my: Math.round(my) });
   }
   async function setConnectorLabel(id, label) {
     const it = itemsById[id]?.data; if (!it) return;
@@ -1908,9 +1918,10 @@
   // ---------- init ----------
   (async function init() {
     ensureOverlaySizing();
-    // Clear any orphaned connector-label groups left over in the DOM
-    // (defensive; normally there are none on a fresh load).
+    // Clear any orphaned connector-label groups / stray marquee boxes left
+    // in the DOM (defensive; normally there are none on a fresh load).
     svgBack.querySelectorAll('.conn-label').forEach(n => n.remove());
+    stage.querySelectorAll('.marquee').forEach(n => n.remove());
 
     // Probe both URL patterns; use whichever the server responds to
     for (const candidate of [

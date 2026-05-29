@@ -1384,7 +1384,13 @@
     if (document.getElementById('canvasConnToolbarStyles')) return;
     const s = document.createElement('style'); s.id = 'canvasConnToolbarStyles';
     s.textContent = `
-      #canvasConnToolbar {
+      /* IMPORTANT: scope display to :not([hidden]). An #id rule (specificity
+         1,0,0) beats the UA [hidden]{display:none} rule (0,1,0), so a bare
+         "#canvasConnToolbar { display:flex }" would make the element ignore
+         the hidden attribute entirely — which is exactly why close/outside-
+         click "did nothing". */
+      #canvasConnToolbar[hidden] { display:none !important; }
+      #canvasConnToolbar:not([hidden]) {
         position:fixed; z-index:9998;
         display:flex; flex-wrap:wrap; align-items:center; gap:.25rem;
         background:#1a1d24; border:1px solid #3a76d2; border-radius:10px;
@@ -1434,21 +1440,35 @@
     const cls = (a) => arrows === a ? 'is-active' : '';
     const dcls = (b) => b ? 'is-active' : '';
     connToolbar.innerHTML = `
-      <button data-cmd="close" class="close" title="Close">✕</button>
+      <button data-cmd="close" class="close" title="Close" type="button">✕</button>
       <span class="sep"></span>
-      <button data-cmd="arrows-none"  class="${cls('none')}"  title="No arrow">—</button>
-      <button data-cmd="arrows-end"   class="${cls('end')}"   title="Arrow at end (one way)">→</button>
-      <button data-cmd="arrows-start" class="${cls('start')}" title="Arrow at start (other way)">←</button>
-      <button data-cmd="arrows-both"  class="${cls('both')}"  title="Both ends (bidirectional)">↔</button>
+      <button data-cmd="arrows-none"  class="${cls('none')}"  title="No arrow" type="button">—</button>
+      <button data-cmd="arrows-end"   class="${cls('end')}"   title="Arrow at end (one way)" type="button">→</button>
+      <button data-cmd="arrows-start" class="${cls('start')}" title="Arrow at start (other way)" type="button">←</button>
+      <button data-cmd="arrows-both"  class="${cls('both')}"  title="Both ends (bidirectional)" type="button">↔</button>
       <span class="sep"></span>
-      <button data-cmd="solid"  class="${dcls(!dashed)}" title="Solid line">──</button>
-      <button data-cmd="dashed" class="${dcls(dashed)}"  title="Dashed line">- -</button>
+      <button data-cmd="solid"  class="${dcls(!dashed)}" title="Solid line" type="button">──</button>
+      <button data-cmd="dashed" class="${dcls(dashed)}"  title="Dashed line" type="button">- -</button>
       <span class="sep"></span>
-      <button data-cmd="reverse" title="Swap from / to">⇄</button>
-      <button data-cmd="label" title="Edit label">A</button>
-      <button data-cmd="delete" class="danger" title="Delete connector"
+      <button data-cmd="reverse" title="Swap from / to" type="button">⇄</button>
+      <button data-cmd="label" title="Edit label" type="button">A</button>
+      <button data-cmd="delete" class="danger" title="Delete connector" type="button"
               style="min-width:auto;padding:0 .7rem;">× Delete</button>
     `;
+    // Belt + suspenders: bind close DIRECTLY on the button in addition to
+    // the delegation below, so the close action is guaranteed to fire
+    // even if something interferes with delegation.
+    const closeBtn = connToolbar.querySelector('[data-cmd="close"]');
+    if (closeBtn) {
+      const onClose = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        hideConnToolbar();
+        selectConnector(null);
+      };
+      closeBtn.addEventListener('click', onClose);
+      closeBtn.addEventListener('touchend', onClose, { passive: false });
+    }
   }
 
   function positionConnToolbar(id) {

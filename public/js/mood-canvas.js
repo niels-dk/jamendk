@@ -1100,11 +1100,12 @@
     // Lazy-create the group {rect, text} the first time
     if (!line._labelGroup) {
       const group = document.createElementNS(NS, 'g');
+      group.setAttribute('class', 'conn-label');
       group.style.pointerEvents = 'none';
 
       const rect = document.createElementNS(NS, 'rect');
-      rect.setAttribute('rx', '6');
-      rect.setAttribute('ry', '6');
+      rect.setAttribute('rx', '4');
+      rect.setAttribute('ry', '4');
       rect.setAttribute('fill', '#1a1d24');
       rect.setAttribute('stroke', '#3a76d2');
       rect.setAttribute('stroke-width', '1');
@@ -1146,23 +1147,20 @@
     //   width  = measured via getComputedTextLength when available,
     //            else estimated from character count — both capped.
     const FONT = 12;
-    const H = 16;            // tight pill height for a 12px label
+    const H = 18;            // tight pill height for a 12px label
     const padX = 6;
-    let textW;
-    try {
-      textW = (typeof label.getComputedTextLength === 'function')
-        ? label.getComputedTextLength()
-        : 0;
-    } catch (e) { textW = 0; }
-    if (!textW || textW > 600) textW = text.length * (FONT * 0.58); // fallback estimate
-    const W = Math.max(14, Math.min(600, textW)) + padX * 2;
+    // Estimate width from character count only — getComputedTextLength has
+    // proven unreliable here, so we don't use it. ~0.6em per char at 12px.
+    const estW = text.length * (FONT * 0.6);
+    const W = Math.max(16, Math.min(240, estW)) + padX * 2;  // hard cap 240+12
 
     rect.setAttribute('x',      String(mx - W / 2));
     rect.setAttribute('y',      String(my - H / 2));
     rect.setAttribute('width',  String(W));
     rect.setAttribute('height', String(H));
-    rect.setAttribute('rx',     '4');
-    rect.setAttribute('ry',     '4');
+
+    // TEMP diagnostic — remove once the label sizing is confirmed good.
+    console.log('[conn-label v14]', { text, estW: Math.round(estW), W: Math.round(W), H, mx: Math.round(mx), my: Math.round(my) });
   }
   async function setConnectorLabel(id, label) {
     const it = itemsById[id]?.data; if (!it) return;
@@ -1910,6 +1908,9 @@
   // ---------- init ----------
   (async function init() {
     ensureOverlaySizing();
+    // Clear any orphaned connector-label groups left over in the DOM
+    // (defensive; normally there are none on a fresh load).
+    svgBack.querySelectorAll('.conn-label').forEach(n => n.remove());
 
     // Probe both URL patterns; use whichever the server responds to
     for (const candidate of [

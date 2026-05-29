@@ -67,22 +67,36 @@ class home_controller
             ];
         } catch (\Throwable $e) { /* keep zeros */ }
 
-        // Recent boards (top 3 across dream/vision/mood, latest updated first)
+        // Recent boards (top 5 across dream/vision/mood, latest touched first).
+        // Explicit COLLATE on every text column + the type literal — the three
+        // tables use different collations, and a bare UNION ALL across them
+        // throws "Illegal mix of collations" (which previously got swallowed,
+        // leaving the section empty). COALESCE(updated_at, created_at) so rows
+        // with a null updated_at still sort sensibly.
+        $C = 'COLLATE utf8mb4_general_ci';
         $recentBoards = [];
         try {
             $rb = $db->prepare("
-                SELECT 'dream'  AS type, slug, title, updated_at FROM dream_boards
-                 WHERE user_id=? AND archived=0 AND deleted_at IS NULL
-                   AND NOT EXISTS (SELECT 1 FROM visions v
-                                    WHERE v.dream_id = dream_boards.id AND v.deleted_at IS NULL)
-                UNION ALL
-                SELECT 'vision' AS type, slug, title, updated_at FROM visions
-                 WHERE user_id=? AND archived=0 AND deleted_at IS NULL
-                UNION ALL
-                SELECT 'mood'   AS type, slug, title, updated_at FROM mood_boards
-                 WHERE user_id=? AND archived=0 AND deleted_at IS NULL
-                ORDER BY updated_at DESC
-                LIMIT 3
+                SELECT * FROM (
+                    SELECT 'dream'  $C AS type,
+                           slug  $C AS slug,
+                           title $C AS title,
+                           COALESCE(updated_at, created_at) AS ts
+                      FROM dream_boards
+                     WHERE user_id=? AND archived=0 AND deleted_at IS NULL
+                       AND NOT EXISTS (SELECT 1 FROM visions v
+                                        WHERE v.dream_id = dream_boards.id AND v.deleted_at IS NULL)
+                    UNION ALL
+                    SELECT 'vision' $C, slug $C, title $C, COALESCE(updated_at, created_at)
+                      FROM visions
+                     WHERE user_id=? AND archived=0 AND deleted_at IS NULL
+                    UNION ALL
+                    SELECT 'mood'   $C, slug $C, title $C, COALESCE(updated_at, created_at)
+                      FROM mood_boards
+                     WHERE user_id=? AND archived=0 AND deleted_at IS NULL
+                ) AS recents
+                ORDER BY ts DESC
+                LIMIT 5
             ");
             $rb->execute([$uid, $uid, $uid]);
             $recentBoards = $rb->fetchAll(PDO::FETCH_ASSOC) ?: [];

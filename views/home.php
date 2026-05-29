@@ -89,11 +89,16 @@ $typeIcon = [
   }
   .recent-tile {
     background: rgba(255,255,255,.03); border: 1px solid #2b3346;
+    border-left-width: 3px;
     border-radius: 10px; padding: .7rem .85rem; text-decoration: none;
     color: inherit; transition: background .12s, transform .12s;
     display: block; min-width: 0;
   }
   .recent-tile:hover { background: rgba(255,255,255,.07); transform: translateY(-1px); }
+  /* Type-colored left accent */
+  .recent-tile.rt-dream  { border-left-color: #e8b04a; }
+  .recent-tile.rt-vision { border-left-color: #8fb1d8; }
+  .recent-tile.rt-mood   { border-left-color: #d87aa8; }
   .recent-tile .rt-type {
     font-size: .7rem; opacity: .7; text-transform: uppercase; letter-spacing: .08em;
   }
@@ -102,6 +107,27 @@ $typeIcon = [
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
   .recent-tile .rt-meta { font-size: .8rem; color: #7a8aa0; }
+
+  /* Quick-create row */
+  .quick-create {
+    display: flex; flex-wrap: wrap; align-items: center; gap: .5rem;
+    margin: 0 0 1.4rem;
+  }
+  .quick-create .qc-label {
+    font-size: .8rem; text-transform: uppercase; letter-spacing: .08em;
+    color: #6c7d92; font-weight: 700; margin-right: .2rem;
+  }
+  .quick-create .qc-btn {
+    display: inline-flex; align-items: center; gap: .35rem;
+    padding: .5rem .9rem; border-radius: 10px; text-decoration: none;
+    font-weight: 600; font-size: .9rem; color: #eaf0f7;
+    background: rgba(255,255,255,.05); border: 1px solid #2b3346;
+    transition: background .12s, transform .12s, border-color .12s;
+  }
+  .quick-create .qc-btn:hover { background: rgba(255,255,255,.1); transform: translateY(-1px); }
+  .quick-create .qc-dream:hover  { border-color: #e8b04a; }
+  .quick-create .qc-vision:hover { border-color: #8fb1d8; }
+  .quick-create .qc-mood:hover   { border-color: #d87aa8; }
 
   @media (max-width: 720px) {
     .welcome { grid-template-columns: 1fr; }
@@ -167,6 +193,14 @@ $typeIcon = [
   </section>
 
   <?php if ($hasActivity): ?>
+    <!-- Quick create -->
+    <div class="quick-create">
+      <span class="qc-label">Create</span>
+      <a class="qc-btn qc-dream"  href="/dreams/new">🌕 New Dream</a>
+      <a class="qc-btn qc-vision" href="/visions/new">📄 New Vision</a>
+      <a class="qc-btn qc-mood"   href="/moods/new">🎨 New Mood</a>
+    </div>
+
     <!-- Welcome-back panel -->
     <div class="welcome">
       <div class="stat-card">
@@ -203,10 +237,10 @@ $typeIcon = [
                 $href = '/' . $type . 's/' . h_e($rb['slug']);
                 $label = ucfirst($type);
               ?>
-              <a class="recent-tile" href="<?= $href ?>">
+              <a class="recent-tile rt-<?= h_e($type) ?>" href="<?= $href ?>">
                 <div class="rt-type"><?= h_e($typeIcon[$type] ?? '') ?> <?= h_e($label) ?></div>
                 <div class="rt-title"><?= h_e($rb['title'] ?: 'Untitled') ?></div>
-                <div class="rt-meta">Updated <?= h_e(h_dt($rb['updated_at'])) ?></div>
+                <div class="rt-meta">Updated <?= h_e(h_dt($rb['ts'] ?? null)) ?></div>
               </a>
             <?php endforeach; ?>
           </div>

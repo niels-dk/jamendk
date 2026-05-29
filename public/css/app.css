@@ -551,7 +551,13 @@ html, body { overflow-x: hidden; }
 /* #canvasOverlay { position:absolute; inset:0; z-index:1; pointer-events:auto; } */
 #canvasOverlay { position: absolute; z-index: 0; pointer-events: none; }
 
-#canvasOverlay, #canvasOverlay * { width:100%; height:100%; display:block; }
+/* Only the SVG element itself should fill the stage. The previous rule
+   included "#canvasOverlay *", which applied width:100%/height:100% to
+   EVERY descendant — and because CSS width/height override SVG geometry
+   attributes, that stretched every <rect> (e.g. connector labels) to the
+   full 1603×599 overlay size. Lines were unaffected (they use x1/x2), so
+   only label boxes appeared giant. Scope it to the SVG only. */
+#canvasOverlay { width:100%; height:100%; display:block; }
 
 /* Back group receives clicks; dashed preview should NOT */
 #overlayBack  { pointer-events:auto; }

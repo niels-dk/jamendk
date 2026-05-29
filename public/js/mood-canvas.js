@@ -1139,17 +1139,30 @@
     label.setAttribute('y', String(my));
     label.textContent = text;
 
-    // Measure the text once it's in the DOM and size the rect around it.
+    // Deterministic chip sizing. We do NOT trust getBBox for the box size
+    // (it can return zero before layout, or oversized values inside a
+    // transformed <g>, which produced a giant rectangle). Instead:
+    //   height = fixed, derived from the 12px font (~16px tall)
+    //   width  = measured via getComputedTextLength when available,
+    //            else estimated from character count — both capped.
+    const FONT = 12;
+    const H = 16;            // tight pill height for a 12px label
+    const padX = 6;
+    let textW;
     try {
-      const bbox = label.getBBox();
-      const padX = 5, padY = 1;
-      rect.setAttribute('x',      String(bbox.x - padX));
-      rect.setAttribute('y',      String(bbox.y - padY));
-      rect.setAttribute('width',  String(bbox.width + padX * 2));
-      rect.setAttribute('height', String(bbox.height + padY * 2));
-      rect.setAttribute('rx',     '4');
-      rect.setAttribute('ry',     '4');
-    } catch (e) { /* getBBox fails if the SVG isn't laid out yet — retry on next frame */ }
+      textW = (typeof label.getComputedTextLength === 'function')
+        ? label.getComputedTextLength()
+        : 0;
+    } catch (e) { textW = 0; }
+    if (!textW || textW > 600) textW = text.length * (FONT * 0.58); // fallback estimate
+    const W = Math.max(14, Math.min(600, textW)) + padX * 2;
+
+    rect.setAttribute('x',      String(mx - W / 2));
+    rect.setAttribute('y',      String(my - H / 2));
+    rect.setAttribute('width',  String(W));
+    rect.setAttribute('height', String(H));
+    rect.setAttribute('rx',     '4');
+    rect.setAttribute('ry',     '4');
   }
   async function setConnectorLabel(id, label) {
     const it = itemsById[id]?.data; if (!it) return;

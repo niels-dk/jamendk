@@ -2,9 +2,37 @@
 // views/home.php — landing + smart welcome-back state
 function h_e($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
 function h_dt($s) { return $s ? date('M j, Y', strtotime($s)) : ''; }
+
+// Relative time: "just now", "3 days ago", "in 2 days", "yesterday", etc.
+function h_rel($s) {
+    if (!$s) return '';
+    $t = strtotime($s);
+    if (!$t) return '';
+    $diff = $t - time();              // future = positive
+    $past = $diff < 0;
+    $a = abs($diff);
+    if ($a < 60)        return $past ? 'just now' : 'in a moment';
+    if ($a < 3600)      { $n = round($a/60);   return $past ? "$n min ago"  : "in $n min"; }
+    if ($a < 86400)     { $n = round($a/3600); return $past ? "$n hr ago"   : "in $n hr"; }
+    $days = round($a/86400);
+    if ($days === 1)    return $past ? 'yesterday' : 'tomorrow';
+    if ($days < 30)     return $past ? "$days days ago" : "in $days days";
+    return date('M j, Y', $t);
+}
+// Days until a date (negative = overdue). Date-only granularity.
+function h_days_until($s) {
+    if (!$s) return null;
+    $t = strtotime($s);
+    if (!$t) return null;
+    $today = strtotime('today');
+    return (int) floor(($t - $today) / 86400);
+}
+
 $hasActivity  = $hasActivity  ?? false;
 $stats        = $stats        ?? ['dreams'=>0,'visions'=>0,'moods'=>0,'trips'=>0];
 $recentBoards = $recentBoards ?? [];
+$upcoming     = $upcoming     ?? [];
+$userName     = $userName     ?? '';
 
 $typeIcon = [
     'dream'  => '🌕',
@@ -161,6 +189,53 @@ $typeIcon = [
     margin: 2.4rem 0 .9rem;
   }
 
+  /* Compact welcome bar (returning users) */
+  .home-welcome-bar {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 1rem; flex-wrap: wrap;
+    margin: 1.6rem 0 1.4rem;
+  }
+  .home-welcome-bar h1 { font-size: clamp(1.5rem, 3vw, 2rem); margin: 0; color: #f0f4fa; }
+  .home-welcome-bar .sub { margin: .25rem 0 0; color: #9bb0c5; font-size: .95rem; }
+
+  /* Trips-ready callout under the stats */
+  .stat-callout {
+    display: block; margin-top: .8rem; padding: .5rem .7rem;
+    background: rgba(58,118,210,.14); border: 1px solid rgba(58,118,210,.35);
+    border-radius: 8px; color: #a8c4ee; font-size: .85rem; font-weight: 600;
+    text-decoration: none;
+  }
+  .stat-callout:hover { background: rgba(58,118,210,.22); }
+
+  /* Upcoming / overdue dates */
+  .upcoming { display: flex; flex-direction: column; gap: .4rem; }
+  .u-row {
+    display: flex; align-items: center; gap: .7rem;
+    padding: .55rem .8rem; border-radius: 10px; text-decoration: none;
+    background: rgba(255,255,255,.04); border: 1px solid #2b3346;
+    border-left-width: 3px;
+    transition: background .12s, transform .12s;
+  }
+  .u-row:hover { background: rgba(255,255,255,.08); transform: translateY(-1px); }
+  .u-row.u-overdue  { border-left-color: #e06a6a; }
+  .u-row.u-ending   { border-left-color: #e8b04a; }
+  .u-row.u-starting { border-left-color: #6fae7a; }
+  .u-badge {
+    font-size: .68rem; text-transform: uppercase; letter-spacing: .06em;
+    font-weight: 700; padding: .12rem .5rem; border-radius: 999px; flex-shrink: 0;
+  }
+  .u-overdue  .u-badge { background: rgba(224,106,106,.18); color: #f0a0a0; }
+  .u-ending   .u-badge { background: rgba(232,176,74,.18);  color: #e8c889; }
+  .u-starting .u-badge { background: rgba(111,174,122,.18); color: #9bd6a6; }
+  .u-title {
+    flex: 1; min-width: 0; color: #eaf0f7; font-weight: 600;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .u-when { color: #8593a6; font-size: .85rem; flex-shrink: 0; }
+  @media (max-width: 520px) {
+    .u-when { display: none; }
+  }
+
   .home-footer {
     margin-top: 3rem; padding-top: 1.2rem;
     border-top: 1px solid rgba(255,255,255,.06);
@@ -170,27 +245,33 @@ $typeIcon = [
 
 <div class="home">
 
-  <!-- Hero -->
-  <section class="home-hero">
-    <h1>
-      The future begins in the<br>
-      <span class="accent">space between ideas</span>
-    </h1>
-    <p class="sub">
-      Capture the spark, sketch the vision, build the trip.<br>
-      A space to dream, plan and share what you're working toward.
-    </p>
-    <div class="cta">
-      <?php if ($hasActivity): ?>
-        <a class="home-btn primary" href="/dashboard">Go to dashboard</a>
-        <a class="home-btn ghost"   href="/dreams/new">+ New Dream</a>
-      <?php else: ?>
+  <?php if ($hasActivity): ?>
+    <!-- Compact welcome bar for returning users -->
+    <section class="home-welcome-bar">
+      <div>
+        <h1>Welcome back<?= $userName ? ', ' . h_e($userName) : '' ?> 👋</h1>
+        <p class="sub">Pick up where you left off, or start something new.</p>
+      </div>
+      <a class="home-btn primary" href="/dashboard">Go to dashboard</a>
+    </section>
+  <?php else: ?>
+    <!-- Full marketing hero for new / logged-out visitors -->
+    <section class="home-hero">
+      <h1>
+        The future begins in the<br>
+        <span class="accent">space between ideas</span>
+      </h1>
+      <p class="sub">
+        Capture the spark, sketch the vision, build the trip.<br>
+        A space to dream, plan and share what you're working toward.
+      </p>
+      <div class="cta">
         <a class="home-btn primary" href="/dreams/new">+ Start your first Dream</a>
         <a class="home-btn ghost"   href="/dashboard">Browse dashboard</a>
-      <?php endif; ?>
-    </div>
-    <div class="home-tagline">Dream &middot; Visualise &middot; Plan &middot; Create</div>
-  </section>
+      </div>
+      <div class="home-tagline">Dream &middot; Visualise &middot; Plan &middot; Create</div>
+    </section>
+  <?php endif; ?>
 
   <?php if ($hasActivity): ?>
     <!-- Quick create -->
@@ -223,6 +304,11 @@ $typeIcon = [
             <span class="num"><?= $stats['trips'] ?></span>
           </a>
         </div>
+        <?php if ((int)$stats['trips'] > 0): ?>
+          <a class="stat-callout" href="/dashboard/trip">
+            ✨ <?= (int)$stats['trips'] ?> trip<?= $stats['trips'] == 1 ? '' : 's' ?> ready to share
+          </a>
+        <?php endif; ?>
       </div>
 
       <div class="recent-card">
@@ -240,34 +326,73 @@ $typeIcon = [
               <a class="recent-tile rt-<?= h_e($type) ?>" href="<?= $href ?>">
                 <div class="rt-type"><?= h_e($typeIcon[$type] ?? '') ?> <?= h_e($label) ?></div>
                 <div class="rt-title"><?= h_e($rb['title'] ?: 'Untitled') ?></div>
-                <div class="rt-meta">Updated <?= h_e(h_dt($rb['ts'] ?? null)) ?></div>
+                <div class="rt-meta">Updated <?= h_e(h_rel($rb['ts'] ?? null)) ?></div>
               </a>
             <?php endforeach; ?>
           </div>
         <?php endif; ?>
       </div>
     </div>
+
+    <?php if (!empty($upcoming)): ?>
+      <!-- Upcoming / overdue Vision dates -->
+      <div class="home-section-title">Upcoming dates</div>
+      <div class="upcoming">
+        <?php foreach ($upcoming as $u): ?>
+          <?php
+            // Prefer the nearest relevant date: an overdue/soon end date wins,
+            // otherwise an upcoming start date.
+            $endDays   = h_days_until($u['end_date'] ?? null);
+            $startDays = h_days_until($u['start_date'] ?? null);
+            $isComplete = ($u['workflow_status'] ?? '') === 'complete';
+
+            $kind = null; $days = null; $dateStr = null;
+            if ($u['end_date'] && $endDays !== null && ($endDays <= 10) && !$isComplete) {
+              $kind = $endDays < 0 ? 'overdue' : 'ending';
+              $days = $endDays; $dateStr = $u['end_date'];
+            } elseif ($u['start_date'] && $startDays !== null && $startDays >= 0 && $startDays <= 10) {
+              $kind = 'starting'; $days = $startDays; $dateStr = $u['start_date'];
+            } elseif ($u['end_date'] && $endDays !== null) {
+              $kind = $endDays < 0 ? 'overdue' : 'ending';
+              $days = $endDays; $dateStr = $u['end_date'];
+            }
+            if ($kind === null) continue;
+
+            if ($kind === 'overdue')      { $badge = 'Overdue';  $cls = 'u-overdue';  $rel = abs($days).' day'.(abs($days)==1?'':'s').' ago'; }
+            elseif ($kind === 'ending')   { $badge = 'Ends';     $cls = 'u-ending';   $rel = $days === 0 ? 'today' : ($days === 1 ? 'tomorrow' : "in $days days"); }
+            else                          { $badge = 'Starts';   $cls = 'u-starting'; $rel = $days === 0 ? 'today' : ($days === 1 ? 'tomorrow' : "in $days days"); }
+          ?>
+          <a class="u-row <?= $cls ?>" href="/visions/<?= h_e($u['slug']) ?>">
+            <span class="u-badge"><?= $badge ?></span>
+            <span class="u-title"><?= h_e($u['title'] ?: 'Untitled vision') ?></span>
+            <span class="u-when"><?= h_e($rel) ?> · <?= h_e(h_dt($dateStr)) ?></span>
+          </a>
+        <?php endforeach; ?>
+      </div>
+    <?php endif; ?>
   <?php endif; ?>
 
-  <!-- Three phases -->
-  <div class="home-section-title">How it works</div>
-  <div class="phases">
-    <div class="phase">
-      <div class="ph-icon"><?= $typeIcon['dream'] ?></div>
-      <h3>Dream</h3>
-      <p>Capture the rough idea — title, scope, and the people, places and brands it touches. Quick, low-friction.</p>
+  <?php if (!$hasActivity): ?>
+    <!-- Three phases (only for new / logged-out visitors) -->
+    <div class="home-section-title">How it works</div>
+    <div class="phases">
+      <div class="phase">
+        <div class="ph-icon"><?= $typeIcon['dream'] ?></div>
+        <h3>Dream</h3>
+        <p>Capture the rough idea — title, scope, and the people, places and brands it touches. Quick, low-friction.</p>
+      </div>
+      <div class="phase">
+        <div class="ph-icon"><?= $typeIcon['vision'] ?></div>
+        <h3>Vision</h3>
+        <p>Promote a Dream into a Vision: add dates, goals, milestones, budget, contacts, documents and workflow notes.</p>
+      </div>
+      <div class="phase">
+        <div class="ph-icon"><?= $typeIcon['trip'] ?></div>
+        <h3>Trip</h3>
+        <p>Pair a Vision with a Mood board and publish a shareable Trip page — mobile-friendly, ready to send.</p>
+      </div>
     </div>
-    <div class="phase">
-      <div class="ph-icon"><?= $typeIcon['vision'] ?></div>
-      <h3>Vision</h3>
-      <p>Promote a Dream into a Vision: add dates, goals, milestones, budget, contacts, documents and workflow notes.</p>
-    </div>
-    <div class="phase">
-      <div class="ph-icon"><?= $typeIcon['trip'] ?></div>
-      <h3>Trip</h3>
-      <p>Pair a Vision with a Mood board and publish a shareable Trip page — mobile-friendly, ready to send.</p>
-    </div>
-  </div>
+  <?php endif; ?>
 
   <div class="home-footer">
     Dream &middot; Visualise &middot; Plan &middot; Create

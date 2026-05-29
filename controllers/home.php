@@ -102,7 +102,29 @@ class home_controller
             $recentBoards = $rb->fetchAll(PDO::FETCH_ASSOC) ?: [];
         } catch (\Throwable $e) { /* keep empty */ }
 
+        // Upcoming / overdue Vision dates — anything starting or ending within
+        // the next ~10 days, plus end dates already overdue (not yet complete).
+        $upcoming = [];
+        try {
+            $uq = $db->prepare("
+                SELECT slug, title, start_date, end_date, workflow_status
+                  FROM visions
+                 WHERE user_id = ? AND archived = 0 AND deleted_at IS NULL
+                   AND (
+                        (start_date IS NOT NULL AND start_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 10 DAY))
+                     OR (end_date   IS NOT NULL AND end_date   BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 10 DAY))
+                     OR (end_date   IS NOT NULL AND end_date < CURDATE() AND workflow_status <> 'complete')
+                   )
+                 ORDER BY COALESCE(end_date, start_date) ASC
+                 LIMIT 6
+            ");
+            $uq->execute([$uid]);
+            $upcoming = $uq->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        } catch (\Throwable $e) { /* keep empty */ }
+
         $hasActivity = ($stats['dreams'] + $stats['visions'] + $stats['moods']) > 0;
+        $userName = (is_array($currentUser ?? null) && !empty($currentUser['name']))
+            ? $currentUser['name'] : '';
 
         $title = 'Welcome to Jamen';
         ob_start();

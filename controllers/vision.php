@@ -31,7 +31,9 @@ class vision_controller
             $kv[] = ['key' => $row['key'] ?? '', 'value' => $row['value'] ?? ''];
         }
         vision_model::replaceAnchors($db, $id, $kv);
-        $slug = (string)$db->query("SELECT slug FROM visions WHERE id=$id")->fetchColumn();
+        $s = $db->prepare("SELECT slug FROM visions WHERE id=?");
+        $s->execute([(int)$id]);
+        $slug = (string)$s->fetchColumn();
         header("Location: /visions/$slug");
         exit;
     }
@@ -141,7 +143,9 @@ class vision_controller
             $kv[] = ['key'=>$row['key'] ?? '', 'value'=>$row['value'] ?? ''];
         }
         vision_model::replaceAnchors($db, $id, $kv);
-        $slug = (string)$db->query("SELECT slug FROM visions WHERE id=$id")->fetchColumn();
+        $s = $db->prepare("SELECT slug FROM visions WHERE id=?");
+        $s->execute([(int)$id]);
+        $slug = (string)$s->fetchColumn();
         header("Location: /visions/$slug");
         exit;
     }

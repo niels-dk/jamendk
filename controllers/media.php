@@ -662,10 +662,12 @@ class media_controller
         $mid = (int)($_POST['media_id'] ?? 0);
         if (!$mid) { http_response_code(400); echo json_encode(['error'=>'media_id required']); return; }
 
-        $inUse = (int)$db->query("SELECT COUNT(*) FROM mood_board_media WHERE media_id={$mid}")->fetchColumn();
-        if ($inUse > 0) { http_response_code(422); echo json_encode(['error'=>'Media attached to board(s); detach first']); return; }
-        $onCanvas = (int)$db->query("SELECT COUNT(*) FROM mood_board_items WHERE media_id={$mid}")->fetchColumn();
-        if ($onCanvas > 0) { http_response_code(422); echo json_encode(['error'=>'Media used on canvas; remove the items first']); return; }
+        $q1 = $db->prepare("SELECT COUNT(*) FROM mood_board_media WHERE media_id=?");
+        $q1->execute([$mid]);
+        if ((int)$q1->fetchColumn() > 0) { http_response_code(422); echo json_encode(['error'=>'Media attached to board(s); detach first']); return; }
+        $q2 = $db->prepare("SELECT COUNT(*) FROM mood_board_items WHERE media_id=?");
+        $q2->execute([$mid]);
+        if ((int)$q2->fetchColumn() > 0) { http_response_code(422); echo json_encode(['error'=>'Media used on canvas; remove the items first']); return; }
 
         $media = media_model::findById($db, $mid);
         if (!$media) { http_response_code(404); echo json_encode(['error'=>'Media not found']); return; }

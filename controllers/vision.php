@@ -107,10 +107,15 @@ class vision_controller
             'workflow'  => (!empty($vision['workflow_status']) && $vision['workflow_status'] !== 'not_started') ? 1 : 0,
         ];
         try {
-            $sidebarBadges['goals']     = (int)$db->query("SELECT COUNT(*) FROM vision_goals WHERE vision_id=$vid AND status != 'cancelled'")->fetchColumn();
-            $sidebarBadges['contacts']  = (int)$db->query("SELECT COUNT(*) FROM vision_contacts WHERE vision_id=$vid")->fetchColumn();
-            $sidebarBadges['documents'] = (int)$db->query("SELECT COUNT(*) FROM vision_documents WHERE vision_id=$vid")->fetchColumn();
-            $sidebarBadges['budget']    = (int)$db->query("SELECT COUNT(*) FROM vision_budget WHERE vision_id=$vid")->fetchColumn();
+            $cnt = function (string $sql) use ($db, $vid): int {
+                $st = $db->prepare($sql);
+                $st->execute([$vid]);
+                return (int)$st->fetchColumn();
+            };
+            $sidebarBadges['goals']     = $cnt("SELECT COUNT(*) FROM vision_goals WHERE vision_id=? AND status != 'cancelled'");
+            $sidebarBadges['contacts']  = $cnt("SELECT COUNT(*) FROM vision_contacts WHERE vision_id=?");
+            $sidebarBadges['documents'] = $cnt("SELECT COUNT(*) FROM vision_documents WHERE vision_id=?");
+            $sidebarBadges['budget']    = $cnt("SELECT COUNT(*) FROM vision_budget WHERE vision_id=?");
         } catch (\Throwable $e) { /* tables may not exist yet — keep zeros */ }
 
         ob_start();

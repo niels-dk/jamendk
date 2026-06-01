@@ -33,17 +33,22 @@
   --shadow:         0 1px 4px rgba(0,0,0,.4);
 }
 
-/* light override */
-@media (prefers-color-scheme: light) {
-  :root, body.light {
-    --bg-base:      #ffffff;
-    --bg-card:      #f4f6f8;
-    --accent:       #006dff;
-    --accent-hover: #096bff;
-    --border:       #d9dce0;
-    --text-main:    #202124;
-    --text-muted:   #5f6368;
-  }
+/* NOTE: The app is a dark-only design — page chrome, cards, overlays, the
+   home/trip pages and many inline-styled components all use hardcoded dark
+   colors. A prefers-color-scheme:light override here used to flip the CSS
+   variables to a light palette on devices set to light mode, producing a
+   broken hybrid (dark page + white form fields + light cards), most
+   visible on mobile. Keeping the palette dark regardless of the OS theme
+   makes mobile match desktop. If a true light theme is wanted later it
+   needs a full, deliberate light skin — not just a variable swap. */
+:root[data-theme="light"], body.light {
+  --bg-base:      #ffffff;
+  --bg-card:      #f4f6f8;
+  --accent:       #006dff;
+  --accent-hover: #096bff;
+  --border:       #d9dce0;
+  --text-main:    #202124;
+  --text-muted:   #5f6368;
 }
 
 body {
@@ -462,6 +467,36 @@ input, textarea, select {
   margin-bottom: 1rem;
   padding: 0.75rem;
   border: 1px solid var(--border);
+}
+
+/* Dark form controls everywhere (incl. mobile, which otherwise falls back
+   to the browser's default white background + black text). Scope to the
+   real text-entry controls so we don't recolor checkboxes/radios/range. */
+input[type="text"],
+input[type="search"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="url"],
+input[type="tel"],
+input[type="date"],
+input[type="time"],
+input[type="datetime-local"],
+input:not([type]),
+textarea,
+select {
+  background: var(--bg-base);
+  color: var(--text-main);
+  -webkit-appearance: none;   /* strip iOS/Android native field chrome */
+  appearance: none;
+}
+input::placeholder,
+textarea::placeholder { color: #7a8aa0; opacity: 1; }
+
+/* Keep the Trix rich-text editor surface dark too */
+trix-editor, .trix-content {
+  background: var(--bg-base);
+  color: var(--text-main);
 }
 
 /* ─── Dashboard grid (1-column on mobile) ─────────────────── */

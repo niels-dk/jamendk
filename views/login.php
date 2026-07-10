@@ -20,8 +20,8 @@ ob_start();
     <?php endif; ?>
 
     <label style="display:flex;flex-direction:column;gap:.3rem;">
-      <span style="font-size:.85rem;opacity:.8;">Email</span>
-      <input type="email" name="email" required autofocus autocomplete="email"
+      <span style="font-size:.85rem;opacity:.8;">Email or username</span>
+      <input type="text" name="email" required autofocus autocomplete="username"
              style="padding:.6rem .8rem;border:1px solid #2b3346;background:#15161A;
                     color:#ddd;border-radius:8px;font-size:1rem;">
     </label>

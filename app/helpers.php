@@ -50,6 +50,30 @@ function current_user(): ?array
     return is_logged_in() && !empty($_SESSION['user']) ? $_SESSION['user'] : null;
 }
 
+/** Site-level role of the current user ('admin' | 'user' | '' when anonymous). */
+function current_role(): string
+{
+    $u = current_user();
+    return $u ? (string)($u['role'] ?? 'user') : '';
+}
+
+/** True when the logged-in user is a site admin (controls everything). */
+function is_admin(): bool
+{
+    return current_role() === 'admin';
+}
+
+/** Guard for admin-only pages. */
+function require_admin(): void
+{
+    require_login();
+    if (!is_admin()) {
+        http_response_code(404);
+        echo 'Not found';
+        exit;
+    }
+}
+
 /**
  * Guard for HTML pages: send anonymous visitors to /login and remember
  * where they were trying to go so we can bounce them back after sign-in.
@@ -73,11 +97,12 @@ function api_require_login(): void
     exit;
 }
 
-/** Does the current user own this row? */
+/** Does the current user own this row? Site admins pass every ownership check. */
 function is_owner(?array $row, string $key = 'user_id'): bool
 {
     global $currentUserId;
     if (!$row || !$currentUserId) return false;
+    if (is_admin()) return true;
     return (int)($row[$key] ?? 0) === (int)$currentUserId;
 }
 

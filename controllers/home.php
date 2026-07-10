@@ -169,10 +169,12 @@ class home_controller
 
         // Pull boards for the requested type + filter.
         // Trips are derived from visions, so route them through fetchTripVisions.
+        // Site admins see every user's boards (uid 0 = no user filter)
+        $uid = is_admin() ? 0 : (int)$currentUserId;
         if ($type === 'trip') {
-            $dreams = self::fetchTripVisions($db, (int)$currentUserId, $filter);
+            $dreams = self::fetchTripVisions($db, $uid, $filter);
         } else {
-            $dreams = self::fetchBoards($db, (int)$currentUserId, $type, $filter);
+            $dreams = self::fetchBoards($db, $uid, $type, $filter);
         }
 
         // View vars
@@ -214,9 +216,14 @@ class home_controller
 		if (!isset($tableMap[$type])) return [];
 		$table = $tableMap[$type];
 
-		// WHERE by filter
-		$where  = "$table.user_id = ?";
-		$params = [$userId];
+		// WHERE by filter. $userId <= 0 means "all users" (site admin view).
+		if ($userId > 0) {
+			$where  = "$table.user_id = ?";
+			$params = [$userId];
+		} else {
+			$where  = "1=1";
+			$params = [];
+		}
 
 		// Dreams that have been promoted to a vision are excluded from Active
 		// — they've "graduated" and live in the Promoted filter (and under
@@ -334,12 +341,12 @@ class home_controller
 					 ON mb.slug COLLATE utf8mb4_general_ci
 						= v.mood_id COLLATE utf8mb4_general_ci
 					AND mb.deleted_at IS NULL
-			 WHERE v.user_id = ?
+			 WHERE " . ($userId > 0 ? "v.user_id = ?" : "1=1") . "
 			   AND $stateSql
 			 ORDER BY v.updated_at DESC
 		";
 		$st = $db->prepare($sql);
-		$st->execute([$userId]);
+		$st->execute($userId > 0 ? [$userId] : []);
 		return $st->fetchAll(PDO::FETCH_ASSOC) ?: [];
 	}
 
@@ -358,11 +365,14 @@ class home_controller
 		$types  = ['dream','vision','mood','trip'];
 		$boards = [];
 
+		// Site admins see every user's boards (uid 0 = no user filter)
+		$uid = is_admin() ? 0 : (int)$currentUserId;
+
 		foreach ($types as $type) {
 			if ($type === 'trip') {
-				$list = self::fetchTripVisions($db, (int)$currentUserId);
+				$list = self::fetchTripVisions($db, $uid);
 			} else {
-				$list = self::fetchBoards($db, (int)$currentUserId, $type, 'active');
+				$list = self::fetchBoards($db, $uid, $type, 'active');
 			}
 
 			// Sorting

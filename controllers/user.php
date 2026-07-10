@@ -106,6 +106,7 @@ class user_controller
             'id'    => (int)$user['id'],
             'name'  => $user['name']  ?? '',
             'email' => $user['email'] ?? '',
+            'role'  => $user['role']  ?? 'user',
         ];
     }
 }

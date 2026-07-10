@@ -7,8 +7,13 @@ global $currentUserId;
 <h1 style="margin-bottom:.3rem;">User management</h1>
 <p style="opacity:.65;margin-top:0;">Site-level accounts. Board sharing (Editor/Viewer per vision) is managed inside each Vision under Roles &amp; Permissions.</p>
 
+<input id="auSearch" type="search" placeholder="Filter by name or email…"
+       style="width:100%;max-width:360px;box-sizing:border-box;margin-bottom:.8rem;
+              padding:.55rem .8rem;border:1px solid #2b3346;background:#15161A;
+              color:#ddd;border-radius:8px;">
+
 <div class="card" style="padding:0;overflow-x:auto;">
-  <table id="adminUsers" style="width:100%;border-collapse:collapse;min-width:720px;">
+  <table id="adminUsers" style="width:100%;border-collapse:collapse;min-width:860px;">
     <thead>
       <tr style="text-align:left;border-bottom:1px solid #2b3346;">
         <th style="padding:.7rem .9rem;">#</th>
@@ -17,6 +22,7 @@ global $currentUserId;
         <th style="padding:.7rem .9rem;">Boards</th>
         <th style="padding:.7rem .9rem;">Role</th>
         <th style="padding:.7rem .9rem;">Joined</th>
+        <th style="padding:.7rem .9rem;">Last login</th>
         <th style="padding:.7rem .9rem;">Actions</th>
       </tr>
     </thead>
@@ -44,7 +50,15 @@ global $currentUserId;
           <td style="padding:.6rem .9rem;font-size:.85em;opacity:.7;">
             <?= $u['created_at'] ? date('Y-m-d', strtotime($u['created_at'])) : '' ?>
           </td>
+          <td style="padding:.6rem .9rem;font-size:.85em;opacity:.7;white-space:nowrap;">
+            <?= !empty($u['last_login_at']) ? date('Y-m-d H:i', strtotime($u['last_login_at'])) : '—' ?>
+          </td>
           <td style="padding:.6rem .9rem;white-space:nowrap;">
+            <?php if (!$isSelf): ?>
+              <a class="btn" href="/admin/users/<?= (int)$u['id'] ?>/impersonate"
+                 title="Browse the site as this user (support). Use the Return button to come back."
+                 style="padding:.3rem .6rem;font-size:.85em;text-decoration:none;">👁 View as</a>
+            <?php endif; ?>
             <button type="button" class="btn au-pass" style="padding:.3rem .6rem;font-size:.85em;">Reset password</button>
             <?php if (!$isSelf): ?>
               <button type="button" class="btn au-del"
@@ -63,6 +77,17 @@ global $currentUserId;
   const table  = document.getElementById('adminUsers');
   const status = document.getElementById('auStatus');
   if (!table) return;
+
+  // Client-side filter by name/email
+  const search = document.getElementById('auSearch');
+  search?.addEventListener('input', () => {
+    const q = search.value.toLowerCase().trim();
+    table.querySelectorAll('tbody tr').forEach(tr => {
+      const name  = tr.children[1]?.textContent?.toLowerCase() || '';
+      const email = tr.children[2]?.textContent?.toLowerCase() || '';
+      tr.style.display = (!q || name.includes(q) || email.includes(q)) ? '' : 'none';
+    });
+  });
 
   async function post(url, params) {
     status.textContent = 'Saving…';

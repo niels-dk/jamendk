@@ -69,6 +69,74 @@ class user_controller
         include __DIR__ . '/../views/register.php';
     }
 
+    /** GET/POST /account — edit own profile (name, email, password). */
+    public static function account(): void
+    {
+        require_login();
+        global $db, $currentUserId;
+
+        $user = User::find((int)$currentUserId);
+        if (!$user) { redirect('logout'); }
+
+        $notice = null; $error = null;
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            if (!csrf_check($_POST['csrf_token'] ?? null)) {
+                $error = 'Your session expired. Please try again.';
+            } else {
+                $action = $_POST['action'] ?? '';
+
+                if ($action === 'profile') {
+                    $name  = trim($_POST['name']  ?? '');
+                    $email = trim($_POST['email'] ?? '');
+                    if ($name === '') {
+                        $error = 'Name cannot be empty.';
+                    } elseif ($email === '') {
+                        $error = 'Email cannot be empty.';
+                    } elseif ($email !== $user['email']
+                              && $email !== 'admin'
+                              && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                        $error = 'That email address doesn\'t look right.';
+                    } else {
+                        try {
+                            $db->prepare('UPDATE users SET name = ?, email = ? WHERE id = ?')
+                               ->execute([$name, $email, (int)$user['id']]);
+                            // Keep the session copy in sync
+                            $_SESSION['user']['name']  = $name;
+                            $_SESSION['user']['email'] = $email;
+                            $user['name'] = $name; $user['email'] = $email;
+                            $notice = 'Profile updated.';
+                        } catch (\Throwable $e) {
+                            $error = 'That email is already taken by another account.';
+                        }
+                    }
+                } elseif ($action === 'password') {
+                    $current = (string)($_POST['current_password'] ?? '');
+                    $new     = (string)($_POST['new_password'] ?? '');
+                    $confirm = (string)($_POST['confirm_password'] ?? '');
+                    if (!password_verify($current, $user['password_hash'] ?? '')) {
+                        $error = 'Current password is incorrect.';
+                    } elseif (strlen($new) < 6) {
+                        $error = 'New password must be at least 6 characters.';
+                    } elseif ($new !== $confirm) {
+                        $error = 'New passwords don\'t match.';
+                    } else {
+                        $db->prepare('UPDATE users SET password_hash = ? WHERE id = ?')
+                           ->execute([password_hash($new, PASSWORD_DEFAULT), (int)$user['id']]);
+                        $notice = 'Password changed.';
+                    }
+                }
+            }
+        }
+
+        $pageTitle = 'My account';
+        $noSidebar = true;
+        ob_start();
+        include __DIR__ . '/../views/account.php';
+        $content = ob_get_clean();
+        include __DIR__ . '/../views/layout.php';
+    }
+
     public static function logout(): void
     {
         // Clear PHP session entirely so the auth.php fallback kicks in again on next request.
@@ -108,5 +176,11 @@ class user_controller
             'email' => $user['email'] ?? '',
             'role'  => $user['role']  ?? 'user',
         ];
+        // Best-effort last-login stamp (column may not be migrated yet)
+        try {
+            global $db;
+            $db->prepare('UPDATE users SET last_login_at = NOW() WHERE id = ?')
+               ->execute([(int)$user['id']]);
+        } catch (\Throwable $e) { /* ignore */ }
     }
 }

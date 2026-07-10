@@ -163,11 +163,16 @@ function route(string $uri): void
         '/moods/([A-Za-z0-9]{6,16})/delete'        => ['mood', 'destroy'],
         '/moods/([A-Za-z0-9]{6,16})/restore'       => ['mood', 'restore'],
 		*/
+        // ── Account (own profile) ─────────────────────────────────────────────
+        '/account'                                 => ['user', 'account'],
+
         // ── Admin (site administration, require_admin inside) ────────────────
         '/admin/users'                             => ['admin', 'users'],
         '/admin/users/([0-9]+)/role'               => ['admin', 'setRole'],
         '/admin/users/([0-9]+)/password'           => ['admin', 'setPassword'],
         '/admin/users/([0-9]+)/delete'             => ['admin', 'deleteUser'],
+        '/admin/users/([0-9]+)/impersonate'        => ['admin', 'impersonate'],
+        '/admin/return'                            => ['admin', 'stopImpersonate'],
 
         // ── Trips (shareable read-only view of a Vision) ─────────────────────
         '/trips/([A-Za-z0-9]{6,16})'               => ['trip', 'show'],

@@ -120,7 +120,17 @@ $currentTypeLabel = $boardLabels[$boardType] ?? 'Boards';
     <?php foreach ($dreams as $d): ?>
       <div class="dashboard-card">
         <h3>
-          <a href="/<?= $boardType ?>s/<?= htmlspecialchars($d['slug']); if($boardType==="vision"){ print "/edit"; }?>">
+          <?php
+            // Visions: deep-link to the editor only when it's your own board
+            // (or you're admin). Shared boards land on the show page, which
+            // offers Edit when the collaborator's role allows it.
+            global $currentUserId;
+            $ownBoard = !empty($d['user_id']) && ((int)$d['user_id'] === (int)$currentUserId
+                        || (function_exists('is_admin') && is_admin()));
+            $cardHref = '/' . $boardType . 's/' . htmlspecialchars($d['slug'])
+                      . (($boardType === 'vision' && $ownBoard) ? '/edit' : '');
+          ?>
+          <a href="<?= $cardHref ?>">
             <span class="board-tag board-tag-<?= $boardType ?>">
               <?= htmlspecialchars(mb_substr($boardLabels[$boardType] ?? '❓', 0, 2)) ?>
             </span>

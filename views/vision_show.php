@@ -86,7 +86,9 @@ $anchors = $anchors ?? [];
   </div>
 
   <div class="btn-group">
-    <a class="btn primary" href="/visions/<?= e($vision['slug']) ?>/edit">Edit Vision</a>
+    <?php global $db; if (function_exists('vision_can') && vision_can($db, $vision, 'edit')): ?>
+      <a class="btn primary" href="/visions/<?= e($vision['slug']) ?>/edit">Edit Vision</a>
+    <?php endif; ?>
     <a class="btn" href="/dashboard/vision">Back to dashboard</a>
   </div>
 </div>

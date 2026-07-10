@@ -132,6 +132,22 @@ class user_controller
         include __DIR__ . '/../views/layout.php';
     }
 
+    /** POST /api/shares/seen — dismiss the "new boards shared with you" notice. */
+    public static function sharesSeen(): void
+    {
+        api_require_login();
+        header('Content-Type: application/json');
+        global $db, $currentUserId;
+        try {
+            $db->prepare('UPDATE users SET shares_seen_at = NOW() WHERE id = ?')
+               ->execute([(int)$currentUserId]);
+            echo json_encode(['success' => true]);
+        } catch (\Throwable $e) {
+            http_response_code(500);
+            echo json_encode(['error' => 'shares_seen_at column missing — run the migration']);
+        }
+    }
+
     public static function logout(): void
     {
         // Clear PHP session entirely so the auth.php fallback kicks in again on next request.

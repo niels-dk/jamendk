@@ -138,3 +138,62 @@ function dt($s){ return $s ? date('M j, Y', strtotime($s)) : ''; }
   <?php endforeach; ?>
 
 </div>
+
+<?php if (!empty($newShares)): ?>
+<!-- One-time "new boards shared with you" notice -->
+<div id="sharesNotice"
+     style="position:fixed;inset:0;z-index:5000;display:flex;align-items:center;justify-content:center;">
+  <div style="position:absolute;inset:0;background:rgba(0,0,0,.55);" data-dismiss></div>
+  <div style="position:relative;max-width:480px;width:calc(100% - 2rem);
+              background:#15161A;border:1px solid #2b3346;border-radius:14px;
+              box-shadow:0 18px 50px rgba(0,0,0,.5);padding:1.3rem 1.4rem;">
+    <h2 style="margin:0 0 .2rem;font-size:1.25rem;">🤝 New boards shared with you</h2>
+    <p style="margin:0 0 .9rem;opacity:.65;font-size:.9em;">
+      Since your last visit, these boards were shared with you:
+    </p>
+    <div style="display:flex;flex-direction:column;gap:.45rem;max-height:280px;overflow-y:auto;">
+      <?php foreach ($newShares as $ns): ?>
+        <a href="/visions/<?= t($ns['slug']) ?>"
+           style="display:flex;align-items:center;justify-content:space-between;gap:.6rem;
+                  padding:.55rem .7rem;background:rgba(255,255,255,.04);
+                  border:1px solid #2b3346;border-radius:8px;
+                  color:inherit;text-decoration:none;">
+          <span style="min-width:0;">
+            <span style="display:block;font-weight:600;color:#eaeaea;
+                         white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+              <?= t($ns['title'] ?: 'Untitled') ?>
+            </span>
+            <span style="display:block;font-size:.8em;opacity:.6;">
+              from <?= t($ns['owner_name'] ?: 'someone') ?>
+            </span>
+          </span>
+          <span style="flex-shrink:0;padding:.1rem .55rem;border-radius:999px;
+                       background:#1f3a66;color:#8fb1d8;font-size:.75rem;font-weight:700;">
+            <?= t(ucfirst(str_replace('_', '-', $ns['role']))) ?>
+          </span>
+        </a>
+      <?php endforeach; ?>
+    </div>
+    <button type="button" data-dismiss
+            style="margin-top:1rem;width:100%;padding:.65rem;border:0;border-radius:8px;
+                   background:#3a76d2;color:#fff;font-size:1rem;font-weight:600;cursor:pointer;">
+      Got it
+    </button>
+  </div>
+</div>
+<script>
+(() => {
+  const notice = document.getElementById('sharesNotice');
+  if (!notice) return;
+  // Mark as seen immediately so the notice shows exactly once,
+  // even if the user navigates away via one of the board links.
+  fetch('/api/shares/seen', { method: 'POST' }).catch(() => {});
+  notice.addEventListener('click', e => {
+    if (e.target.closest('[data-dismiss]')) notice.remove();
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') notice.remove();
+  });
+})();
+</script>
+<?php endif; ?>

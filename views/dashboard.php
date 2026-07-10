@@ -12,7 +12,15 @@ $boardLabels = [
 // Fallbacks
 $boardType   = $boardType ?? 'dream';
 $filter      = $filter ?? 'active';
-$activeLabel = ucfirst($filter);
+$filterLabels = [
+  'active'         => 'Active',
+  'archived'       => 'Archived',
+  'trash'          => 'Trash',
+  'promoted'       => 'Promoted',
+  'shared-with-me' => 'Shared with me',
+  'shared-by-me'   => 'Shared by me',
+];
+$activeLabel = $filterLabels[$filter] ?? ucfirst($filter);
 $currentTypeLabel = $boardLabels[$boardType] ?? 'Boards';
 ?>
 
@@ -102,13 +110,17 @@ $currentTypeLabel = $boardLabels[$boardType] ?? 'Boards';
       <?php if ($boardType === 'dream'): ?>
         <a href="/dashboard/<?= $boardType ?>/promoted" role="menuitem">Promoted</a>
       <?php endif; ?>
+      <?php if ($boardType === 'vision' || $boardType === 'mood'): ?>
+        <a href="/dashboard/<?= $boardType ?>/shared-with-me" role="menuitem">🤝 Shared with me</a>
+        <a href="/dashboard/<?= $boardType ?>/shared-by-me" role="menuitem">📤 Shared by me</a>
+      <?php endif; ?>
     </div>
   </span>
 </h1>
 
 <?php if (empty($dreams)): ?>
   <div class="empty-state">
-    <p>No <?= htmlspecialchars($filter) ?> boards found.</p>
+    <p>No boards found under “<?= htmlspecialchars($activeLabel) ?>”.</p>
     <?php if ($filter === 'active' && $boardType !== 'trip'): ?>
       <a class="btn" href="/<?= $boardType ?>s/new">➕ Create Your First <?= htmlspecialchars($boardTypes[$boardType] ?? ucfirst($boardType)) ?></a>
     <?php elseif ($boardType === 'trip'): ?>

@@ -160,6 +160,10 @@ class home_controller
 
         $type   = strtolower(trim($type ?: 'dream'));
         $filter = strtolower(trim($filter ?: 'active'));
+        // Accept plural type slugs (/dashboard/visions/…)
+        if (!isset($boardTypes[$type]) && str_ends_with($type, 's')) {
+            $type = substr($type, 0, -1);
+        }
 
         if (!isset($boardTypes[$type])) {
             http_response_code(404);
@@ -215,6 +219,59 @@ class home_controller
 		];
 		if (!isset($tableMap[$type])) return [];
 		$table = $tableMap[$type];
+
+		// Sharing filters — dedicated queries since they invert the usual
+		// ownership logic. Only meaningful for visions (the sharing unit)
+		// and moods (which inherit the parent vision's sharing).
+		if ($filter === 'shared-with-me' || $filter === 'shared-by-me') {
+			if ($userId <= 0) return []; // admin sees everything under Active anyway
+			try {
+				if ($type === 'vision') {
+					if ($filter === 'shared-with-me') {
+						$sql = "SELECT v.* FROM visions v
+								  JOIN vision_roles vr ON vr.vision_id = v.id AND vr.user_id = ?
+								 WHERE v.archived = 0 AND v.deleted_at IS NULL
+								 ORDER BY v.updated_at DESC";
+					} else {
+						$sql = "SELECT v.* FROM visions v
+								 WHERE v.user_id = ?
+								   AND EXISTS (SELECT 1 FROM vision_roles vr WHERE vr.vision_id = v.id)
+								   AND v.archived = 0 AND v.deleted_at IS NULL
+								 ORDER BY v.updated_at DESC";
+					}
+				} elseif ($type === 'mood') {
+					if ($filter === 'shared-with-me') {
+						$sql = "SELECT DISTINCT m.* FROM mood_boards m
+								  JOIN visions v2
+									ON (v2.id = m.vision_id
+										OR v2.mood_id COLLATE utf8mb4_general_ci
+										   = m.slug COLLATE utf8mb4_general_ci)
+								   AND v2.deleted_at IS NULL
+								  JOIN vision_roles vr ON vr.vision_id = v2.id AND vr.user_id = ?
+								 WHERE m.archived = 0 AND m.deleted_at IS NULL
+								 ORDER BY m.updated_at DESC";
+					} else {
+						$sql = "SELECT m.* FROM mood_boards m
+								 WHERE m.user_id = ?
+								   AND EXISTS (SELECT 1 FROM vision_roles vr
+											   JOIN visions v2 ON vr.vision_id = v2.id
+											  WHERE (v2.id = m.vision_id
+													 OR v2.mood_id COLLATE utf8mb4_general_ci
+														= m.slug COLLATE utf8mb4_general_ci)
+												AND v2.deleted_at IS NULL)
+								   AND m.archived = 0 AND m.deleted_at IS NULL
+								 ORDER BY m.updated_at DESC";
+					}
+				} else {
+					return []; // dreams/trips have no direct sharing
+				}
+				$st = $db->prepare($sql);
+				$st->execute([$userId]);
+				return $st->fetchAll(PDO::FETCH_ASSOC) ?: [];
+			} catch (\Throwable $e) {
+				return [];
+			}
+		}
 
 		// WHERE by filter. $userId <= 0 means "all users" (site admin view).
 		// Visions include boards shared with me via vision_roles; moods inherit
@@ -416,6 +473,24 @@ class home_controller
 
 			$boards[$type] = $list;
 		}
+
+		// One-time notice: boards shared with me since I last dismissed it.
+		$newShares = [];
+		try {
+			$ns = $db->prepare("
+				SELECT vr.role, vr.created_at, v.slug, v.title, u.name AS owner_name
+				  FROM vision_roles vr
+				  JOIN visions v ON v.id = vr.vision_id AND v.deleted_at IS NULL
+				  JOIN users u   ON u.id = v.user_id
+				 WHERE vr.user_id = ?
+				   AND vr.created_at > COALESCE(
+						 (SELECT shares_seen_at FROM users WHERE id = ?), '1970-01-01')
+				 ORDER BY vr.created_at DESC
+				 LIMIT 20
+			");
+			$ns->execute([(int)$currentUserId, (int)$currentUserId]);
+			$newShares = $ns->fetchAll(PDO::FETCH_ASSOC) ?: [];
+		} catch (\Throwable $e) { /* column/table not migrated yet */ }
 
 		// View vars
 		$pageTitle  = 'Dashboard';

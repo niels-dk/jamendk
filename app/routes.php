@@ -97,6 +97,12 @@ function route(string $uri): void
         '/dashboard'          => ['home', 'dashboard_overview'],
 
         // New structure: pluralized board dashboards under /dashboard/<type>
+        // Sharing filters (hyphens don't match the generic [a-z]+ catch-alls)
+        '/dashboard/(dream|dreams|vision|visions|mood|moods|trip|trips)/(shared-with-me|shared-by-me)'
+                               => ['home', 'dashboard_type_filter'],
+        // Mark "new shares" notice as seen
+        '/api/shares/seen'     => ['user', 'sharesSeen'],
+
         '/dashboard/(dreams|visions|moods|trips)/(archived|trash)'
                                => ['home', 'dashboard_type_filter'],
         '/dashboard/(dreams|visions|moods|trips)'

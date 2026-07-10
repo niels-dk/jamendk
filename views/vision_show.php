@@ -104,8 +104,12 @@ $anchors = $anchors ?? [];
   </div>
 
   <?php if ($isCollab): ?>
-    <div id="handoffModal" hidden
-         style="position:fixed;inset:0;z-index:5000;display:flex;align-items:center;justify-content:center;">
+    <style>
+      #handoffModal { position:fixed; inset:0; z-index:5000; align-items:center; justify-content:center; }
+      #handoffModal { display:none; }
+      #handoffModal.is-open { display:flex; }
+    </style>
+    <div id="handoffModal">
       <div style="position:absolute;inset:0;background:rgba(0,0,0,.55);" data-close></div>
       <div style="position:relative;max-width:440px;width:calc(100% - 2rem);
                   background:#15161A;border:1px solid #2b3346;border-radius:14px;
@@ -132,11 +136,13 @@ $anchors = $anchors ?? [];
       const note   = document.getElementById('handoffNote');
       const status = document.getElementById('handoffStatus');
       if (!modal || !openB) return;
-      openB.addEventListener('click', () => { modal.hidden = false; note.focus(); });
+      const open  = () => { modal.classList.add('is-open'); note.focus(); };
+      const close = () => { modal.classList.remove('is-open'); };
+      openB.addEventListener('click', open);
       modal.addEventListener('click', e => {
-        if (e.target.closest('[data-close]')) modal.hidden = true;
+        if (e.target.closest('[data-close]')) close();
       });
-      document.addEventListener('keydown', e => { if (e.key === 'Escape') modal.hidden = true; });
+      document.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
       sendB.addEventListener('click', async () => {
         status.textContent = 'Sending…';
         sendB.disabled = true;
@@ -151,7 +157,7 @@ $anchors = $anchors ?? [];
           const j = await res.json();
           if (j && j.success) {
             status.textContent = '✅ Sent';
-            setTimeout(() => { modal.hidden = true; status.textContent = ''; note.value = ''; sendB.disabled = false; }, 900);
+            setTimeout(() => { close(); status.textContent = ''; note.value = ''; sendB.disabled = false; }, 900);
           } else {
             status.textContent = '⚠ ' + (j?.error || 'Failed');
             sendB.disabled = false;

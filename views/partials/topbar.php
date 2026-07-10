@@ -21,6 +21,9 @@ $loggedIn = (bool)$me;
         </span>
         <?= htmlspecialchars($me['name'] ?: $me['email']) ?>
       </span>
+      <?php if (function_exists('is_admin') && is_admin()): ?>
+        <a class="btn btn-ghost" href="/admin/users" title="User management">⚙️ Users</a>
+      <?php endif; ?>
       <a class="btn btn-ghost" href="/logout">Logout</a>
     <?php else: ?>
       <a class="btn btn-primary" href="/login">Login</a>

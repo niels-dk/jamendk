@@ -163,6 +163,12 @@ function route(string $uri): void
         '/moods/([A-Za-z0-9]{6,16})/delete'        => ['mood', 'destroy'],
         '/moods/([A-Za-z0-9]{6,16})/restore'       => ['mood', 'restore'],
 		*/
+        // ── Admin (site administration, require_admin inside) ────────────────
+        '/admin/users'                             => ['admin', 'users'],
+        '/admin/users/([0-9]+)/role'               => ['admin', 'setRole'],
+        '/admin/users/([0-9]+)/password'           => ['admin', 'setPassword'],
+        '/admin/users/([0-9]+)/delete'             => ['admin', 'deleteUser'],
+
         // ── Trips (shareable read-only view of a Vision) ─────────────────────
         '/trips/([A-Za-z0-9]{6,16})'               => ['trip', 'show'],
 
@@ -173,6 +179,11 @@ function route(string $uri): void
                                                    => ['vision', 'overlay'],
         // Goals & Milestones (must come before generic /api/visions/{slug}/{section})
         '/api/visions/([A-Za-z0-9]{6,16})/goals'                 => ['vision', 'listGoals'],
+        // Roles & sharing (must come before the generic {section} catch-all)
+        '/api/visions/([A-Za-z0-9]{6,16})/roles'                 => ['vision', 'listRoles'],
+        '/api/visions/([A-Za-z0-9]{6,16})/roles/add'             => ['vision', 'addRole'],
+        '/api/visions/([A-Za-z0-9]{6,16})/roles/([0-9]+)'        => ['vision', 'updateRole'],
+        '/api/visions/([A-Za-z0-9]{6,16})/roles/([0-9]+)/delete' => ['vision', 'removeRole'],
         '/api/visions/([A-Za-z0-9]{6,16})/goals/create'          => ['vision', 'createGoal'],
         '/api/visions/([A-Za-z0-9]{6,16})/goals/([0-9]+)'        => ['vision', 'updateGoal'],
         '/api/visions/([A-Za-z0-9]{6,16})/goals/([0-9]+)/get'    => ['vision', 'getGoal'],

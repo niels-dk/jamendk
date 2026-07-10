@@ -53,7 +53,7 @@ class vision_controller
 		");
 		$stmt->execute([$slug]);
 		$vision = $stmt->fetch(PDO::FETCH_ASSOC);
-		require_owner($vision);
+		require_vision($db, $vision, 'view');
 
 		$anchors = vision_model::getAnchors($db, (int)$vision['id']);
 
@@ -85,7 +85,7 @@ class vision_controller
         require_login();
         global $db;
         $vision = vision_model::get($db, $slug);
-        require_owner($vision);
+        require_vision($db, $vision, 'edit');
         $st = $db->prepare("SELECT * FROM vision_presentation WHERE vision_id=?");
         $st->execute([(int)$vision['id']]);
         $presentationFlags = $st->fetch(PDO::FETCH_ASSOC) ?: [];
@@ -130,9 +130,13 @@ class vision_controller
     /** POST /visions/update – legacy update */
     public static function update(): void
     {
+        require_login();
         global $db;
         $id = (int)($_POST['vision_id'] ?? 0);
         if (!$id) { http_response_code(400); echo 'Missing ID'; return; }
+        $vq = $db->prepare("SELECT * FROM visions WHERE id = ? LIMIT 1");
+        $vq->execute([$id]);
+        require_vision($db, $vq->fetch(PDO::FETCH_ASSOC) ?: null, 'edit');
         $title = trim($_POST['title'] ?? '');
         $desc  = $_POST['description'] ?? '';
         vision_model::update($db, $id, $title, $desc);
@@ -156,7 +160,7 @@ class vision_controller
         require_login();
         global $db;
         $v = vision_model::get($db, $slug);
-        require_owner($v);
+        require_vision($db, $v, 'manage');
         vision_model::setArchived($db, (int)$v['id'], true);
         header('Location: /dashboard/vision'); exit;
     }
@@ -165,7 +169,7 @@ class vision_controller
         require_login();
         global $db;
         $v = vision_model::get($db, $slug);
-        require_owner($v);
+        require_vision($db, $v, 'manage');
         vision_model::setArchived($db, (int)$v['id'], false);
         header('Location: /dashboard/vision/archived'); exit;
     }
@@ -174,7 +178,7 @@ class vision_controller
         require_login();
         global $db;
         $v = vision_model::get($db, $slug);
-        require_owner($v);
+        require_vision($db, $v, 'manage');
         vision_model::softDelete($db, (int)$v['id']);
         header('Location: /dashboard/vision'); exit;
     }
@@ -183,7 +187,7 @@ class vision_controller
         require_login();
         global $db;
         $v = vision_model::get($db, $slug);
-        require_owner($v);
+        require_vision($db, $v, 'manage');
         vision_model::restore($db, (int)$v['id']);
         header('Location: /dashboard/vision/trash'); exit;
     }
@@ -213,11 +217,11 @@ class vision_controller
 				return;
 			}
 
-			// Verify ownership before any mutation
-			$own = $db->prepare("SELECT user_id FROM visions WHERE id = ? LIMIT 1");
+			// Verify edit permission before any mutation (owner, shared editor, or admin)
+			$own = $db->prepare("SELECT * FROM visions WHERE id = ? LIMIT 1");
 			$own->execute([$visionId]);
-			$ownerId = (int)($own->fetchColumn() ?: 0);
-			if ($ownerId !== (int)$currentUserId) {
+			$visionRow = $own->fetch(PDO::FETCH_ASSOC) ?: null;
+			if (!$visionRow || !vision_can($db, $visionRow, 'edit')) {
 				http_response_code(404);
 				echo json_encode(['success' => false, 'error' => 'Not found']);
 				return;
@@ -276,7 +280,7 @@ class vision_controller
         global $db;
         try {
             $vision = vision_model::get($db, $slug);
-            api_require_owner($vision);
+            api_require_vision($db, $vision, 'edit');
             $payload = json_decode(file_get_contents('php://input'), true) ?: [];
             $update=[];
             $result=['title'=>false,'description'=>false,'anchors'=>false,'statusChanged'=>false];
@@ -332,7 +336,7 @@ class vision_controller
         require_login();
         global $db;
         $vision = vision_model::get($db, $slug);
-        require_owner($vision);
+        require_vision($db, $vision, 'edit');
         // load presentation flags so basics overlay can pre-check toggles
         $st = $db->prepare("SELECT * FROM vision_presentation WHERE vision_id=?");
         $st->execute([(int)$vision['id']]);
@@ -365,7 +369,7 @@ class vision_controller
         header('Content-Type: application/json');
         global $db;
         $vision = vision_model::get($db, $slug);
-        api_require_owner($vision);
+        api_require_vision($db, $vision, 'edit');
         $id=(int)$vision['id'];
         // differentiate by section
         switch ($section) {
@@ -484,7 +488,7 @@ class vision_controller
 			} else {
 				$vision = self::findVisionBySlug($db, $slug);
 			}
-			api_require_owner($vision);
+			api_require_vision($db, $vision, 'edit');
 
 			$data   = $_POST ?: json_decode(file_get_contents('php://input'), true) ?: [];
 			$moodId = isset($data['mood_id']) ? trim((string)$data['mood_id']) : null;
@@ -520,7 +524,7 @@ class vision_controller
 				? vision_model::get($db, $slug)
 				: self::findVisionBySlug($db, $slug);
 
-			api_require_owner($vision);
+			api_require_vision($db, $vision, 'edit');
 
 			$st = $db->prepare("UPDATE visions
 								   SET mood_id=NULL, show_mood_on_dashboard=0, show_mood_on_trip=0
@@ -541,7 +545,7 @@ class vision_controller
 		global $db;
 
 		$vision = vision_model::get($db, $slug);
-		api_require_owner($vision);
+		api_require_vision($db, $vision, 'view');
 
 		$st = $db->prepare("SELECT currency, amount_cents, show_on_dashboard, show_on_trip
 							FROM vision_budget WHERE vision_id = ?");
@@ -564,7 +568,7 @@ class vision_controller
 		global $db;
 
 		$vision = vision_model::get($db, $slug);
-		api_require_owner($vision);
+		api_require_vision($db, $vision, 'edit');
 
 		$cur   = strtoupper(trim($_POST['currency'] ?? ''));
 		$cents = (int)($_POST['amount_cents'] ?? -1);
@@ -621,7 +625,7 @@ class vision_controller
 		header('Content-Type: application/json');
 		global $db;
 		$vision = self::findVisionBySlug($db, $slug);
-		api_require_owner($vision);
+		api_require_vision($db, $vision, 'view');
 
 		// Aggregate Name, Company, Email into columns for list view.  Other keys remain unaggregated.
 		$sql = "
@@ -647,7 +651,7 @@ class vision_controller
 		header('Content-Type: application/json');
 		global $db;
 		$vision = self::findVisionBySlug($db, $slug);
-		api_require_owner($vision);
+		api_require_vision($db, $vision, 'view');
 
 		$vcIdNum = (int)$vcId;
 		$pivot = $db->prepare("SELECT id FROM vision_contacts WHERE id=? AND vision_id=?");
@@ -676,7 +680,7 @@ class vision_controller
 		global $db;
 
 		$vision = self::findVisionBySlug($db, $slug);
-		api_require_owner($vision);
+		api_require_vision($db, $vision, 'edit');
 
 		// Expected arrays: keys[], values[]; flags: is_current, is_main, show_on_dashboard, show_on_trip
 		$keys = $_POST['keys']   ?? [];
@@ -735,7 +739,7 @@ class vision_controller
 		global $db;
 
 		$vision = self::findVisionBySlug($db, $slug);
-		api_require_owner($vision);
+		api_require_vision($db, $vision, 'edit');
 
 		$vcIdNum = (int)$vcId;
 		$check   = $db->prepare("SELECT vision_id FROM vision_contacts WHERE id=?");
@@ -800,7 +804,7 @@ class vision_controller
 		header('Content-Type: application/json');
 		global $db;
 		$vision = self::findVisionBySlug($db, $slug);
-		api_require_owner($vision);
+		api_require_vision($db, $vision, 'edit');
 
 		$vcIdNum = (int)$vcId;
 		// Ensure contact belongs to this vision
@@ -839,7 +843,7 @@ class vision_controller
 		header('Content-Type: application/json');
 		global $db;
 		$vision = vision_model::get($db, $slug);
-		api_require_owner($vision);
+		api_require_vision($db, $vision, 'view');
 
 		$sql = "SELECT g.id, g.title, g.description, g.status, g.priority,
 					   g.due_date, g.completed_at, g.created_at,
@@ -865,7 +869,7 @@ class vision_controller
 		header('Content-Type: application/json');
 		global $db;
 		$vision = vision_model::get($db, $slug);
-		api_require_owner($vision);
+		api_require_vision($db, $vision, 'view');
 
 		$gid = (int)$goalId;
 		$g = $db->prepare("SELECT * FROM vision_goals WHERE id=? AND vision_id=?");
@@ -886,7 +890,7 @@ class vision_controller
 		header('Content-Type: application/json');
 		global $db;
 		$vision = vision_model::get($db, $slug);
-		api_require_owner($vision);
+		api_require_vision($db, $vision, 'edit');
 
 		$title = trim((string)($_POST['title'] ?? ''));
 		if ($title === '') { http_response_code(422); echo json_encode(['error'=>'Title required']); return; }
@@ -927,7 +931,7 @@ class vision_controller
 		header('Content-Type: application/json');
 		global $db;
 		$vision = vision_model::get($db, $slug);
-		api_require_owner($vision);
+		api_require_vision($db, $vision, 'edit');
 
 		$gid = (int)$goalId;
 		$chk = $db->prepare("SELECT status, completed_at FROM vision_goals WHERE id=? AND vision_id=?");
@@ -977,7 +981,7 @@ class vision_controller
 		header('Content-Type: application/json');
 		global $db;
 		$vision = vision_model::get($db, $slug);
-		api_require_owner($vision);
+		api_require_vision($db, $vision, 'edit');
 
 		$gid = (int)$goalId;
 		$chk = $db->prepare("SELECT id FROM vision_goals WHERE id=? AND vision_id=?");
@@ -985,6 +989,109 @@ class vision_controller
 		if (!$chk->fetch()) { http_response_code(404); echo json_encode(['error'=>'Goal not found']); return; }
 
 		$db->prepare("DELETE FROM vision_goals WHERE id=?")->execute([$gid]); // milestones cascade
+		echo json_encode(['success'=>true]);
+	}
+
+	/* ──────────────────────  Roles & sharing (board-level)  ────────────────────── */
+
+	private static function roleVisionOr404(PDO $db, string $slug, string $ability): ?array
+	{
+		$vision = vision_model::get($db, $slug);
+		api_require_vision($db, $vision, $ability);
+		return $vision;
+	}
+
+	/** GET /api/visions/{slug}/roles — members incl. the implicit owner */
+	public static function listRoles(string $slug): void
+	{
+		header('Content-Type: application/json');
+		global $db;
+		$vision = self::roleVisionOr404($db, $slug, 'view');
+
+		$out = [];
+		// Implicit owner first
+		$ow = $db->prepare("SELECT id, name, email FROM users WHERE id = ? LIMIT 1");
+		$ow->execute([(int)$vision['user_id']]);
+		if ($o = $ow->fetch(PDO::FETCH_ASSOC)) {
+			$out[] = ['id'=>null, 'user_id'=>(int)$o['id'], 'name'=>$o['name'],
+					  'email'=>$o['email'], 'role'=>'owner'];
+		}
+		$st = $db->prepare("
+			SELECT vr.id, vr.user_id, vr.role, u.name, u.email
+			  FROM vision_roles vr
+			  JOIN users u ON u.id = vr.user_id
+			 WHERE vr.vision_id = ?
+			 ORDER BY FIELD(vr.role,'co_owner','delegate','editor','viewer'), u.name
+		");
+		$st->execute([(int)$vision['id']]);
+		foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) {
+			$out[] = ['id'=>(int)$r['id'], 'user_id'=>(int)$r['user_id'],
+					  'name'=>$r['name'], 'email'=>$r['email'], 'role'=>$r['role']];
+		}
+		// Tell the client whether the current user may manage this list
+		echo json_encode([
+			'members'   => $out,
+			'can_manage'=> vision_can($db, $vision, 'manage'),
+		]);
+	}
+
+	/** POST /api/visions/{slug}/roles/add  body: email, role */
+	public static function addRole(string $slug): void
+	{
+		header('Content-Type: application/json');
+		global $db;
+		$vision = self::roleVisionOr404($db, $slug, 'manage');
+
+		$email = trim((string)($_POST['email'] ?? ''));
+		$role  = (string)($_POST['role'] ?? 'viewer');
+		$allowed = ['co_owner','editor','viewer','delegate'];
+		if (!in_array($role, $allowed, true)) $role = 'viewer';
+		if ($email === '') { http_response_code(422); echo json_encode(['error'=>'Email required']); return; }
+
+		$us = $db->prepare("SELECT id, name, email FROM users WHERE email = ? LIMIT 1");
+		$us->execute([$email]);
+		$user = $us->fetch(PDO::FETCH_ASSOC);
+		if (!$user) { http_response_code(404); echo json_encode(['error'=>'No user with that email']); return; }
+		if ((int)$user['id'] === (int)$vision['user_id']) {
+			http_response_code(422); echo json_encode(['error'=>'That user is already the owner']); return;
+		}
+
+		$ins = $db->prepare("INSERT INTO vision_roles (vision_id, user_id, role)
+							 VALUES (?,?,?)
+							 ON DUPLICATE KEY UPDATE role = VALUES(role)");
+		$ins->execute([(int)$vision['id'], (int)$user['id'], $role]);
+
+		echo json_encode(['success'=>true, 'user'=>[
+			'user_id'=>(int)$user['id'], 'name'=>$user['name'], 'email'=>$user['email'], 'role'=>$role,
+		]]);
+	}
+
+	/** POST /api/visions/{slug}/roles/{roleId}  body: role */
+	public static function updateRole(string $slug, string $roleId): void
+	{
+		header('Content-Type: application/json');
+		global $db;
+		$vision = self::roleVisionOr404($db, $slug, 'manage');
+
+		$role = (string)($_POST['role'] ?? '');
+		$allowed = ['co_owner','editor','viewer','delegate'];
+		if (!in_array($role, $allowed, true)) {
+			http_response_code(422); echo json_encode(['error'=>'Invalid role']); return;
+		}
+		$st = $db->prepare("UPDATE vision_roles SET role=? WHERE id=? AND vision_id=?");
+		$st->execute([$role, (int)$roleId, (int)$vision['id']]);
+		echo json_encode(['success'=>true]);
+	}
+
+	/** DELETE (or POST) /api/visions/{slug}/roles/{roleId}/delete */
+	public static function removeRole(string $slug, string $roleId): void
+	{
+		header('Content-Type: application/json');
+		global $db;
+		$vision = self::roleVisionOr404($db, $slug, 'manage');
+
+		$db->prepare("DELETE FROM vision_roles WHERE id=? AND vision_id=?")
+		   ->execute([(int)$roleId, (int)$vision['id']]);
 		echo json_encode(['success'=>true]);
 	}
 

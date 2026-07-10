@@ -27,7 +27,7 @@ class canvas_controller
     {
         global $db;
         $board = mood_model::get($db, $slug);
-        api_require_owner($board);
+        api_require_mood($db, $board, 'view');
         $items = mood_canvas_model::listItems($db, (int)$board['id']);
         header('Content-Type: application/json');
         echo json_encode($items);
@@ -46,7 +46,7 @@ class canvas_controller
     {
         global $db;
         $board = mood_model::get($db, $slug);
-        api_require_owner($board);
+        api_require_mood($db, $board, 'edit');
         $data = json_decode(file_get_contents('php://input'), true) ?: [];
         $kind = isset($data['kind']) ? (string)$data['kind'] : '';
         $x    = isset($data['x']) ? (int)$data['x'] : 0;
@@ -71,7 +71,7 @@ class canvas_controller
     {
         global $db;
         $board = mood_model::get($db, $slug);
-        api_require_owner($board);
+        api_require_mood($db, $board, 'edit');
         $fields = json_decode(file_get_contents('php://input'), true) ?: [];
         mood_canvas_model::updateItem($db, $itemId, $fields);
         header('Content-Type: application/json');
@@ -89,7 +89,7 @@ class canvas_controller
 	public static function deleteItem($slug, $id) {
 		global $db;
 		$board = mood_model::get($db, $slug);
-		api_require_owner($board);
+		api_require_mood($db, $board, 'edit');
 		mood_canvas_model::deleteItem($db, (int)$id);
 		header('Content-Type: application/json');
 		echo json_encode(['success' => true]);
@@ -109,7 +109,7 @@ class canvas_controller
     {
         global $db;
         $board = mood_model::get($db, $slug);
-        api_require_owner($board);
+        api_require_mood($db, $board, 'edit');
         $payload = json_decode(file_get_contents('php://input'), true) ?: [];
         $moves = isset($payload['moves']) && is_array($payload['moves']) ? $payload['moves'] : [];
         mood_canvas_model::bulkUpdate($db, (int)$board['id'], $moves);
@@ -128,7 +128,7 @@ class canvas_controller
 	public static function deleteArrow($slug, $id) {
 		global $db;
 		$board = mood_model::get($db, $slug);
-		api_require_owner($board);
+		api_require_mood($db, $board, 'edit');
 		mood_canvas_model::deleteItem($db, (int)$id);
 		header('Content-Type: application/json');
 		echo json_encode(['success' => true]);
@@ -139,7 +139,7 @@ class canvas_controller
 	{
 		global $db;
 		$board = mood_model::get($db, $slug);
-		api_require_owner($board);
+		api_require_mood($db, $board, 'edit');
 
 		$data = json_decode(file_get_contents('php://input'), true) ?: [];
 		$from = (int)($data['from_item_id'] ?? 0);

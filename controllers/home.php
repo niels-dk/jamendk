@@ -217,9 +217,29 @@ class home_controller
 		$table = $tableMap[$type];
 
 		// WHERE by filter. $userId <= 0 means "all users" (site admin view).
+		// Visions include boards shared with me via vision_roles; moods inherit
+		// the parent vision's sharing (either linkage direction).
 		if ($userId > 0) {
-			$where  = "$table.user_id = ?";
-			$params = [$userId];
+			if ($type === 'vision') {
+				$where  = "($table.user_id = ? OR EXISTS (
+							  SELECT 1 FROM vision_roles vr
+							   WHERE vr.vision_id = $table.id AND vr.user_id = ?))";
+				$params = [$userId, $userId];
+			} elseif ($type === 'mood') {
+				$where  = "($table.user_id = ? OR EXISTS (
+							  SELECT 1 FROM vision_roles vr
+							  JOIN visions v2
+								ON (v2.id = $table.vision_id
+									OR v2.mood_id COLLATE utf8mb4_general_ci
+									   = $table.slug COLLATE utf8mb4_general_ci)
+							   WHERE vr.vision_id = v2.id
+								 AND vr.user_id = ?
+								 AND v2.deleted_at IS NULL))";
+				$params = [$userId, $userId];
+			} else {
+				$where  = "$table.user_id = ?";
+				$params = [$userId];
+			}
 		} else {
 			$where  = "1=1";
 			$params = [];

@@ -43,7 +43,7 @@ class mood_controller
         require_login();
         global $db;
         $board = mood_model::get($db, $slug);
-        require_owner($board);
+        require_mood($db, $board, 'view');
         $boardType = 'mood';
         $pageTitle = htmlspecialchars($board['title'] ?? 'Untitled Mood Board');
 
@@ -77,7 +77,7 @@ class mood_controller
     {
         global $db;
         $board = mood_model::get($db, $slug);
-        require_owner($board);
+        require_mood($db, $board, 'edit');
         $boardType = 'mood';
         $pageTitle = htmlspecialchars($board['title'] ?? 'Edit Mood Board');
         ob_start();
@@ -93,7 +93,7 @@ class mood_controller
 
 		// Fetch the board by slug and verify ownership.
 		$board = mood_model::get($db, $slug);
-		require_owner($board);
+		require_mood($db, $board, 'edit');
 
 		// On POST, update the title and description then redirect back to the
 		// mood board info page.
@@ -134,11 +134,11 @@ class mood_controller
         $id    = (int)($_POST['mood_id'] ?? 0);
         if (!$id) { http_response_code(400); echo 'Missing ID'; return; }
 
-        // Ownership check before any write
-        $own = $db->prepare("SELECT user_id, slug FROM mood_boards WHERE id = ? LIMIT 1");
+        // Permission check before any write (owner, shared editor, or admin)
+        $own = $db->prepare("SELECT * FROM mood_boards WHERE id = ? LIMIT 1");
         $own->execute([$id]);
         $row = $own->fetch(PDO::FETCH_ASSOC);
-        if (!$row || (int)$row['user_id'] !== (int)$currentUserId) {
+        if (!$row || !mood_can($db, $row, 'edit')) {
             http_response_code(404); echo 'Not found'; return;
         }
 
@@ -157,7 +157,7 @@ class mood_controller
     {
         global $db;
         $board = mood_model::get($db, $slug);
-        require_owner($board);
+        require_mood($db, $board, 'manage');
         mood_model::setArchived($db, (int)$board['id'], true);
         header('Location: /dashboard/moods');
         exit;
@@ -167,7 +167,7 @@ class mood_controller
     {
         global $db;
         $board = mood_model::get($db, $slug);
-        require_owner($board);
+        require_mood($db, $board, 'manage');
         mood_model::setArchived($db, (int)$board['id'], false);
         header('Location: /dashboard/moods/archived');
         exit;
@@ -178,7 +178,7 @@ class mood_controller
     {
         global $db;
         $board = mood_model::get($db, $slug);
-        require_owner($board);
+        require_mood($db, $board, 'manage');
         mood_model::softDelete($db, (int)$board['id']);
         header('Location: /dashboard/moods');
         exit;
@@ -189,11 +189,11 @@ class mood_controller
     {
         require_login();
         global $db, $currentUserId;
-        // fetch even if deleted
-        $st = $db->prepare("SELECT id, user_id FROM mood_boards WHERE slug=? LIMIT 1");
+        // fetch even if deleted; restore is lifecycle → owner/co-owner/admin only
+        $st = $db->prepare("SELECT * FROM mood_boards WHERE slug=? LIMIT 1");
         $st->execute([$slug]);
         $row = $st->fetch(PDO::FETCH_ASSOC);
-        if (!$row || (int)$row['user_id'] !== (int)$currentUserId) {
+        if (!$row || !mood_can($db, $row, 'manage')) {
             http_response_code(404); echo 'Not found'; return;
         }
         mood_model::restore($db, (int)$row['id']);
@@ -210,7 +210,7 @@ class mood_controller
 	{
 		global $db;
 		$board = mood_model::get($db, $slug);
-		require_owner($board);
+		require_mood($db, $board, 'view');
 		$boardType = 'mood';
 		// Append “Canvas” to the page title
 		$pageTitle = htmlspecialchars(($board['title'] ?? '') . ' Canvas');

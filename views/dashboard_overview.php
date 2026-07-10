@@ -71,6 +71,16 @@ function dt($s){ return $s ? date('M j, Y', strtotime($s)) : ''; }
                     ✨ Promoted
                   </span>
                 <?php endif; ?>
+                <?php global $currentUserId;
+                      if (!empty($row['user_id']) && (int)$row['user_id'] !== (int)$currentUserId): ?>
+                  <span title="Shared with you (or another user's board, if you're admin)"
+                        style="display:inline-block;margin-left:.4rem;padding:.05rem .4rem;
+                               border-radius:999px;background:rgba(126,217,154,.14);
+                               border:1px solid rgba(126,217,154,.4);color:#7ed99a;
+                               font-size:.7rem;vertical-align:middle;font-weight:600;">
+                    🤝 Shared
+                  </span>
+                <?php endif; ?>
               </h3>
 
               <?php if ($type === 'trip'): ?>

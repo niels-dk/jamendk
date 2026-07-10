@@ -85,10 +85,83 @@ $anchors = $anchors ?? [];
     <?php if ($updated): ?> · Updated <?= e($updated) ?><?php endif; ?>
   </div>
 
+  <?php
+    global $db, $currentUserId;
+    $myRole      = function_exists('vision_role') ? vision_role($db, $vision) : '';
+    $isCollab    = $myRole !== '' && (int)$vision['user_id'] !== (int)$currentUserId && !is_admin();
+  ?>
   <div class="btn-group">
-    <?php global $db; if (function_exists('vision_can') && vision_can($db, $vision, 'edit')): ?>
+    <?php if (function_exists('vision_can') && vision_can($db, $vision, 'edit')): ?>
       <a class="btn primary" href="/visions/<?= e($vision['slug']) ?>/edit">Edit Vision</a>
+    <?php endif; ?>
+    <?php if ($isCollab): ?>
+      <button type="button" class="btn" id="btnHandoff"
+              title="Tell the owner you're done — they get a note on their next visit">
+        📤 Send back to owner
+      </button>
     <?php endif; ?>
     <a class="btn" href="/dashboard/vision">Back to dashboard</a>
   </div>
+
+  <?php if ($isCollab): ?>
+    <div id="handoffModal" hidden
+         style="position:fixed;inset:0;z-index:5000;display:flex;align-items:center;justify-content:center;">
+      <div style="position:absolute;inset:0;background:rgba(0,0,0,.55);" data-close></div>
+      <div style="position:relative;max-width:440px;width:calc(100% - 2rem);
+                  background:#15161A;border:1px solid #2b3346;border-radius:14px;
+                  box-shadow:0 18px 50px rgba(0,0,0,.5);padding:1.2rem 1.3rem;">
+        <h3 style="margin:0 0 .3rem;">Send back to owner</h3>
+        <p style="margin:0 0 .8rem;opacity:.65;font-size:.9em;">
+          The owner will see your note the next time they open their dashboard.
+        </p>
+        <textarea id="handoffNote" rows="4" placeholder="Optional note — what did you do, what's left, anything to look at…"
+                  style="width:100%;box-sizing:border-box;background:#0f1014;border:1px solid #2b3346;
+                         color:#ddd;border-radius:8px;padding:.6rem .7rem;resize:vertical;"></textarea>
+        <div style="display:flex;align-items:center;gap:.6rem;margin-top:.8rem;">
+          <button type="button" class="btn primary" id="handoffSend">Send</button>
+          <button type="button" class="btn" data-close>Cancel</button>
+          <span id="handoffStatus" style="opacity:.6;font-size:.85em;"></span>
+        </div>
+      </div>
+    </div>
+    <script>
+    (() => {
+      const modal  = document.getElementById('handoffModal');
+      const openB  = document.getElementById('btnHandoff');
+      const sendB  = document.getElementById('handoffSend');
+      const note   = document.getElementById('handoffNote');
+      const status = document.getElementById('handoffStatus');
+      if (!modal || !openB) return;
+      openB.addEventListener('click', () => { modal.hidden = false; note.focus(); });
+      modal.addEventListener('click', e => {
+        if (e.target.closest('[data-close]')) modal.hidden = true;
+      });
+      document.addEventListener('keydown', e => { if (e.key === 'Escape') modal.hidden = true; });
+      sendB.addEventListener('click', async () => {
+        status.textContent = 'Sending…';
+        sendB.disabled = true;
+        try {
+          const p = new URLSearchParams();
+          p.set('note', note.value.trim());
+          const res = await fetch(`/api/visions/<?= e($vision['slug']) ?>/handoff`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: p.toString()
+          });
+          const j = await res.json();
+          if (j && j.success) {
+            status.textContent = '✅ Sent';
+            setTimeout(() => { modal.hidden = true; status.textContent = ''; note.value = ''; sendB.disabled = false; }, 900);
+          } else {
+            status.textContent = '⚠ ' + (j?.error || 'Failed');
+            sendB.disabled = false;
+          }
+        } catch {
+          status.textContent = '⚠ Network error';
+          sendB.disabled = false;
+        }
+      });
+    })();
+    </script>
+  <?php endif; ?>
 </div>

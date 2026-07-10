@@ -228,12 +228,17 @@ class home_controller
 			try {
 				if ($type === 'vision') {
 					if ($filter === 'shared-with-me') {
-						$sql = "SELECT v.* FROM visions v
+						$sql = "SELECT v.*, vr.role AS my_shared_role FROM visions v
 								  JOIN vision_roles vr ON vr.vision_id = v.id AND vr.user_id = ?
 								 WHERE v.archived = 0 AND v.deleted_at IS NULL
 								 ORDER BY v.updated_at DESC";
 					} else {
-						$sql = "SELECT v.* FROM visions v
+						$sql = "SELECT v.*,
+								   (SELECT GROUP_CONCAT(u2.name ORDER BY u2.name SEPARATOR ', ')
+									  FROM vision_roles vr2
+									  JOIN users u2 ON u2.id = vr2.user_id
+									 WHERE vr2.vision_id = v.id) AS shared_with_names
+								  FROM visions v
 								 WHERE v.user_id = ?
 								   AND EXISTS (SELECT 1 FROM vision_roles vr WHERE vr.vision_id = v.id)
 								   AND v.archived = 0 AND v.deleted_at IS NULL
@@ -241,7 +246,7 @@ class home_controller
 					}
 				} elseif ($type === 'mood') {
 					if ($filter === 'shared-with-me') {
-						$sql = "SELECT DISTINCT m.* FROM mood_boards m
+						$sql = "SELECT DISTINCT m.*, vr.role AS my_shared_role FROM mood_boards m
 								  JOIN visions v2
 									ON (v2.id = m.vision_id
 										OR v2.mood_id COLLATE utf8mb4_general_ci
@@ -358,11 +363,34 @@ class home_controller
 		// Build SELECT — for dreams, attach a derived is_promoted flag so the
 		// dashboard cards can show a "Promoted ✓" badge without an N+1 query.
 		$select = "`$table`.*";
+		$selectParams = []; // positional params bind in SQL order: SELECT first
 		if ($type === 'dream') {
 			$select .= ", (SELECT 1 FROM visions v
 							WHERE v.dream_id = $table.id
 							  AND v.deleted_at IS NULL
 							LIMIT 1) AS is_promoted";
+		}
+		// Sharing context for the cards: my role on boards shared with me,
+		// and the collaborator names on boards I've shared out.
+		if ($userId > 0 && $type === 'vision') {
+			$select .= ", (SELECT vr.role FROM vision_roles vr
+							WHERE vr.vision_id = $table.id AND vr.user_id = ?
+							LIMIT 1) AS my_shared_role";
+			$selectParams[] = $userId;
+			$select .= ", (SELECT GROUP_CONCAT(u2.name ORDER BY u2.name SEPARATOR ', ')
+							 FROM vision_roles vr2
+							 JOIN users u2 ON u2.id = vr2.user_id
+							WHERE vr2.vision_id = $table.id) AS shared_with_names";
+		} elseif ($userId > 0 && $type === 'mood') {
+			$select .= ", (SELECT vr.role FROM vision_roles vr
+							 JOIN visions v3 ON vr.vision_id = v3.id
+							WHERE (v3.id = $table.vision_id
+								   OR v3.mood_id COLLATE utf8mb4_general_ci
+									  = $table.slug COLLATE utf8mb4_general_ci)
+							  AND v3.deleted_at IS NULL
+							  AND vr.user_id = ?
+							LIMIT 1) AS my_shared_role";
+			$selectParams[] = $userId;
 		}
 
 		$sql = "SELECT $select FROM `$table` WHERE $where ORDER BY $orderBy";
@@ -371,7 +399,7 @@ class home_controller
 		}
 
 		$stmt = $db->prepare($sql);
-		$stmt->execute($params);
+		$stmt->execute(array_merge($selectParams, $params));
 		return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
 	}
 
@@ -491,6 +519,25 @@ class home_controller
 			$ns->execute([(int)$currentUserId, (int)$currentUserId]);
 			$newShares = $ns->fetchAll(PDO::FETCH_ASSOC) ?: [];
 		} catch (\Throwable $e) { /* column/table not migrated yet */ }
+
+		// Returned work: handoffs to me that I haven't checked off yet.
+		// These persist in the notice until each one is acknowledged.
+		$handoffs = [];
+		try {
+			$hs = $db->prepare("
+				SELECT h.id, h.note, h.created_at,
+					   v.slug, v.title,
+					   u.name AS from_name
+				  FROM vision_handoffs h
+				  JOIN visions v ON v.id = h.vision_id AND v.deleted_at IS NULL
+				  JOIN users u   ON u.id = h.from_user_id
+				 WHERE h.to_user_id = ? AND h.acknowledged_at IS NULL
+				 ORDER BY h.created_at DESC
+				 LIMIT 30
+			");
+			$hs->execute([(int)$currentUserId]);
+			$handoffs = $hs->fetchAll(PDO::FETCH_ASSOC) ?: [];
+		} catch (\Throwable $e) { /* table not migrated yet */ }
 
 		// View vars
 		$pageTitle  = 'Dashboard';

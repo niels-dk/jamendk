@@ -102,6 +102,9 @@ function route(string $uri): void
                                => ['home', 'dashboard_type_filter'],
         // Mark "new shares" notice as seen
         '/api/shares/seen'     => ['user', 'sharesSeen'],
+        // Handoffs: collaborator sends a board back to its owner
+        '/api/visions/([A-Za-z0-9]{6,16})/handoff' => ['vision', 'handoff'],
+        '/api/handoffs/([0-9]+)/ack'               => ['vision', 'ackHandoff'],
 
         '/dashboard/(dreams|visions|moods|trips)/(archived|trash)'
                                => ['home', 'dashboard_type_filter'],

@@ -1095,4 +1095,50 @@ class vision_controller
 		echo json_encode(['success'=>true]);
 	}
 
+	/* ──────────────────────  Handoffs ("send back to owner")  ────────────────── */
+
+	/** POST /api/visions/{slug}/handoff  body: note (optional) */
+	public static function handoff(string $slug): void
+	{
+		header('Content-Type: application/json');
+		global $db, $currentUserId;
+		$vision = vision_model::get($db, $slug);
+		api_require_vision($db, $vision, 'view');
+
+		// Only collaborators hand back — the owner has nobody to send to.
+		if ((int)$vision['user_id'] === (int)$currentUserId) {
+			http_response_code(422);
+			echo json_encode(['error' => 'You own this board — nothing to hand back.']);
+			return;
+		}
+
+		$note = trim((string)($_POST['note'] ?? ''));
+		if (mb_strlen($note) > 2000) $note = mb_substr($note, 0, 2000);
+
+		$db->prepare("INSERT INTO vision_handoffs (vision_id, from_user_id, to_user_id, note)
+					  VALUES (?,?,?,?)")
+		   ->execute([(int)$vision['id'], (int)$currentUserId, (int)$vision['user_id'], $note ?: null]);
+		echo json_encode(['success' => true]);
+	}
+
+	/** POST /api/handoffs/{id}/ack — recipient checks a returned item off. */
+	public static function ackHandoff(string $handoffId): void
+	{
+		header('Content-Type: application/json');
+		api_require_login();
+		global $db, $currentUserId;
+
+		$st = $db->prepare("SELECT id, to_user_id FROM vision_handoffs WHERE id = ? LIMIT 1");
+		$st->execute([(int)$handoffId]);
+		$h = $st->fetch(PDO::FETCH_ASSOC);
+		if (!$h || ((int)$h['to_user_id'] !== (int)$currentUserId && !is_admin())) {
+			http_response_code(404);
+			echo json_encode(['error' => 'Not found']);
+			return;
+		}
+		$db->prepare("UPDATE vision_handoffs SET acknowledged_at = NOW() WHERE id = ?")
+		   ->execute([(int)$h['id']]);
+		echo json_encode(['success' => true]);
+	}
+
 }

@@ -158,13 +158,23 @@ $currentTypeLabel = $boardLabels[$boardType] ?? 'Boards';
             </span>
           <?php endif; ?>
           <?php global $currentUserId;
+                $roleLbl = !empty($d['my_shared_role'])
+                  ? ' · ' . ucfirst(str_replace('_', '-', $d['my_shared_role'])) : '';
                 if (!empty($d['user_id']) && (int)$d['user_id'] !== (int)$currentUserId): ?>
             <span title="Shared with you (or another user's board, if you're admin)"
                   style="display:inline-block;margin-left:.4rem;padding:.05rem .4rem;
                          border-radius:999px;background:rgba(126,217,154,.14);
                          border:1px solid rgba(126,217,154,.4);color:#7ed99a;
                          font-size:.7rem;vertical-align:middle;font-weight:600;">
-              🤝 Shared
+              🤝 Shared<?= htmlspecialchars($roleLbl) ?>
+            </span>
+          <?php elseif (!empty($d['shared_with_names'])): ?>
+            <span title="You shared this board with: <?= htmlspecialchars($d['shared_with_names']) ?>"
+                  style="display:inline-block;margin-left:.4rem;padding:.05rem .4rem;
+                         border-radius:999px;background:rgba(58,118,210,.14);
+                         border:1px solid rgba(58,118,210,.4);color:#8fb1d8;
+                         font-size:.7rem;vertical-align:middle;font-weight:600;">
+              📤 Shared with <?= htmlspecialchars($d['shared_with_names']) ?>
             </span>
           <?php endif; ?>
         </h3>

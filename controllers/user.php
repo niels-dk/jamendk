@@ -87,27 +87,22 @@ class user_controller
                 $action = $_POST['action'] ?? '';
 
                 if ($action === 'profile') {
-                    $name  = trim($_POST['name']  ?? '');
-                    $email = trim($_POST['email'] ?? '');
+                    // Email stays read-only until we can send verification mail.
+                    $name    = trim($_POST['name']         ?? '');
+                    $company = trim($_POST['company']      ?? '');
+                    $org     = trim($_POST['organisation'] ?? '');
                     if ($name === '') {
                         $error = 'Name cannot be empty.';
-                    } elseif ($email === '') {
-                        $error = 'Email cannot be empty.';
-                    } elseif ($email !== $user['email']
-                              && $email !== 'admin'
-                              && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
-                        $error = 'That email address doesn\'t look right.';
                     } else {
                         try {
-                            $db->prepare('UPDATE users SET name = ?, email = ? WHERE id = ?')
-                               ->execute([$name, $email, (int)$user['id']]);
-                            // Keep the session copy in sync
-                            $_SESSION['user']['name']  = $name;
-                            $_SESSION['user']['email'] = $email;
-                            $user['name'] = $name; $user['email'] = $email;
+                            $db->prepare('UPDATE users SET name = ?, company = ?, organisation = ? WHERE id = ?')
+                               ->execute([$name, $company ?: null, $org ?: null, (int)$user['id']]);
+                            $_SESSION['user']['name'] = $name;
+                            $user['name'] = $name;
+                            $user['company'] = $company; $user['organisation'] = $org;
                             $notice = 'Profile updated.';
                         } catch (\Throwable $e) {
-                            $error = 'That email is already taken by another account.';
+                            $error = 'Could not save — has the profile-fields migration been run?';
                         }
                     }
                 } elseif ($action === 'password') {

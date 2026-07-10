@@ -13,14 +13,9 @@ class admin_controller
         require_admin();
         global $db;
 
-        // last_login_at is optional (older installs) — degrade gracefully
-        $hasLastLogin = true;
-        try { $db->query("SELECT last_login_at FROM users LIMIT 1"); }
-        catch (\Throwable $e) { $hasLastLogin = false; }
-        $lastLoginCol = $hasLastLogin ? 'u.last_login_at,' : 'NULL AS last_login_at,';
-
+        // u.* keeps this robust as profile columns get added over time
         $sql = "
-            SELECT u.id, u.name, u.email, u.role, u.created_at, $lastLoginCol
+            SELECT u.*,
                    (SELECT COUNT(*) FROM dream_boards d WHERE d.user_id = u.id AND d.deleted_at IS NULL) AS dreams,
                    (SELECT COUNT(*) FROM visions v      WHERE v.user_id = u.id AND v.deleted_at IS NULL) AS visions,
                    (SELECT COUNT(*) FROM mood_boards m  WHERE m.user_id = u.id AND m.deleted_at IS NULL) AS moods

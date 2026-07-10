@@ -39,7 +39,21 @@ function ac_e($s){ return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
       </label>
       <label style="display:flex;flex-direction:column;gap:.3rem;">
         <span style="font-size:.85rem;opacity:.8;">Email</span>
-        <input type="text" name="email" required value="<?= ac_e($user['email']) ?>"
+        <input type="text" value="<?= ac_e($user['email']) ?>" disabled
+               title="Email changes will be possible once verification emails are in place"
+               style="padding:.55rem .8rem;border:1px solid #232838;background:#101116;
+                      color:#8593a6;border-radius:8px;cursor:not-allowed;">
+        <span style="font-size:.75rem;opacity:.5;">Email can't be changed yet — verification mail is coming later.</span>
+      </label>
+      <label style="display:flex;flex-direction:column;gap:.3rem;">
+        <span style="font-size:.85rem;opacity:.8;">Company <span style="opacity:.5;">(optional)</span></span>
+        <input type="text" name="company" value="<?= ac_e($user['company'] ?? '') ?>"
+               style="padding:.55rem .8rem;border:1px solid #2b3346;background:#15161A;
+                      color:#ddd;border-radius:8px;">
+      </label>
+      <label style="display:flex;flex-direction:column;gap:.3rem;">
+        <span style="font-size:.85rem;opacity:.8;">Organisation <span style="opacity:.5;">(optional)</span></span>
+        <input type="text" name="organisation" value="<?= ac_e($user['organisation'] ?? '') ?>"
                style="padding:.55rem .8rem;border:1px solid #2b3346;background:#15161A;
                       color:#ddd;border-radius:8px;">
       </label>

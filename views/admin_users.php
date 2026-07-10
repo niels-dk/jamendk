@@ -12,57 +12,87 @@ global $currentUserId;
               padding:.55rem .8rem;border:1px solid #2b3346;background:#15161A;
               color:#ddd;border-radius:8px;">
 
+<style>
+  #adminUsers { width:100%; border-collapse:collapse; min-width:760px; }
+  #adminUsers thead th {
+    text-align:left; padding:.7rem .9rem; border-bottom:1px solid #2b3346;
+    font-size:.8rem; text-transform:uppercase; letter-spacing:.05em; opacity:.7;
+    white-space:nowrap;
+  }
+  #adminUsers tbody td {
+    padding:.65rem .9rem; border-bottom:1px solid #1e2230; vertical-align:middle;
+  }
+  #adminUsers .u-name { font-weight:600; color:#eaeaea; white-space:nowrap; }
+  #adminUsers .u-mail {
+    font-size:.82em; opacity:.6; max-width:260px;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  #adminUsers .u-extra { font-size:.78em; opacity:.5; white-space:nowrap; }
+  #adminUsers .u-boards { white-space:nowrap; font-size:.85em; opacity:.85; }
+  #adminUsers .u-date { white-space:nowrap; font-size:.85em; opacity:.7; }
+  #adminUsers select.au-role {
+    background:#15161A; border:1px solid #2b3346; color:#ddd;
+    padding:.35rem .5rem; border-radius:6px; min-width:88px;
+  }
+  #adminUsers .u-actions { white-space:nowrap; }
+  #adminUsers .u-actions .btn, #adminUsers .u-actions a.btn {
+    display:inline-block; padding:.3rem .6rem; font-size:.82em;
+    margin-right:.25rem; text-decoration:none;
+  }
+</style>
+
 <div class="card" style="padding:0;overflow-x:auto;">
-  <table id="adminUsers" style="width:100%;border-collapse:collapse;min-width:860px;">
+  <table id="adminUsers">
     <thead>
-      <tr style="text-align:left;border-bottom:1px solid #2b3346;">
-        <th style="padding:.7rem .9rem;">#</th>
-        <th style="padding:.7rem .9rem;">Name</th>
-        <th style="padding:.7rem .9rem;">Email</th>
-        <th style="padding:.7rem .9rem;">Boards</th>
-        <th style="padding:.7rem .9rem;">Role</th>
-        <th style="padding:.7rem .9rem;">Joined</th>
-        <th style="padding:.7rem .9rem;">Last login</th>
-        <th style="padding:.7rem .9rem;">Actions</th>
+      <tr>
+        <th>#</th>
+        <th>User</th>
+        <th>Boards</th>
+        <th>Role</th>
+        <th>Joined</th>
+        <th>Last login</th>
+        <th>Actions</th>
       </tr>
     </thead>
     <tbody>
       <?php foreach ($users as $u): ?>
-        <?php $isSelf = (int)$u['id'] === (int)$currentUserId; ?>
-        <tr data-id="<?= (int)$u['id'] ?>" style="border-bottom:1px solid #1e2230;">
-          <td style="padding:.6rem .9rem;opacity:.6;font-family:monospace;"><?= (int)$u['id'] ?></td>
-          <td style="padding:.6rem .9rem;font-weight:600;">
-            <?= au_e($u['name'] ?: '(no name)') ?>
-            <?php if ($isSelf): ?><span style="opacity:.55;font-weight:400;"> (you)</span><?php endif; ?>
+        <?php
+          $isSelf = (int)$u['id'] === (int)$currentUserId;
+          $extra  = trim(implode(' · ', array_filter([
+            $u['company'] ?? '', $u['organisation'] ?? ''
+          ])));
+        ?>
+        <tr data-id="<?= (int)$u['id'] ?>">
+          <td style="opacity:.6;font-family:monospace;"><?= (int)$u['id'] ?></td>
+          <td>
+            <div class="u-name">
+              <?= au_e($u['name'] ?: '(no name)') ?>
+              <?php if ($isSelf): ?><span style="opacity:.55;font-weight:400;">(you)</span><?php endif; ?>
+            </div>
+            <div class="u-mail" title="<?= au_e($u['email']) ?>"><?= au_e($u['email']) ?></div>
+            <?php if ($extra !== ''): ?>
+              <div class="u-extra"><?= au_e($extra) ?></div>
+            <?php endif; ?>
           </td>
-          <td style="padding:.6rem .9rem;word-break:break-all;"><?= au_e($u['email']) ?></td>
-          <td style="padding:.6rem .9rem;font-size:.85em;opacity:.8;">
-            🔮 <?= (int)$u['dreams'] ?> · 👁️ <?= (int)$u['visions'] ?> · 🎭 <?= (int)$u['moods'] ?>
+          <td class="u-boards" title="Dreams · Visions · Moods">
+            🔮 <?= (int)$u['dreams'] ?> &nbsp; 👁️ <?= (int)$u['visions'] ?> &nbsp; 🎭 <?= (int)$u['moods'] ?>
           </td>
-          <td style="padding:.6rem .9rem;">
-            <select class="au-role" <?= $isSelf ? 'disabled title="You can\'t change your own role"' : '' ?>
-                    style="background:#15161A;border:1px solid #2b3346;color:#ddd;
-                           padding:.3rem .5rem;border-radius:6px;">
+          <td>
+            <select class="au-role" <?= $isSelf ? 'disabled title="You can\'t change your own role"' : '' ?>>
               <option value="user"  <?= $u['role']==='user'  ? 'selected':''; ?>>User</option>
               <option value="admin" <?= $u['role']==='admin' ? 'selected':''; ?>>Admin</option>
             </select>
           </td>
-          <td style="padding:.6rem .9rem;font-size:.85em;opacity:.7;">
-            <?= $u['created_at'] ? date('Y-m-d', strtotime($u['created_at'])) : '' ?>
-          </td>
-          <td style="padding:.6rem .9rem;font-size:.85em;opacity:.7;white-space:nowrap;">
-            <?= !empty($u['last_login_at']) ? date('Y-m-d H:i', strtotime($u['last_login_at'])) : '—' ?>
-          </td>
-          <td style="padding:.6rem .9rem;white-space:nowrap;">
+          <td class="u-date"><?= $u['created_at'] ? date('Y-m-d', strtotime($u['created_at'])) : '' ?></td>
+          <td class="u-date"><?= !empty($u['last_login_at']) ? date('Y-m-d H:i', strtotime($u['last_login_at'])) : '—' ?></td>
+          <td class="u-actions">
             <?php if (!$isSelf): ?>
               <a class="btn" href="/admin/users/<?= (int)$u['id'] ?>/impersonate"
-                 title="Browse the site as this user (support). Use the Return button to come back."
-                 style="padding:.3rem .6rem;font-size:.85em;text-decoration:none;">👁 View as</a>
+                 title="Browse the site as this user (support). Use the Return button to come back.">👁 View as</a>
             <?php endif; ?>
-            <button type="button" class="btn au-pass" style="padding:.3rem .6rem;font-size:.85em;">Reset password</button>
+            <button type="button" class="btn au-pass" title="Set a new password for this account">Reset password</button>
             <?php if (!$isSelf): ?>
-              <button type="button" class="btn au-del"
-                      style="padding:.3rem .6rem;font-size:.85em;color:#f08792;">Delete</button>
+              <button type="button" class="btn au-del" style="color:#f08792;">Delete</button>
             <?php endif; ?>
           </td>
         </tr>
@@ -83,9 +113,9 @@ global $currentUserId;
   search?.addEventListener('input', () => {
     const q = search.value.toLowerCase().trim();
     table.querySelectorAll('tbody tr').forEach(tr => {
-      const name  = tr.children[1]?.textContent?.toLowerCase() || '';
-      const email = tr.children[2]?.textContent?.toLowerCase() || '';
-      tr.style.display = (!q || name.includes(q) || email.includes(q)) ? '' : 'none';
+      // The User cell holds name + email + company/organisation
+      const who = tr.children[1]?.textContent?.toLowerCase() || '';
+      tr.style.display = (!q || who.includes(q)) ? '' : 'none';
     });
   });
 
@@ -127,7 +157,7 @@ global $currentUserId;
       return;
     }
     if (e.target.closest('.au-del')) {
-      const email = row.children[2]?.textContent?.trim() || 'this user';
+      const email = row.querySelector('.u-mail')?.textContent?.trim() || 'this user';
       if (!confirm(`Delete ${email}?\n\nTheir boards stay in the database but become orphaned. This cannot be undone.`)) return;
       if (await post(`/admin/users/${id}/delete`, {})) row.remove();
     }

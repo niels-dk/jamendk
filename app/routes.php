@@ -181,6 +181,7 @@ function route(string $uri): void
         '/api/teams/create'                        => ['team', 'create'],
         '/api/teams/([0-9]+)/rename'               => ['team', 'rename'],
         '/api/teams/([0-9]+)/delete'               => ['team', 'deleteTeam'],
+        '/api/teams/([0-9]+)/leave'                => ['team', 'leave'],
         '/api/teams/([0-9]+)/members/add'          => ['team', 'addMember'],
         '/api/teams/([0-9]+)/members/([0-9]+)/role'   => ['team', 'setMemberRole'],
         '/api/teams/([0-9]+)/members/([0-9]+)/delete' => ['team', 'removeMember'],

@@ -26,23 +26,48 @@ class team_controller
         return $team;
     }
 
-    /** GET /teams — my teams page */
+    /** GET /teams — my teams page (admins see and can edit every team) */
     public static function index(): void
     {
         require_login();
         global $db, $currentUserId;
 
-        $teams = [];
+        $ownTeams = [];      // teams I manage (admin: all teams, with owner info)
+        $memberTeams = [];   // teams I'm a member of (read-only view)
+        $boardsByTeamUser = [];
         try {
-            $ts = $db->prepare("SELECT * FROM teams WHERE owner_user_id = ? ORDER BY name ASC");
-            $ts->execute([(int)$currentUserId]);
-            $teams = $ts->fetchAll(PDO::FETCH_ASSOC);
+            if (is_admin()) {
+                $ts = $db->query("
+                    SELECT t.*, u.name AS owner_name, u.email AS owner_email
+                      FROM teams t
+                      JOIN users u ON u.id = t.owner_user_id
+                     ORDER BY u.name ASC, t.name ASC
+                ");
+                $ownTeams = $ts->fetchAll(PDO::FETCH_ASSOC);
+            } else {
+                $ts = $db->prepare("SELECT *, NULL AS owner_name, NULL AS owner_email
+                                      FROM teams WHERE owner_user_id = ? ORDER BY name ASC");
+                $ts->execute([(int)$currentUserId]);
+                $ownTeams = $ts->fetchAll(PDO::FETCH_ASSOC);
 
-            if ($teams) {
-                $teamIds = array_map('intval', array_column($teams, 'id'));
+                $mt = $db->prepare("
+                    SELECT t.*, u.name AS owner_name, u.email AS owner_email
+                      FROM team_members tm
+                      JOIN teams t ON t.id = tm.team_id
+                      JOIN users u ON u.id = t.owner_user_id
+                     WHERE tm.user_id = ?
+                     ORDER BY t.name ASC
+                ");
+                $mt->execute([(int)$currentUserId]);
+                $memberTeams = $mt->fetchAll(PDO::FETCH_ASSOC);
+            }
+
+            $allTeams = array_merge($ownTeams, $memberTeams);
+            if ($allTeams) {
+                $teamIds = array_values(array_unique(array_map('intval', array_column($allTeams, 'id'))));
                 $in = implode(',', array_fill(0, count($teamIds), '?'));
 
-                // Members with profile info (visible here because they're on your team)
+                // Members with profile info (visible because you share a team)
                 $ms = $db->prepare("
                     SELECT tm.id, tm.team_id, tm.user_id, tm.default_role,
                            u.name, u.email, u.company, u.organisation, u.last_login_at
@@ -53,46 +78,53 @@ class team_controller
                 ");
                 $ms->execute($teamIds);
                 $membersByTeam = [];
-                $memberUserIds = [];
                 foreach ($ms->fetchAll(PDO::FETCH_ASSOC) as $m) {
                     $membersByTeam[(int)$m['team_id']][] = $m;
-                    $memberUserIds[(int)$m['user_id']] = true;
                 }
-                foreach ($teams as &$t) {
-                    $t['members'] = $membersByTeam[(int)$t['id']] ?? [];
-                }
+                foreach ($ownTeams as &$t)    { $t['members'] = $membersByTeam[(int)$t['id']] ?? []; }
+                unset($t);
+                foreach ($memberTeams as &$t) { $t['members'] = $membersByTeam[(int)$t['id']] ?? []; }
                 unset($t);
 
-                // Board audit: my visions each member has a role on
-                $boardsByUser = [];
-                if ($memberUserIds) {
-                    $uids = array_keys($memberUserIds);
-                    $uin  = implode(',', array_fill(0, count($uids), '?'));
-                    $bs = $db->prepare("
-                        SELECT vr.user_id, vr.role, v.slug, v.title
-                          FROM vision_roles vr
-                          JOIN visions v ON v.id = vr.vision_id
-                         WHERE v.user_id = ? AND v.deleted_at IS NULL
-                           AND vr.user_id IN ($uin)
-                         ORDER BY v.updated_at DESC
-                    ");
-                    $bs->execute(array_merge([(int)$currentUserId], $uids));
-                    foreach ($bs->fetchAll(PDO::FETCH_ASSOC) as $b) {
-                        $boardsByUser[(int)$b['user_id']][] = $b;
-                    }
+                // Board audit, relative to each team's owner: which of the
+                // owner's visions is each member on?
+                $bs = $db->prepare("
+                    SELECT tm.team_id, vr.user_id, vr.role, v.slug, v.title
+                      FROM team_members tm
+                      JOIN teams t  ON t.id = tm.team_id
+                      JOIN vision_roles vr ON vr.user_id = tm.user_id
+                      JOIN visions v ON v.id = vr.vision_id
+                           AND v.user_id = t.owner_user_id
+                           AND v.deleted_at IS NULL
+                     WHERE tm.team_id IN ($in)
+                     ORDER BY v.updated_at DESC
+                ");
+                $bs->execute($teamIds);
+                foreach ($bs->fetchAll(PDO::FETCH_ASSOC) as $b) {
+                    $boardsByTeamUser[(int)$b['team_id']][(int)$b['user_id']][] = $b;
                 }
             }
         } catch (\Throwable $e) {
             $migrationMissing = true; // teams tables not created yet
         }
 
-        $boardsByUser = $boardsByUser ?? [];
         $pageTitle = 'My teams';
         $noSidebar = true;
         ob_start();
         include __DIR__ . '/../views/teams.php';
         $content = ob_get_clean();
         include __DIR__ . '/../views/layout.php';
+    }
+
+    /** POST /api/teams/{id}/leave — a member removes themself from a team. */
+    public static function leave(string $teamId): void
+    {
+        api_require_login();
+        header('Content-Type: application/json');
+        global $db, $currentUserId;
+        $db->prepare("DELETE FROM team_members WHERE team_id = ? AND user_id = ?")
+           ->execute([(int)$teamId, (int)$currentUserId]);
+        echo json_encode(['success' => true]);
     }
 
     /** GET /api/teams — JSON: my teams + members (feeds the roles overlay) */
@@ -186,8 +218,8 @@ class team_controller
         $us->execute([$email]);
         $user = $us->fetch(PDO::FETCH_ASSOC);
         if (!$user) { http_response_code(404); echo json_encode(['error' => 'No user with that email']); return; }
-        if ((int)$user['id'] === (int)$currentUserId) {
-            http_response_code(422); echo json_encode(['error' => "You're the team owner — no need to add yourself"]); return;
+        if ((int)$user['id'] === (int)$team['owner_user_id']) {
+            http_response_code(422); echo json_encode(['error' => 'That user owns this team — no need to add them']); return;
         }
 
         $db->prepare("INSERT INTO team_members (team_id, user_id, default_role)

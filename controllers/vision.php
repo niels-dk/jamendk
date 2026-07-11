@@ -1121,6 +1121,41 @@ class vision_controller
 		echo json_encode(['success' => true]);
 	}
 
+	/** POST /api/visions/{slug}/roles/add-team  body: team_id
+	 *  Snapshot-copies the team's members (with their default roles) into
+	 *  vision_roles. Members who already have a role on the board keep it. */
+	public static function addTeamRoles(string $slug): void
+	{
+		header('Content-Type: application/json');
+		global $db, $currentUserId;
+		$vision = self::roleVisionOr404($db, $slug, 'manage');
+
+		$teamId = (int)($_POST['team_id'] ?? 0);
+		$ts = $db->prepare("SELECT * FROM teams WHERE id = ? LIMIT 1");
+		$ts->execute([$teamId]);
+		$team = $ts->fetch(PDO::FETCH_ASSOC);
+		if (!$team || ((int)$team['owner_user_id'] !== (int)$currentUserId && !is_admin())) {
+			http_response_code(404); echo json_encode(['error' => 'Team not found']); return;
+		}
+
+		$ms = $db->prepare("SELECT user_id, default_role FROM team_members WHERE team_id = ?");
+		$ms->execute([$teamId]);
+		$members = $ms->fetchAll(PDO::FETCH_ASSOC);
+		if (!$members) { echo json_encode(['success' => true, 'added' => 0, 'skipped' => 0]); return; }
+
+		$ins = $db->prepare("INSERT INTO vision_roles (vision_id, user_id, role)
+							 VALUES (?,?,?)
+							 ON DUPLICATE KEY UPDATE role = role"); // keep existing custom roles
+		$added = 0; $skipped = 0;
+		foreach ($members as $m) {
+			// The board owner never needs a role row
+			if ((int)$m['user_id'] === (int)$vision['user_id']) { $skipped++; continue; }
+			$ins->execute([(int)$vision['id'], (int)$m['user_id'], $m['default_role']]);
+			if ($ins->rowCount() === 1) $added++; else $skipped++;
+		}
+		echo json_encode(['success' => true, 'added' => $added, 'skipped' => $skipped]);
+	}
+
 	/** POST /api/handoffs/{id}/ack — recipient checks a returned item off. */
 	public static function ackHandoff(string $handoffId): void
 	{

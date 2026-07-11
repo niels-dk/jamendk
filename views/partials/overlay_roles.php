@@ -25,6 +25,16 @@ $slug = htmlspecialchars($vision['slug'] ?? '', ENT_QUOTES);
       <span id="roleStatus" style="opacity:.6;font-size:.85em;"></span>
     </div>
   </div>
+
+  <div id="teamAddCard" class="card" hidden style="margin-top:.8rem;">
+    <h4 style="margin:.2rem 0 .6rem;">Add from your teams</h4>
+    <select id="teamPick"></select>
+    <div style="display:flex;align-items:center;gap:.6rem;margin-top:.6rem;">
+      <button type="button" class="btn btn-primary" id="btnTeamAdd">Add</button>
+      <span id="teamStatus" style="opacity:.6;font-size:.85em;"></span>
+      <a href="/teams" style="margin-left:auto;font-size:.82em;color:#8fb1d8;">Manage teams</a>
+    </div>
+  </div>
 </div>
 
 <style>
@@ -53,7 +63,7 @@ $slug = htmlspecialchars($vision['slug'] ?? '', ENT_QUOTES);
     cursor:pointer; padding:0 .35rem;
   }
   #rolesWrap .role-remove:hover { color:#f08792; }
-  #rolesWrap #roleEmail, #rolesWrap #roleSelect {
+  #rolesWrap #roleEmail, #rolesWrap #roleSelect, #rolesWrap #teamPick {
     width:100%; box-sizing:border-box;
     background:#15161A; border:1px solid #2b3346; color:#ddd;
     padding:.5rem .7rem; border-radius:8px; margin-bottom:.5rem;
@@ -91,6 +101,7 @@ $slug = htmlspecialchars($vision['slug'] ?? '', ENT_QUOTES);
   function render(data) {
     const canManage = !!data.can_manage;
     addCard.hidden = !canManage;
+    if (canManage) loadTeams();
     const rows = (data.members || []).map(m => {
       const control = m.role === 'owner'
         ? `<span class="owner-pill">Owner</span>`
@@ -165,6 +176,66 @@ $slug = htmlspecialchars($vision['slug'] ?? '', ENT_QUOTES);
     const j = await res.json();
     if (j?.success) load();
     else alert(j?.error || 'Remove failed');
+  });
+
+  // ── Teams integration: pick a member (with their default role) or a whole team ──
+  const teamCard   = wrap.querySelector('#teamAddCard');
+  const teamPick   = wrap.querySelector('#teamPick');
+  const teamAddBtn = wrap.querySelector('#btnTeamAdd');
+  const teamStatus = wrap.querySelector('#teamStatus');
+  let teamsData = [];
+  let teamsLoaded = false;
+
+  async function loadTeams() {
+    if (teamsLoaded) return;
+    teamsLoaded = true;
+    try {
+      const res = await fetch('/api/teams');
+      const j = await res.json();
+      teamsData = j?.teams || [];
+    } catch { teamsData = []; }
+    if (!teamsData.length) return; // no teams → keep the card hidden
+    teamPick.innerHTML = teamsData.map((t, ti) => {
+      const opts = [
+        `<option value="team:${t.id}">➕ Whole team — ${esc(t.name)} (${t.members.length})</option>`,
+        ...t.members.map((m, mi) =>
+          `<option value="member:${ti}:${mi}">${esc(m.name || m.email)} — ${ROLE_LABELS[m.default_role] || m.default_role}</option>`)
+      ].join('');
+      return `<optgroup label="${esc(t.name)}">${opts}</optgroup>`;
+    }).join('');
+    teamCard.hidden = false;
+  }
+
+  teamAddBtn?.addEventListener('click', async () => {
+    const v = teamPick.value;
+    if (!v) return;
+    teamStatus.textContent = 'Adding…';
+    try {
+      if (v.startsWith('team:')) {
+        const p = new URLSearchParams(); p.set('team_id', v.slice(5));
+        const res = await fetch(`/api/visions/${slug}/roles/add-team`, {
+          method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:p.toString()
+        });
+        const j = await res.json();
+        if (j?.success) {
+          teamStatus.textContent = `Added ${j.added}` + (j.skipped ? ` (${j.skipped} already on the board)` : '');
+          load();
+        } else teamStatus.textContent = '⚠ ' + (j?.error || 'Failed');
+      } else {
+        const [, ti, mi] = v.split(':');
+        const m = teamsData[+ti]?.members[+mi];
+        if (!m) return;
+        const p = new URLSearchParams();
+        p.set('email', m.email);
+        p.set('role', m.default_role);
+        const res = await fetch(`/api/visions/${slug}/roles/add`, {
+          method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:p.toString()
+        });
+        const j = await res.json();
+        if (j?.success) { teamStatus.textContent = 'Added'; load(); }
+        else teamStatus.textContent = '⚠ ' + (j?.error || 'Failed');
+      }
+    } catch { teamStatus.textContent = '⚠ Network error'; }
   });
 
   load();

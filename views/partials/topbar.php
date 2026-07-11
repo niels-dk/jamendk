@@ -31,6 +31,7 @@ $loggedIn = (bool)$me;
         </span>
         <?= htmlspecialchars($me['name'] ?: $me['email']) ?>
       </a>
+      <a class="btn btn-ghost" href="/teams" title="My teams">👥 Teams</a>
       <?php if (function_exists('is_admin') && is_admin()): ?>
         <a class="btn btn-ghost" href="/admin/users" title="User management">⚙️ Users</a>
       <?php endif; ?>

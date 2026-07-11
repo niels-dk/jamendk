@@ -175,6 +175,16 @@ function route(string $uri): void
         // ── Account (own profile) ─────────────────────────────────────────────
         '/account'                                 => ['user', 'account'],
 
+        // ── Teams (private collaborator groups) ───────────────────────────────
+        '/teams'                                   => ['team', 'index'],
+        '/api/teams'                               => ['team', 'listMine'],
+        '/api/teams/create'                        => ['team', 'create'],
+        '/api/teams/([0-9]+)/rename'               => ['team', 'rename'],
+        '/api/teams/([0-9]+)/delete'               => ['team', 'deleteTeam'],
+        '/api/teams/([0-9]+)/members/add'          => ['team', 'addMember'],
+        '/api/teams/([0-9]+)/members/([0-9]+)/role'   => ['team', 'setMemberRole'],
+        '/api/teams/([0-9]+)/members/([0-9]+)/delete' => ['team', 'removeMember'],
+
         // ── Admin (site administration, require_admin inside) ────────────────
         '/admin/users'                             => ['admin', 'users'],
         '/admin/users/([0-9]+)/role'               => ['admin', 'setRole'],
@@ -196,6 +206,7 @@ function route(string $uri): void
         // Roles & sharing (must come before the generic {section} catch-all)
         '/api/visions/([A-Za-z0-9]{6,16})/roles'                 => ['vision', 'listRoles'],
         '/api/visions/([A-Za-z0-9]{6,16})/roles/add'             => ['vision', 'addRole'],
+        '/api/visions/([A-Za-z0-9]{6,16})/roles/add-team'        => ['vision', 'addTeamRoles'],
         '/api/visions/([A-Za-z0-9]{6,16})/roles/([0-9]+)'        => ['vision', 'updateRole'],
         '/api/visions/([A-Za-z0-9]{6,16})/roles/([0-9]+)/delete' => ['vision', 'removeRole'],
         '/api/visions/([A-Za-z0-9]{6,16})/goals/create'          => ['vision', 'createGoal'],

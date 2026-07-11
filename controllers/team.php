@@ -199,13 +199,33 @@ class team_controller
         echo json_encode(['success' => true]);
     }
 
-    /** POST /api/teams/{id}/members/add  body: email, role */
+    /** Team resolvable for member-add: owner, admin, OR any existing member. */
+    private static function teamForAddOr404(PDO $db, string $teamId): ?array
+    {
+        global $currentUserId;
+        $st = $db->prepare("SELECT * FROM teams WHERE id = ? LIMIT 1");
+        $st->execute([(int)$teamId]);
+        $team = $st->fetch(PDO::FETCH_ASSOC);
+        if ($team) {
+            if ((int)$team['owner_user_id'] === (int)$currentUserId || is_admin()) return $team;
+            $ms = $db->prepare("SELECT 1 FROM team_members WHERE team_id = ? AND user_id = ? LIMIT 1");
+            $ms->execute([(int)$team['id'], (int)$currentUserId]);
+            if ($ms->fetchColumn()) return $team;
+        }
+        http_response_code(404);
+        header('Content-Type: application/json');
+        echo json_encode(['error' => 'Team not found']);
+        return null;
+    }
+
+    /** POST /api/teams/{id}/members/add  body: email, role
+     *  Owner, admin, or ANY existing member may add people. */
     public static function addMember(string $teamId): void
     {
         api_require_login();
         header('Content-Type: application/json');
         global $db, $currentUserId;
-        $team = self::ownTeamOr404($db, $teamId);
+        $team = self::teamForAddOr404($db, $teamId);
         if (!$team) return;
 
         $email = trim((string)($_POST['email'] ?? ''));

@@ -1,7 +1,7 @@
 <?php
 // views/teams.php — expects:
 //   $ownTeams        teams I manage (admin: every team, with owner_name/owner_email)
-//   $memberTeams     teams I'm a member of (read-only)
+//   $memberTeams     teams I'm a member of (read-only except member-add)
 //   $boardsByTeamUser[team_id][user_id] = [ ['slug','title','role'], … ]
 //   optional $migrationMissing
 function tm_e($s){ return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
@@ -13,11 +13,11 @@ $isAdminView = function_exists('is_admin') && is_admin();
 <h1 style="margin-bottom:.3rem;"><?= $isAdminView ? 'All teams' : 'My teams' ?></h1>
 <p style="opacity:.65;margin-top:0;max-width:44rem;">
   <?php if ($isAdminView): ?>
-    As admin you see every user's teams and can manage all of them.
+    As admin you see every user's teams and can manage all of them. Click a team to unfold its members.
   <?php else: ?>
     Teams are your private collaborator groups. Set each member's usual role once, and you can add
     a whole team to any Vision from its <strong>Roles &amp; Permissions</strong> panel in one click.
-    Profile details are only visible for people who share a team with you.
+    Click a team to unfold its members.
   <?php endif; ?>
 </p>
 
@@ -30,10 +30,21 @@ $isAdminView = function_exists('is_admin') && is_admin();
 <?php endif; ?>
 
 <style>
-  .team-card { margin-bottom:1.2rem; padding:1rem 1.2rem; }
+  .team-card { margin-bottom:.7rem; padding:.7rem 1.1rem; }
   .team-head { display:flex; align-items:center; gap:.6rem; flex-wrap:wrap; }
-  .team-head h2 { margin:0; font-size:1.15rem; flex:1; min-width:180px; }
-  .team-owner { font-size:.82em; opacity:.6; margin:.15rem 0 .6rem; }
+  .team-toggle {
+    flex:1; min-width:200px; display:flex; align-items:center; gap:.5rem;
+    background:none; border:0; color:inherit; cursor:pointer; text-align:left;
+    font-size:1.1rem; font-weight:700; padding:.15rem 0;
+  }
+  .team-toggle .chev { display:inline-block; transition:transform .12s ease; opacity:.6; font-size:.85em; }
+  .team-card.open .team-toggle .chev { transform:rotate(90deg); }
+  .team-toggle .t-meta {
+    font-weight:400; font-size:.8rem; opacity:.55; white-space:nowrap;
+    overflow:hidden; text-overflow:ellipsis;
+  }
+  .team-body { margin-top:.6rem; }
+  .team-owner { font-size:.82em; opacity:.6; margin:0 0 .6rem; }
   .team-card table { width:100%; border-collapse:collapse; min-width:640px; }
   .team-card thead th {
     text-align:left; padding:.5rem .7rem; border-bottom:1px solid #2b3346;
@@ -88,86 +99,98 @@ $isAdminView = function_exists('is_admin') && is_admin();
 <?php endif; ?>
 
 <?php foreach ($ownTeams as $team): ?>
-  <?php $isMine = (int)$team['owner_user_id'] === (int)$currentUserId; ?>
+  <?php
+    $isMine = (int)$team['owner_user_id'] === (int)$currentUserId;
+    $count  = count($team['members'] ?? []);
+    $meta   = $count . ' member' . ($count === 1 ? '' : 's')
+            . ((!$isMine && !empty($team['owner_name'])) ? ' · Owner: ' . $team['owner_name'] : '');
+  ?>
   <div class="card team-card" data-team-id="<?= (int)$team['id'] ?>">
     <div class="team-head">
-      <h2>👥 <?= tm_e($team['name']) ?></h2>
+      <button type="button" class="team-toggle">
+        <span class="chev">▶</span>
+        <span>👥 <?= tm_e($team['name']) ?></span>
+        <span class="t-meta">· <?= tm_e($meta) ?></span>
+      </button>
       <button type="button" class="btn t-rename" style="padding:.3rem .6rem;font-size:.82em;">Rename</button>
       <button type="button" class="btn t-delete" style="padding:.3rem .6rem;font-size:.82em;color:#f08792;">Delete team</button>
     </div>
-    <?php if (!$isMine && !empty($team['owner_name'])): ?>
-      <div class="team-owner">Owner: <?= tm_e($team['owner_name']) ?> — <?= tm_e($team['owner_email']) ?></div>
-    <?php endif; ?>
 
-    <?php if (empty($team['members'])): ?>
-      <p class="none" style="margin:.2rem 0 .4rem;">No members yet — add someone below.</p>
-    <?php else: ?>
-      <div style="overflow-x:auto;">
-      <table>
-        <thead>
-          <tr>
-            <th>Member</th>
-            <th>Last active</th>
-            <th>Default role</th>
-            <th>On <?= $isMine ? 'my' : "the owner's" ?> boards</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          <?php foreach ($team['members'] as $m): ?>
-            <?php
-              $extra  = trim(implode(' · ', array_filter([$m['company'] ?? '', $m['organisation'] ?? ''])));
-              $boards = $boardsByTeamUser[(int)$team['id']][(int)$m['user_id']] ?? [];
-            ?>
-            <tr data-member-id="<?= (int)$m['id'] ?>">
-              <td>
-                <div class="m-name"><?= tm_e($m['name'] ?: '(no name)') ?></div>
-                <div class="m-mail"><?= tm_e($m['email']) ?></div>
-                <?php if ($extra !== ''): ?><div class="m-extra"><?= tm_e($extra) ?></div><?php endif; ?>
-              </td>
-              <td style="white-space:nowrap;font-size:.85em;opacity:.7;">
-                <?= !empty($m['last_login_at']) ? date('Y-m-d', strtotime($m['last_login_at'])) : '—' ?>
-              </td>
-              <td>
-                <select class="m-role">
-                  <?php foreach ($ROLE_LABELS as $rv => $rl): ?>
-                    <option value="<?= $rv ?>" <?= $m['default_role'] === $rv ? 'selected' : '' ?>><?= $rl ?></option>
-                  <?php endforeach; ?>
-                </select>
-              </td>
-              <td>
-                <?php if ($boards): ?>
-                  <div class="m-boards">
-                    <?php foreach ($boards as $b): ?>
-                      <a class="board-chip" href="/visions/<?= tm_e($b['slug']) ?>"
-                         title="<?= tm_e(($b['title'] ?: 'Untitled') . ' — ' . ($ROLE_LABELS[$b['role']] ?? $b['role'])) ?>">
-                        <?= tm_e($b['title'] ?: 'Untitled') ?>
-                      </a>
-                    <?php endforeach; ?>
-                  </div>
-                <?php else: ?>
-                  <span class="none">No boards yet</span>
-                <?php endif; ?>
-              </td>
-              <td class="row-actions">
-                <button type="button" class="m-remove" title="Remove from team">×</button>
-              </td>
+    <div class="team-body" hidden>
+      <?php if (!$isMine && !empty($team['owner_name'])): ?>
+        <div class="team-owner">Owner: <?= tm_e($team['owner_name']) ?> — <?= tm_e($team['owner_email']) ?></div>
+      <?php endif; ?>
+
+      <?php if (empty($team['members'])): ?>
+        <p class="none" style="margin:.2rem 0 .4rem;">No members yet — add someone below.</p>
+      <?php else: ?>
+        <div style="overflow-x:auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>Member</th>
+              <th>Last active</th>
+              <th>Default role</th>
+              <th>On <?= $isMine ? 'my' : "the owner's" ?> boards</th>
+              <th></th>
             </tr>
-          <?php endforeach; ?>
-        </tbody>
-      </table>
-      </div>
-    <?php endif; ?>
+          </thead>
+          <tbody>
+            <?php foreach ($team['members'] as $m): ?>
+              <?php
+                $extra  = trim(implode(' · ', array_filter([$m['company'] ?? '', $m['organisation'] ?? ''])));
+                $boards = $boardsByTeamUser[(int)$team['id']][(int)$m['user_id']] ?? [];
+              ?>
+              <tr data-member-id="<?= (int)$m['id'] ?>">
+                <td>
+                  <div class="m-name"><?= tm_e($m['name'] ?: '(no name)') ?></div>
+                  <div class="m-mail"><?= tm_e($m['email']) ?></div>
+                  <?php if ($extra !== ''): ?><div class="m-extra"><?= tm_e($extra) ?></div><?php endif; ?>
+                </td>
+                <td style="white-space:nowrap;font-size:.85em;opacity:.7;">
+                  <?= !empty($m['last_login_at']) ? date('Y-m-d', strtotime($m['last_login_at'])) : '—' ?>
+                </td>
+                <td>
+                  <select class="m-role">
+                    <?php foreach ($ROLE_LABELS as $rv => $rl): ?>
+                      <option value="<?= $rv ?>" <?= $m['default_role'] === $rv ? 'selected' : '' ?>><?= $rl ?></option>
+                    <?php endforeach; ?>
+                  </select>
+                </td>
+                <td>
+                  <?php if ($boards): ?>
+                    <div class="m-boards">
+                      <?php foreach ($boards as $b): ?>
+                        <a class="board-chip" href="/visions/<?= tm_e($b['slug']) ?>"
+                           title="<?= tm_e(($b['title'] ?: 'Untitled') . ' — ' . ($ROLE_LABELS[$b['role']] ?? $b['role'])) ?>">
+                          <?= tm_e($b['title'] ?: 'Untitled') ?>
+                        </a>
+                      <?php endforeach; ?>
+                    </div>
+                  <?php else: ?>
+                    <span class="none">No boards yet</span>
+                  <?php endif; ?>
+                </td>
+                <td class="row-actions">
+                  <button type="button" class="m-remove" title="Remove from team">×</button>
+                </td>
+              </tr>
+            <?php endforeach; ?>
+          </tbody>
+        </table>
+        </div>
+      <?php endif; ?>
 
-    <div class="team-inline-form">
-      <input type="text" class="t-add-email" placeholder="Member's account email…">
-      <select class="t-add-role">
-        <option value="viewer">Viewer — read-only</option>
-        <option value="editor">Editor — can modify content</option>
-        <option value="co_owner">Co-owner — full control incl. sharing</option>
-        <option value="delegate">Delegate — acts on behalf of the owner</option>
-      </select>
-      <button type="button" class="btn t-add-member">Add member</button>
+      <div class="team-inline-form">
+        <input type="text" class="t-add-email" placeholder="Member's account email…">
+        <select class="t-add-role">
+          <option value="viewer">Viewer — read-only</option>
+          <option value="editor">Editor — can modify content</option>
+          <option value="co_owner">Co-owner — full control incl. sharing</option>
+          <option value="delegate">Delegate — acts on behalf of the owner</option>
+        </select>
+        <button type="button" class="btn t-add-member">Add member</button>
+      </div>
     </div>
   </div>
 <?php endforeach; ?>
@@ -175,47 +198,71 @@ $isAdminView = function_exists('is_admin') && is_admin();
 <?php if (!empty($memberTeams)): ?>
   <h2 class="section-title">Teams I'm on</h2>
   <?php foreach ($memberTeams as $team): ?>
+    <?php
+      $count = count($team['members'] ?? []);
+      $meta  = $count . ' member' . ($count === 1 ? '' : 's')
+             . (!empty($team['owner_name']) ? ' · Owner: ' . $team['owner_name'] : '');
+    ?>
     <div class="card team-card" data-team-id="<?= (int)$team['id'] ?>">
       <div class="team-head">
-        <h2>👥 <?= tm_e($team['name']) ?></h2>
+        <button type="button" class="team-toggle">
+          <span class="chev">▶</span>
+          <span>👥 <?= tm_e($team['name']) ?></span>
+          <span class="t-meta">· <?= tm_e($meta) ?></span>
+        </button>
         <button type="button" class="btn t-leave" style="padding:.3rem .6rem;font-size:.82em;color:#f08792;">Leave team</button>
       </div>
-      <div class="team-owner">Owner: <?= tm_e($team['owner_name'] ?: '') ?> — <?= tm_e($team['owner_email'] ?: '') ?></div>
 
-      <?php if (!empty($team['members'])): ?>
-        <div style="overflow-x:auto;">
-        <table>
-          <thead>
-            <tr>
-              <th>Member</th>
-              <th>Last active</th>
-              <th>Role on this team</th>
-            </tr>
-          </thead>
-          <tbody>
-            <?php foreach ($team['members'] as $m): ?>
-              <?php $extra = trim(implode(' · ', array_filter([$m['company'] ?? '', $m['organisation'] ?? '']))); ?>
+      <div class="team-body" hidden>
+        <div class="team-owner">Owner: <?= tm_e($team['owner_name'] ?: '') ?> — <?= tm_e($team['owner_email'] ?: '') ?></div>
+
+        <?php if (!empty($team['members'])): ?>
+          <div style="overflow-x:auto;">
+          <table>
+            <thead>
               <tr>
-                <td>
-                  <div class="m-name">
-                    <?= tm_e($m['name'] ?: '(no name)') ?>
-                    <?php if ((int)$m['user_id'] === (int)$currentUserId): ?>
-                      <span style="opacity:.55;font-weight:400;">(you)</span>
-                    <?php endif; ?>
-                  </div>
-                  <div class="m-mail"><?= tm_e($m['email']) ?></div>
-                  <?php if ($extra !== ''): ?><div class="m-extra"><?= tm_e($extra) ?></div><?php endif; ?>
-                </td>
-                <td style="white-space:nowrap;font-size:.85em;opacity:.7;">
-                  <?= !empty($m['last_login_at']) ? date('Y-m-d', strtotime($m['last_login_at'])) : '—' ?>
-                </td>
-                <td><span class="role-pill"><?= tm_e($ROLE_LABELS[$m['default_role']] ?? $m['default_role']) ?></span></td>
+                <th>Member</th>
+                <th>Last active</th>
+                <th>Role on this team</th>
               </tr>
-            <?php endforeach; ?>
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              <?php foreach ($team['members'] as $m): ?>
+                <?php $extra = trim(implode(' · ', array_filter([$m['company'] ?? '', $m['organisation'] ?? '']))); ?>
+                <tr>
+                  <td>
+                    <div class="m-name">
+                      <?= tm_e($m['name'] ?: '(no name)') ?>
+                      <?php if ((int)$m['user_id'] === (int)$currentUserId): ?>
+                        <span style="opacity:.55;font-weight:400;">(you)</span>
+                      <?php endif; ?>
+                    </div>
+                    <div class="m-mail"><?= tm_e($m['email']) ?></div>
+                    <?php if ($extra !== ''): ?><div class="m-extra"><?= tm_e($extra) ?></div><?php endif; ?>
+                  </td>
+                  <td style="white-space:nowrap;font-size:.85em;opacity:.7;">
+                    <?= !empty($m['last_login_at']) ? date('Y-m-d', strtotime($m['last_login_at'])) : '—' ?>
+                  </td>
+                  <td><span class="role-pill"><?= tm_e($ROLE_LABELS[$m['default_role']] ?? $m['default_role']) ?></span></td>
+                </tr>
+              <?php endforeach; ?>
+            </tbody>
+          </table>
+          </div>
+        <?php endif; ?>
+
+        <!-- Any member may add people to the team -->
+        <div class="team-inline-form">
+          <input type="text" class="t-add-email" placeholder="Add a member by account email…">
+          <select class="t-add-role">
+            <option value="viewer">Viewer — read-only</option>
+            <option value="editor">Editor — can modify content</option>
+            <option value="co_owner">Co-owner — full control incl. sharing</option>
+            <option value="delegate">Delegate — acts on behalf of the owner</option>
+          </select>
+          <button type="button" class="btn t-add-member">Add member</button>
         </div>
-      <?php endif; ?>
+      </div>
     </div>
   <?php endforeach; ?>
 <?php endif; ?>
@@ -251,13 +298,21 @@ $isAdminView = function_exists('is_admin') && is_admin();
     if (await post('/api/teams/create', { name })) location.reload();
   });
 
-  // Per-team actions (delegated; covers both editable and member cards)
   document.querySelectorAll('.team-card').forEach(card => {
     const teamId = card.dataset.teamId;
 
+    // Fold / unfold
+    card.querySelector('.team-toggle')?.addEventListener('click', () => {
+      const body = card.querySelector('.team-body');
+      if (!body) return;
+      body.hidden = !body.hidden;
+      card.classList.toggle('open', !body.hidden);
+    });
+
     card.addEventListener('click', async e => {
       if (e.target.closest('.t-rename')) {
-        const name = prompt('New team name:', card.querySelector('h2')?.textContent.replace('👥','').trim());
+        const current = card.querySelector('.team-toggle span:nth-child(2)')?.textContent.replace('👥','').trim();
+        const name = prompt('New team name:', current);
         if (name && await post(`/api/teams/${teamId}/rename`, { name })) location.reload();
         return;
       }

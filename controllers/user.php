@@ -132,6 +132,23 @@ class user_controller
         include __DIR__ . '/../views/layout.php';
     }
 
+    /** POST /api/notifications/{id}/ack — check a dashboard notice off. */
+    public static function ackNotification(string $id): void
+    {
+        api_require_login();
+        header('Content-Type: application/json');
+        global $db, $currentUserId;
+        try {
+            $st = $db->prepare("UPDATE notifications SET acknowledged_at = NOW()
+                                 WHERE id = ? AND user_id = ? AND acknowledged_at IS NULL");
+            $st->execute([(int)$id, (int)$currentUserId]);
+            echo json_encode(['success' => true]);
+        } catch (\Throwable $e) {
+            http_response_code(500);
+            echo json_encode(['error' => 'notifications table missing — run the migration']);
+        }
+    }
+
     /** POST /api/shares/seen — dismiss the "new boards shared with you" notice. */
     public static function sharesSeen(): void
     {

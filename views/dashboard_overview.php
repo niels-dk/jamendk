@@ -149,8 +149,8 @@ function dt($s){ return $s ? date('M j, Y', strtotime($s)) : ''; }
 
 </div>
 
-<?php if (!empty($newShares) || !empty($handoffs)): ?>
-<!-- Login notice: returned work (persists until checked) + new shares (one-time) -->
+<?php if (!empty($newShares) || !empty($handoffs) || !empty($notices)): ?>
+<!-- Login notice: task updates + returned work (persist until checked) + new shares (one-time) -->
 <div id="sharesNotice"
      style="position:fixed;inset:0;z-index:5000;display:flex;align-items:center;justify-content:center;">
   <div style="position:absolute;inset:0;background:rgba(0,0,0,.55);" data-dismiss></div>
@@ -158,6 +158,55 @@ function dt($s){ return $s ? date('M j, Y', strtotime($s)) : ''; }
               background:#15161A;border:1px solid #2b3346;border-radius:14px;
               box-shadow:0 18px 50px rgba(0,0,0,.5);padding:1.3rem 1.4rem;
               max-height:calc(100vh - 4rem);overflow-y:auto;">
+
+    <?php if (!empty($notices)): ?>
+      <?php
+        $NOTICE_META = [
+          'goal_assigned' => ['📋', 'assigned you'],
+          'goal_resolved' => ['✅', 'resolved'],
+          'goal_returned' => ['↩',  'sent back'],
+        ];
+      ?>
+      <h2 style="margin:0 0 .2rem;font-size:1.25rem;">🔔 Task updates</h2>
+      <p style="margin:0 0 .9rem;opacity:.65;font-size:.9em;">
+        Check each item once you've seen it — unchecked items will show again next time.
+      </p>
+      <div style="display:flex;flex-direction:column;gap:.45rem;margin-bottom:1rem;">
+        <?php foreach ($notices as $n): ?>
+          <?php [$icon, $verb] = $NOTICE_META[$n['type']] ?? ['🔔', $n['type']]; ?>
+          <div class="notice-row" data-id="<?= (int)$n['id'] ?>"
+               style="padding:.6rem .7rem;background:rgba(255,255,255,.04);
+                      border:1px solid #2b3346;border-radius:8px;">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:.6rem;">
+              <span style="min-width:0;">
+                <span style="display:block;font-size:.95em;color:#eaeaea;">
+                  <?= $icon ?> <strong><?= t($n['from_name'] ?: 'Someone') ?></strong>
+                  <?= t($verb) ?>:
+                  <strong><?= t($n['goal_title'] ?: 'a goal') ?></strong>
+                </span>
+                <span style="display:block;font-size:.8em;opacity:.6;margin-top:.15rem;">
+                  <?php if (!empty($n['vision_slug'])): ?>
+                    on <a href="/visions/<?= t($n['vision_slug']) ?>"
+                          style="color:#8fb1d8;"><?= t($n['vision_title'] ?: 'Untitled') ?></a> ·
+                  <?php endif; ?>
+                  <?= t(date('M j, H:i', strtotime($n['created_at']))) ?>
+                </span>
+              </span>
+              <button type="button" class="notice-ack"
+                      style="flex-shrink:0;padding:.3rem .7rem;border:1px solid #1e5530;
+                             border-radius:999px;background:#15351f;color:#7ed99a;
+                             font-size:.8rem;font-weight:700;cursor:pointer;">
+                ✓ Check
+              </button>
+            </div>
+            <?php if (!empty($n['note'])): ?>
+              <div style="margin-top:.45rem;padding:.5rem .6rem;background:#0f1014;
+                          border-radius:6px;font-size:.88em;color:#c7d2df;white-space:pre-wrap;"><?= t($n['note']) ?></div>
+            <?php endif; ?>
+          </div>
+        <?php endforeach; ?>
+      </div>
+    <?php endif; ?>
 
     <?php if (!empty($handoffs)): ?>
       <h2 style="margin:0 0 .2rem;font-size:1.25rem;">📥 Work returned to you</h2>
@@ -257,6 +306,20 @@ function dt($s){ return $s ? date('M j, Y', strtotime($s)) : ''; }
       } catch { ack.disabled = false; }
       return;
     }
+    // Per-item acknowledge for task updates
+    const nack = e.target.closest('.notice-ack');
+    if (nack) {
+      const row = nack.closest('.notice-row');
+      nack.disabled = true;
+      try {
+        const res = await fetch(`/api/notifications/${row.dataset.id}/ack`, { method: 'POST' });
+        const j = await res.json();
+        if (j && j.success) row.remove();
+        else nack.disabled = false;
+      } catch { nack.disabled = false; }
+      return;
+    }
+    if (e.target.closest('a')) return; // let board links navigate
     if (e.target.closest('[data-dismiss]')) notice.remove();
   });
   document.addEventListener('keydown', e => {

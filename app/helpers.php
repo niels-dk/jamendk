@@ -63,6 +63,21 @@ function is_admin(): bool
     return current_role() === 'admin';
 }
 
+/**
+ * Queue a check-to-dismiss notice for a user's dashboard popup.
+ * Silently no-ops if the notifications table hasn't been migrated yet.
+ */
+function add_notification(PDO $db, int $userId, string $type,
+                          ?int $visionId = null, ?int $goalId = null,
+                          ?int $fromUserId = null, ?string $note = null): void
+{
+    try {
+        $db->prepare("INSERT INTO notifications (user_id, type, vision_id, goal_id, from_user_id, note)
+                      VALUES (?,?,?,?,?,?)")
+           ->execute([$userId, $type, $visionId, $goalId, $fromUserId, ($note !== null && $note !== '') ? $note : null]);
+    } catch (\Throwable $e) { /* table missing — ignore */ }
+}
+
 /** Guard for admin-only pages. */
 function require_admin(): void
 {

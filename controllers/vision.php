@@ -66,6 +66,38 @@ class vision_controller
 			$sourceDream = $ds->fetch(PDO::FETCH_ASSOC) ?: null;
 		}
 
+		// Goals assigned to the current user on this board (open + returned),
+		// so collaborators — including Viewers — can resolve or send back
+		// right from the show page.
+		$myTasks = [];
+		try {
+			$ts = $db->prepare("
+				SELECT id, title, description, status, priority, due_date, assignment_status
+				  FROM vision_goals
+				 WHERE vision_id = ? AND assigned_user_id = ?
+				   AND status NOT IN ('done','cancelled')
+				 ORDER BY (assignment_status='returned') ASC,
+						  priority ASC, (due_date IS NULL) ASC, due_date ASC, id ASC
+			");
+			$ts->execute([(int)$vision['id'], (int)$currentUserId]);
+			$myTasks = $ts->fetchAll(PDO::FETCH_ASSOC);
+			if ($myTasks) {
+				$gIds = array_map('intval', array_column($myTasks, 'id'));
+				$in   = implode(',', array_fill(0, count($gIds), '?'));
+				$mm = $db->prepare("SELECT goal_id, text, done, due_date
+									  FROM vision_goal_milestones
+									 WHERE goal_id IN ($in)
+									 ORDER BY sort_order, id");
+				$mm->execute($gIds);
+				$msByGoal = [];
+				foreach ($mm->fetchAll(PDO::FETCH_ASSOC) as $m) {
+					$msByGoal[(int)$m['goal_id']][] = $m;
+				}
+				foreach ($myTasks as &$t) { $t['milestones'] = $msByGoal[(int)$t['id']] ?? []; }
+				unset($t);
+			}
+		} catch (\Throwable $e) { /* assignment columns not migrated yet */ }
+
 		// Page vars for the layout
 		$pageTitle = $vision['title'] ?: 'Vision';
 		$pageDescription = $vision['description'] ?: 'Vision';
@@ -824,17 +856,32 @@ class vision_controller
 		return in_array($status, $allowed, true) ? $status : 'not_started';
 	}
 
-	private static function saveMilestones(PDO $db, int $goalId, array $texts, array $dones): void
+	private static function saveMilestones(PDO $db, int $goalId, array $texts, array $dones,
+										   array $dues = [], array $assignees = []): void
 	{
 		$db->prepare("DELETE FROM vision_goal_milestones WHERE goal_id=?")->execute([$goalId]);
 		if (!$texts) return;
-		$st = $db->prepare("INSERT INTO vision_goal_milestones (goal_id, text, done, sort_order) VALUES (?,?,?,?)");
+		$st = $db->prepare("INSERT INTO vision_goal_milestones
+							(goal_id, text, done, sort_order, due_date, assigned_user_id)
+							VALUES (?,?,?,?,?,?)");
 		foreach ($texts as $i => $t) {
 			$text = trim((string)$t);
 			if ($text === '') continue;
 			$done = !empty($dones[$i]) ? 1 : 0;
-			$st->execute([$goalId, $text, $done, $i]);
+			$due  = trim((string)($dues[$i] ?? ''));
+			$aid  = (int)($assignees[$i] ?? 0);
+			$st->execute([$goalId, $text, $done, $i, $due !== '' ? $due : null, $aid > 0 ? $aid : null]);
 		}
+	}
+
+	/** Is this user the board owner or a collaborator (any role) on the vision? */
+	private static function isOnBoard(PDO $db, array $vision, int $userId): bool
+	{
+		if ($userId <= 0) return false;
+		if ((int)$vision['user_id'] === $userId) return true;
+		$st = $db->prepare("SELECT 1 FROM vision_roles WHERE vision_id = ? AND user_id = ? LIMIT 1");
+		$st->execute([(int)$vision['id'], $userId]);
+		return (bool)$st->fetchColumn();
 	}
 
 	/** GET /api/visions/{slug}/goals */
@@ -847,12 +894,16 @@ class vision_controller
 
 		$sql = "SELECT g.id, g.title, g.description, g.status, g.priority,
 					   g.due_date, g.completed_at, g.created_at,
+					   g.assigned_user_id, g.assignment_status,
+					   au.name AS assignee_name,
 					   COUNT(m.id) AS milestone_total,
-					   COALESCE(SUM(m.done), 0) AS milestone_done
+					   COALESCE(SUM(m.done), 0) AS milestone_done,
+					   MIN(CASE WHEN m.done = 0 THEN m.due_date END) AS next_milestone_due
 				  FROM vision_goals g
 				  LEFT JOIN vision_goal_milestones m ON m.goal_id = g.id
+				  LEFT JOIN users au ON au.id = g.assigned_user_id
 				 WHERE g.vision_id = ?
-				 GROUP BY g.id
+				 GROUP BY g.id, au.name
 				 ORDER BY (g.status IN ('done','cancelled')) ASC,
 						  g.priority ASC,
 						  (g.due_date IS NULL) ASC,
@@ -877,7 +928,8 @@ class vision_controller
 		$goal = $g->fetch(PDO::FETCH_ASSOC);
 		if (!$goal) { http_response_code(404); echo json_encode(['error'=>'Goal not found']); return; }
 
-		$m = $db->prepare("SELECT id, text, done FROM vision_goal_milestones
+		$m = $db->prepare("SELECT id, text, done, due_date, assigned_user_id
+							 FROM vision_goal_milestones
 							WHERE goal_id=? ORDER BY sort_order, id");
 		$m->execute([$gid]);
 		$goal['milestones'] = $m->fetchAll(PDO::FETCH_ASSOC);
@@ -888,7 +940,7 @@ class vision_controller
 	public static function createGoal(string $slug): void
 	{
 		header('Content-Type: application/json');
-		global $db;
+		global $db, $currentUserId;
 		$vision = vision_model::get($db, $slug);
 		api_require_vision($db, $vision, 'edit');
 
@@ -905,19 +957,32 @@ class vision_controller
 			? (!empty($_POST['show_on_trip']) ? 1 : 0)
 			: 1; // default visible
 
+		// Assignee must actually be on the board
+		$assignedTo = (int)($_POST['assigned_user_id'] ?? 0) ?: null;
+		if ($assignedTo && !self::isOnBoard($db, $vision, $assignedTo)) {
+			http_response_code(422); echo json_encode(['error'=>'Assignee is not on this board']); return;
+		}
+
 		$db->beginTransaction();
 		try {
 			$st = $db->prepare("INSERT INTO vision_goals
-				(vision_id, title, description, status, priority, due_date, completed_at, show_on_trip)
-				VALUES (?,?,?,?,?,?,?,?)");
-			$st->execute([(int)$vision['id'], $title, $description, $status, $priority, $due, $completedAt, $showOnTrip]);
+				(vision_id, title, description, status, priority, due_date, completed_at, show_on_trip,
+				 assigned_user_id, assigned_by_user_id, assignment_status)
+				VALUES (?,?,?,?,?,?,?,?,?,?,'open')");
+			$st->execute([(int)$vision['id'], $title, $description, $status, $priority, $due, $completedAt, $showOnTrip,
+						  $assignedTo, $assignedTo ? (int)$currentUserId : null]);
 			$goalId = (int)$db->lastInsertId();
 			self::saveMilestones(
 				$db, $goalId,
 				$_POST['milestone_texts'] ?? [],
-				$_POST['milestone_dones'] ?? []
+				$_POST['milestone_dones'] ?? [],
+				$_POST['milestone_dues'] ?? [],
+				$_POST['milestone_assignees'] ?? []
 			);
 			$db->commit();
+			if ($assignedTo && $assignedTo !== (int)$currentUserId) {
+				add_notification($db, $assignedTo, 'goal_assigned', (int)$vision['id'], $goalId, (int)$currentUserId);
+			}
 			echo json_encode(['success'=>true, 'goal_id'=>$goalId]);
 		} catch (\Throwable $e) {
 			$db->rollBack();
@@ -929,12 +994,13 @@ class vision_controller
 	public static function updateGoal(string $slug, string $goalId): void
 	{
 		header('Content-Type: application/json');
-		global $db;
+		global $db, $currentUserId;
 		$vision = vision_model::get($db, $slug);
 		api_require_vision($db, $vision, 'edit');
 
 		$gid = (int)$goalId;
-		$chk = $db->prepare("SELECT status, completed_at FROM vision_goals WHERE id=? AND vision_id=?");
+		$chk = $db->prepare("SELECT status, completed_at, assigned_user_id, assigned_by_user_id, assignment_status
+							   FROM vision_goals WHERE id=? AND vision_id=?");
 		$chk->execute([$gid, (int)$vision['id']]);
 		$existing = $chk->fetch(PDO::FETCH_ASSOC);
 		if (!$existing) { http_response_code(404); echo json_encode(['error'=>'Goal not found']); return; }
@@ -951,6 +1017,22 @@ class vision_controller
 			? (!empty($_POST['show_on_trip']) ? 1 : 0)
 			: 1;
 
+		// Assignment: keep existing values unless the form sends a change
+		$prevAssignee = (int)($existing['assigned_user_id'] ?? 0) ?: null;
+		$newAssignee  = array_key_exists('assigned_user_id', $_POST)
+			? ((int)$_POST['assigned_user_id'] ?: null)
+			: $prevAssignee;
+		if ($newAssignee && !self::isOnBoard($db, $vision, $newAssignee)) {
+			http_response_code(422); echo json_encode(['error'=>'Assignee is not on this board']); return;
+		}
+		$assignedBy       = $existing['assigned_by_user_id'];
+		$assignmentStatus = $existing['assignment_status'] ?: 'open';
+		$assigneeChanged  = $newAssignee !== $prevAssignee;
+		if ($assigneeChanged) {
+			$assignedBy       = $newAssignee ? (int)$currentUserId : null;
+			$assignmentStatus = 'open'; // fresh assignment resets resolved/returned
+		}
+
 		// Manage completed_at on transitions
 		$completedAt = $existing['completed_at'];
 		if ($status === 'done' && $existing['status'] !== 'done')      $completedAt = date('Y-m-d H:i:s');
@@ -959,20 +1041,87 @@ class vision_controller
 		$db->beginTransaction();
 		try {
 			$st = $db->prepare("UPDATE vision_goals
-				   SET title=?, description=?, status=?, priority=?, due_date=?, completed_at=?, show_on_trip=?
+				   SET title=?, description=?, status=?, priority=?, due_date=?, completed_at=?, show_on_trip=?,
+					   assigned_user_id=?, assigned_by_user_id=?, assignment_status=?
 				 WHERE id=?");
-			$st->execute([$title, $description, $status, $priority, $due, $completedAt, $showOnTrip, $gid]);
+			$st->execute([$title, $description, $status, $priority, $due, $completedAt, $showOnTrip,
+						  $newAssignee, $assignedBy, $assignmentStatus, $gid]);
 			self::saveMilestones(
 				$db, $gid,
 				$_POST['milestone_texts'] ?? [],
-				$_POST['milestone_dones'] ?? []
+				$_POST['milestone_dones'] ?? [],
+				$_POST['milestone_dues'] ?? [],
+				$_POST['milestone_assignees'] ?? []
 			);
 			$db->commit();
+			if ($assigneeChanged && $newAssignee && $newAssignee !== (int)$currentUserId) {
+				add_notification($db, $newAssignee, 'goal_assigned', (int)$vision['id'], $gid, (int)$currentUserId);
+			}
 			echo json_encode(['success'=>true]);
 		} catch (\Throwable $e) {
 			$db->rollBack();
 			http_response_code(500); echo json_encode(['error'=>$e->getMessage()]);
 		}
+	}
+
+	/** Shared guts of resolve/return: permission + goal lookup. */
+	private static function goalForAssigneeAction(string $slug, string $goalId): ?array
+	{
+		global $db, $currentUserId;
+		$vision = vision_model::get($db, $slug);
+		api_require_vision($db, $vision, 'view');
+
+		$g = $db->prepare("SELECT * FROM vision_goals WHERE id=? AND vision_id=?");
+		$g->execute([(int)$goalId, (int)$vision['id']]);
+		$goal = $g->fetch(PDO::FETCH_ASSOC);
+		if (!$goal) { http_response_code(404); echo json_encode(['error'=>'Goal not found']); return null; }
+
+		$isAssignee = (int)($goal['assigned_user_id'] ?? 0) === (int)$currentUserId;
+		if (!$isAssignee && !vision_can($db, $vision, 'edit')) {
+			http_response_code(403); echo json_encode(['error'=>'Only the assignee can do that']); return null;
+		}
+		return ['vision' => $vision, 'goal' => $goal];
+	}
+
+	/** POST /api/visions/{slug}/goals/{id}/resolve  body: note (optional) */
+	public static function resolveGoal(string $slug, string $goalId): void
+	{
+		header('Content-Type: application/json');
+		global $db, $currentUserId;
+		$ctx = self::goalForAssigneeAction($slug, $goalId);
+		if (!$ctx) return;
+		$goal = $ctx['goal']; $vision = $ctx['vision'];
+
+		$note = mb_substr(trim((string)($_POST['note'] ?? '')), 0, 2000);
+		$db->prepare("UPDATE vision_goals
+						 SET status='done', completed_at=NOW(), assignment_status='resolved'
+					   WHERE id=?")->execute([(int)$goal['id']]);
+
+		$recipient = (int)($goal['assigned_by_user_id'] ?: $vision['user_id']);
+		if ($recipient && $recipient !== (int)$currentUserId) {
+			add_notification($db, $recipient, 'goal_resolved', (int)$vision['id'], (int)$goal['id'], (int)$currentUserId, $note);
+		}
+		echo json_encode(['success'=>true]);
+	}
+
+	/** POST /api/visions/{slug}/goals/{id}/return  body: note (optional) */
+	public static function returnGoal(string $slug, string $goalId): void
+	{
+		header('Content-Type: application/json');
+		global $db, $currentUserId;
+		$ctx = self::goalForAssigneeAction($slug, $goalId);
+		if (!$ctx) return;
+		$goal = $ctx['goal']; $vision = $ctx['vision'];
+
+		$note = mb_substr(trim((string)($_POST['note'] ?? '')), 0, 2000);
+		$db->prepare("UPDATE vision_goals SET assignment_status='returned' WHERE id=?")
+		   ->execute([(int)$goal['id']]);
+
+		$recipient = (int)($goal['assigned_by_user_id'] ?: $vision['user_id']);
+		if ($recipient && $recipient !== (int)$currentUserId) {
+			add_notification($db, $recipient, 'goal_returned', (int)$vision['id'], (int)$goal['id'], (int)$currentUserId, $note);
+		}
+		echo json_encode(['success'=>true]);
 	}
 
 	/** DELETE /api/visions/{slug}/goals/{id}/delete */

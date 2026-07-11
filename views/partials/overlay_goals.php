@@ -47,6 +47,11 @@ $slug = htmlspecialchars($vision['slug'] ?? '', ENT_QUOTES);
         </div>
       </div>
 
+      <label for="goalAssignee" style="font-size:.8em;opacity:.7;">Assign to</label>
+      <select id="goalAssignee" name="assigned_user_id">
+        <option value="">— Unassigned —</option>
+      </select>
+
       <label class="switch switch-row" style="margin-top:.6rem;">
         <span class="switch-label">Show on Trip layer</span>
         <input class="switch-input" type="checkbox" name="show_on_trip" checked>
@@ -87,6 +92,14 @@ $slug = htmlspecialchars($vision['slug'] ?? '', ENT_QUOTES);
   #goalsWrap .goal-date { opacity:.7; font-family:monospace; }
   #goalsWrap .goal-date.is-overdue { color:#f08792; }
   #goalsWrap .goal-progress { opacity:.7; }
+  #goalsWrap .assignee-pill {
+    display:inline-block; padding:.05rem .45rem; border-radius:999px;
+    font-size:.7rem; background:#1f2533; color:#8fb1d8; border:1px solid #2b3f5f;
+  }
+  #goalsWrap .returned-pill {
+    display:inline-block; padding:.05rem .45rem; border-radius:999px;
+    font-size:.7rem; background:#3a2310; color:#e8b067; border:1px solid #5a3818;
+  }
 
   /* Pills */
   #goalsWrap .pri-pill {
@@ -123,12 +136,22 @@ $slug = htmlspecialchars($vision['slug'] ?? '', ENT_QUOTES);
   }
   #goalForm .goal-meta-row label { font-size:.8em; opacity:.7; }
   #goalsWrap .milestone-row {
-    display:flex; align-items:center; gap:.4rem; margin-bottom:.35rem;
+    display:flex; flex-wrap:wrap; align-items:center; gap:.4rem; margin-bottom:.45rem;
   }
   #goalsWrap .milestone-row input[type="text"] {
-    flex:1; margin-bottom:0;
+    flex:1 1 150px; margin-bottom:0;
     background:#15161A; border:1px solid #2b3346; color:#ddd;
     padding:.35rem .5rem; border-radius:6px;
+  }
+  #goalsWrap .milestone-row .ms-due {
+    width:132px; margin-bottom:0;
+    background:#15161A; border:1px solid #2b3346; color:#ddd;
+    padding:.3rem .4rem; border-radius:6px; font-size:.85em;
+  }
+  #goalsWrap .milestone-row .ms-assignee {
+    flex:0 1 130px; margin-bottom:0;
+    background:#15161A; border:1px solid #2b3346; color:#ddd;
+    padding:.3rem .4rem; border-radius:6px; font-size:.85em;
   }
   #goalsWrap .milestone-row.is-done input[type="text"] { text-decoration:line-through; opacity:.6; }
   #goalsWrap .milestone-row .ms-remove {
@@ -151,6 +174,7 @@ $slug = htmlspecialchars($vision['slug'] ?? '', ENT_QUOTES);
   const closeBtn = wrap.querySelector('#btnCloseGoal');
   const delBtn   = wrap.querySelector('#btnDeleteGoal');
   const addMs    = wrap.querySelector('#btnAddMilestone');
+  const assigneeSel = wrap.querySelector('#goalAssignee');
 
   const STATUS_LABELS = {
     not_started: 'Not started', in_progress: 'In progress',
@@ -162,15 +186,35 @@ $slug = htmlspecialchars($vision['slug'] ?? '', ENT_QUOTES);
     return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   }
 
-  function msRow(text='', done=false) {
+  // Board members (owner + collaborators) for the assignee dropdowns
+  let members = [];
+  function memberOptions(selected) {
+    return '<option value="">—</option>' + members.map(m =>
+      `<option value="${m.user_id}" ${String(m.user_id) === String(selected ?? '') ? 'selected' : ''}>${escapeHtml(m.name || m.email)}</option>`
+    ).join('');
+  }
+  async function loadMembers() {
+    try {
+      const res = await fetch(`/api/visions/${slug}/roles`);
+      const j   = await res.json();
+      members = (j?.members || []).map(m => ({ user_id: m.user_id, name: m.name, email: m.email }));
+    } catch { members = []; }
+    assigneeSel.innerHTML = '<option value="">— Unassigned —</option>' + members.map(m =>
+      `<option value="${m.user_id}">${escapeHtml(m.name || m.email)}</option>`
+    ).join('');
+  }
+
+  function msRow(text = '', done = false, due = '', assignee = '') {
     return `
       <div class="milestone-row ${done?'is-done':''}">
         <input type="checkbox" class="ms-done" ${done?'checked':''}>
         <input type="text" class="ms-text" value="${escapeHtml(text)}" placeholder="Milestone…">
+        <input type="date" class="ms-due" value="${escapeHtml(due || '')}" title="Milestone due date">
+        <select class="ms-assignee" title="Assign this milestone">${memberOptions(assignee)}</select>
         <button type="button" class="ms-remove" aria-label="Remove">×</button>
       </div>`;
   }
-  function addMsRow(t='', d=false) { msWrap.insertAdjacentHTML('beforeend', msRow(t, d)); }
+  function addMsRow(t='', d=false, due='', assignee='') { msWrap.insertAdjacentHTML('beforeend', msRow(t, d, due, assignee)); }
 
   function clearForm() {
     form.reset();
@@ -192,14 +236,26 @@ $slug = htmlspecialchars($vision['slug'] ?? '', ENT_QUOTES);
       const done  = +g.milestone_done  || 0;
       const pct   = total ? Math.round((done/total)*100) : null;
       const progress = total ? `${done}/${total} · ${pct}%` : '—';
-      const overdue = g.due_date && g.due_date < today && g.status !== 'done' && g.status !== 'cancelled';
+      const active  = g.status !== 'done' && g.status !== 'cancelled';
+      const overdue = g.due_date && g.due_date < today && active;
+      const msDue   = g.next_milestone_due;
+      const msOverdue = msDue && msDue < today && active;
       const cls = [
         g.status === 'done' ? 'is-done' : '',
         g.status === 'cancelled' ? 'is-cancelled' : '',
-        overdue ? 'is-overdue' : '',
+        (overdue || msOverdue) ? 'is-overdue' : '',
       ].filter(Boolean).join(' ');
       const dateLabel = g.due_date
         ? `<span class="goal-date ${overdue?'is-overdue':''}">📅 ${g.due_date}</span>`
+        : '';
+      const msDueLabel = (msDue && active)
+        ? `<span class="goal-date ${msOverdue?'is-overdue':''}">⏳ next ${msDue}</span>`
+        : '';
+      const assignee = g.assignee_name
+        ? `<span class="assignee-pill">👤 ${escapeHtml(g.assignee_name)}</span>`
+        : '';
+      const returned = (g.assignment_status === 'returned' && active)
+        ? `<span class="returned-pill">↩ Returned</span>`
         : '';
       return `
         <div class="goal-row ${cls}" data-id="${g.id}">
@@ -208,7 +264,10 @@ $slug = htmlspecialchars($vision['slug'] ?? '', ENT_QUOTES);
             <div class="goal-meta">
               <span class="pri-pill" data-p="${g.priority}">P${g.priority}</span>
               <span class="stat-pill" data-s="${g.status}">${STATUS_LABELS[g.status] || g.status}</span>
+              ${assignee}
+              ${returned}
               ${dateLabel}
+              ${msDueLabel}
               <span class="goal-progress">${progress}</span>
             </div>
           </div>
@@ -229,12 +288,13 @@ $slug = htmlspecialchars($vision['slug'] ?? '', ENT_QUOTES);
     fd.append('status',      form.status.value);
     fd.append('priority',    form.priority.value);
     fd.append('due_date',    form.due_date.value);
+    fd.append('assigned_user_id', assigneeSel.value || '');
     fd.append('show_on_trip', form.show_on_trip.checked ? '1' : '0');
     msWrap.querySelectorAll('.milestone-row').forEach(row => {
-      const t = row.querySelector('.ms-text').value;
-      const d = row.querySelector('.ms-done').checked ? '1' : '';
-      fd.append('milestone_texts[]', t);
-      fd.append('milestone_dones[]', d);
+      fd.append('milestone_texts[]',     row.querySelector('.ms-text').value);
+      fd.append('milestone_dones[]',     row.querySelector('.ms-done').checked ? '1' : '');
+      fd.append('milestone_dues[]',      row.querySelector('.ms-due')?.value || '');
+      fd.append('milestone_assignees[]', row.querySelector('.ms-assignee')?.value || '');
     });
     return fd;
   }
@@ -288,7 +348,7 @@ $slug = htmlspecialchars($vision['slug'] ?? '', ENT_QUOTES);
   });
   msWrap.addEventListener('input', autoSave);
 
-  ['title','description','status','priority','due_date'].forEach(name => {
+  ['title','description','status','priority','due_date','assigned_user_id'].forEach(name => {
     const el = form.querySelector(`[name="${name}"]`);
     if (!el) return;
     el.addEventListener('change', autoSave);
@@ -321,14 +381,16 @@ $slug = htmlspecialchars($vision['slug'] ?? '', ENT_QUOTES);
       form.status.value      = g.status || 'not_started';
       form.priority.value    = g.priority || 3;
       form.due_date.value    = g.due_date || '';
+      assigneeSel.value      = g.assigned_user_id || '';
       // Per-goal trip visibility (defaults to checked for new goals; respects DB for existing)
       form.show_on_trip.checked = (g.show_on_trip == null) ? true : !!+g.show_on_trip;
-      (g.milestones || []).forEach(m => addMsRow(m.text, !!+m.done));
+      (g.milestones || []).forEach(m => addMsRow(m.text, !!+m.done, m.due_date || '', m.assigned_user_id || ''));
       delBtn.hidden = false;
       showForm();
     } catch { alert('Failed to load goal'); }
   });
 
-  loadList();
+  // Members must load before milestone rows render their assignee options
+  loadMembers().then(loadList);
 })();
 </script>

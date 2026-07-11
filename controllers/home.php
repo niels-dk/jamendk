@@ -539,6 +539,27 @@ class home_controller
 			$handoffs = $hs->fetchAll(PDO::FETCH_ASSOC) ?: [];
 		} catch (\Throwable $e) { /* table not migrated yet */ }
 
+		// Generic check-to-dismiss notices (goal assignments, resolutions, returns…)
+		$notices = [];
+		try {
+			$nt = $db->prepare("
+				SELECT n.id, n.type, n.note, n.created_at,
+					   v.slug  AS vision_slug,
+					   v.title AS vision_title,
+					   g.title AS goal_title,
+					   u.name  AS from_name
+				  FROM notifications n
+				  LEFT JOIN visions v ON v.id = n.vision_id
+				  LEFT JOIN vision_goals g ON g.id = n.goal_id
+				  LEFT JOIN users u ON u.id = n.from_user_id
+				 WHERE n.user_id = ? AND n.acknowledged_at IS NULL
+				 ORDER BY n.created_at DESC
+				 LIMIT 30
+			");
+			$nt->execute([(int)$currentUserId]);
+			$notices = $nt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+		} catch (\Throwable $e) { /* table not migrated yet */ }
+
 		// View vars
 		$pageTitle  = 'Dashboard';
 		$boardSets  = $boards;

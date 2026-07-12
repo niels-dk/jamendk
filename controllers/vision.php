@@ -895,7 +895,7 @@ class vision_controller
 		$sql = "SELECT g.id, g.title, g.description, g.status, g.priority,
 					   g.due_date, g.completed_at, g.created_at,
 					   g.assigned_user_id, g.assignment_status,
-					   au.name AS assignee_name,
+					   au.name AS assignee_name, au.email AS assignee_email,
 					   COUNT(m.id) AS milestone_total,
 					   COALESCE(SUM(m.done), 0) AS milestone_done,
 					   MIN(CASE WHEN m.done = 0 THEN m.due_date END) AS next_milestone_due
@@ -903,7 +903,7 @@ class vision_controller
 				  LEFT JOIN vision_goal_milestones m ON m.goal_id = g.id
 				  LEFT JOIN users au ON au.id = g.assigned_user_id
 				 WHERE g.vision_id = ?
-				 GROUP BY g.id, au.name
+				 GROUP BY g.id, au.name, au.email
 				 ORDER BY (g.status IN ('done','cancelled')) ASC,
 						  g.priority ASC,
 						  (g.due_date IS NULL) ASC,

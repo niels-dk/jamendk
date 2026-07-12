@@ -186,22 +186,59 @@ $slug = htmlspecialchars($vision['slug'] ?? '', ENT_QUOTES);
     return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   }
 
-  // Board members (owner + collaborators) for the assignee dropdowns
-  let members = [];
-  function memberOptions(selected) {
-    return '<option value="">—</option>' + members.map(m =>
-      `<option value="${m.user_id}" ${String(m.user_id) === String(selected ?? '') ? 'selected' : ''}>${escapeHtml(m.name || m.email)}</option>`
-    ).join('');
+  // Board members (owner + collaborators) for the assignee dropdowns.
+  // Grouped by team so same-named people are distinguishable; label shows email.
+  let members = [];      // [{user_id, name, email}]
+  let teamOf  = {};      // user_id -> [team names]
+
+  function memberLabel(m) {
+    return (m.name || m.email) + (m.email ? ` — ${m.email}` : '');
   }
+  // Build <optgroup>-based options: one group per team the members belong to,
+  // plus a "Not in a team" group. A member in several teams appears once,
+  // under their first team (keeps the list short and unambiguous enough).
+  function buildOptions(selected, placeholder) {
+    const sel = String(selected ?? '');
+    const groups = {};            // teamName -> [members]
+    const loose  = [];            // members on no team
+    const seen   = new Set();
+    members.forEach(m => {
+      if (seen.has(m.user_id)) return;
+      seen.add(m.user_id);
+      const teams = teamOf[m.user_id] || [];
+      if (teams.length) (groups[teams[0]] ||= []).push(m);
+      else loose.push(m);
+    });
+    const opt = m =>
+      `<option value="${m.user_id}" ${String(m.user_id) === sel ? 'selected' : ''}>${escapeHtml(memberLabel(m))}</option>`;
+    let html = `<option value="">${placeholder}</option>`;
+    Object.keys(groups).sort().forEach(tn => {
+      html += `<optgroup label="👥 ${escapeHtml(tn)}">${groups[tn].map(opt).join('')}</optgroup>`;
+    });
+    if (loose.length) {
+      html += `<optgroup label="Not in a team">${loose.map(opt).join('')}</optgroup>`;
+    }
+    return html;
+  }
+  function memberOptions(selected) { return buildOptions(selected, '—'); }
+
   async function loadMembers() {
     try {
       const res = await fetch(`/api/visions/${slug}/roles`);
       const j   = await res.json();
       members = (j?.members || []).map(m => ({ user_id: m.user_id, name: m.name, email: m.email }));
     } catch { members = []; }
-    assigneeSel.innerHTML = '<option value="">— Unassigned —</option>' + members.map(m =>
-      `<option value="${m.user_id}">${escapeHtml(m.name || m.email)}</option>`
-    ).join('');
+    // Cross-reference the current user's teams to tag each board member
+    try {
+      const tr = await fetch('/api/teams');
+      const tj = await tr.json();
+      (tj?.teams || []).forEach(t => {
+        (t.members || []).forEach(mm => {
+          (teamOf[mm.user_id] ||= []).push(t.name);
+        });
+      });
+    } catch { /* teams optional */ }
+    assigneeSel.innerHTML = buildOptions('', '— Unassigned —');
   }
 
   function msRow(text = '', done = false, due = '', assignee = '') {
@@ -252,7 +289,7 @@ $slug = htmlspecialchars($vision['slug'] ?? '', ENT_QUOTES);
         ? `<span class="goal-date ${msOverdue?'is-overdue':''}">⏳ next ${msDue}</span>`
         : '';
       const assignee = g.assignee_name
-        ? `<span class="assignee-pill">👤 ${escapeHtml(g.assignee_name)}</span>`
+        ? `<span class="assignee-pill" title="${escapeHtml(g.assignee_email || '')}">👤 ${escapeHtml(g.assignee_name)}</span>`
         : '';
       const returned = (g.assignment_status === 'returned' && active)
         ? `<span class="returned-pill">↩ Returned</span>`

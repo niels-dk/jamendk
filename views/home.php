@@ -334,7 +334,8 @@ $typeIcon = [
       </div>
     </div>
 
-    <?php if (!empty($upcoming)): ?>
+    <?php $taskDeadlines = $taskDeadlines ?? []; ?>
+    <?php if (!empty($upcoming) || !empty($taskDeadlines)): ?>
       <!-- Upcoming / overdue Vision dates -->
       <div class="home-section-title">Upcoming dates</div>
       <div class="upcoming">
@@ -366,6 +367,28 @@ $typeIcon = [
             <span class="u-badge"><?= $badge ?></span>
             <span class="u-title"><?= h_e($u['title'] ?: 'Untitled vision') ?></span>
             <span class="u-when"><?= h_e($rel) ?> · <?= h_e(h_dt($dateStr)) ?></span>
+          </a>
+        <?php endforeach; ?>
+
+        <?php foreach ($taskDeadlines as $t): ?>
+          <?php
+            $days = h_days_until($t['due_date'] ?? null);
+            if ($days === null) continue;
+            $overdue = $days < 0;
+            $cls = $overdue ? 'u-overdue' : ($days <= 2 ? 'u-ending' : 'u-starting');
+            $badge = $t['kind'] === 'milestone' ? 'Milestone' : 'Goal';
+            $rel = $overdue
+              ? abs($days).' day'.(abs($days)==1?'':'s').' ago'
+              : ($days === 0 ? 'today' : ($days === 1 ? 'tomorrow' : "in $days days"));
+            $who = !empty($t['assignee_name']) ? ' · '.$t['assignee_name'] : '';
+          ?>
+          <a class="u-row <?= $cls ?>" href="/visions/<?= h_e($t['vision_slug']) ?>">
+            <span class="u-badge"><?= $badge ?></span>
+            <span class="u-title">
+              <?= h_e($t['title'] ?: 'Untitled') ?>
+              <span style="opacity:.55;font-weight:400;">— <?= h_e($t['vision_title'] ?: 'vision') ?><?= h_e($who) ?></span>
+            </span>
+            <span class="u-when"><?= h_e($rel) ?> · <?= h_e(h_dt($t['due_date'])) ?></span>
           </a>
         <?php endforeach; ?>
       </div>

@@ -122,6 +122,39 @@ class home_controller
             $upcoming = $uq->fetchAll(PDO::FETCH_ASSOC) ?: [];
         } catch (\Throwable $e) { /* keep empty */ }
 
+        // Goal & milestone deadlines — on boards I own or items assigned to me,
+        // due within ~10 days or already overdue and not finished.
+        $taskDeadlines = [];
+        try {
+            $gq = $db->prepare("
+                SELECT 'goal' AS kind, g.title, g.due_date,
+                       v.slug AS vision_slug, v.title AS vision_title,
+                       au.name AS assignee_name
+                  FROM vision_goals g
+                  JOIN visions v ON v.id = g.vision_id AND v.deleted_at IS NULL
+                  LEFT JOIN users au ON au.id = g.assigned_user_id
+                 WHERE g.due_date IS NOT NULL
+                   AND g.status NOT IN ('done','cancelled')
+                   AND (v.user_id = ? OR g.assigned_user_id = ?)
+                   AND g.due_date <= DATE_ADD(CURDATE(), INTERVAL 10 DAY)
+                UNION ALL
+                SELECT 'milestone' AS kind, m.text AS title, m.due_date,
+                       v.slug AS vision_slug, v.title AS vision_title,
+                       au.name AS assignee_name
+                  FROM vision_goal_milestones m
+                  JOIN vision_goals g ON g.id = m.goal_id AND g.status NOT IN ('done','cancelled')
+                  JOIN visions v ON v.id = g.vision_id AND v.deleted_at IS NULL
+                  LEFT JOIN users au ON au.id = COALESCE(m.assigned_user_id, g.assigned_user_id)
+                 WHERE m.due_date IS NOT NULL AND m.done = 0
+                   AND (v.user_id = ? OR m.assigned_user_id = ? OR g.assigned_user_id = ?)
+                   AND m.due_date <= DATE_ADD(CURDATE(), INTERVAL 10 DAY)
+                 ORDER BY due_date ASC
+                 LIMIT 12
+            ");
+            $gq->execute([$uid, $uid, $uid, $uid, $uid]);
+            $taskDeadlines = $gq->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        } catch (\Throwable $e) { /* columns not migrated yet */ }
+
         $hasActivity = ($stats['dreams'] + $stats['visions'] + $stats['moods']) > 0;
         $userName = (is_array($currentUser ?? null) && !empty($currentUser['name']))
             ? $currentUser['name'] : '';

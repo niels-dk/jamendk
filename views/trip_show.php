@@ -1,7 +1,41 @@
 <?php
 // views/trip_show.php — polished shareable trip page with embedded mood canvas.
+// Renders in two modes from the same markup:
+//   live   ($export=false) — normal web page
+//   export ($export=true)  — self-contained offline HTML: every image is
+//                            inlined as base64 and documents become data:
+//                            URIs (prepared by the controller in $docEmbeds).
 function tr_e($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
 function tr_date($s) { return $s ? date('M j, Y', strtotime($s)) : ''; }
+
+$export    = $export    ?? false;
+$docEmbeds = $docEmbeds ?? [];
+
+// In export mode, turn any asset URL into a data: URI (local storage files
+// read from disk; remote thumbs fetched with a short timeout). Falls back
+// to the online URL if the asset can't be read.
+$assetUrl = function (string $url) use ($export): string {
+    static $cache = [];
+    if (!$export || $url === '' || str_starts_with($url, 'data:')) return $url;
+    if (isset($cache[$url])) return $cache[$url];
+    $data = false;
+    $mime = 'image/jpeg';
+    if (str_starts_with($url, '/storage/')) {
+        $fs = realpath(__DIR__ . '/..') . $url;
+        if (is_file($fs)) {
+            $data = @file_get_contents($fs);
+            $mime = ['png'=>'image/png','gif'=>'image/gif','webp'=>'image/webp',
+                     'jpg'=>'image/jpeg','jpeg'=>'image/jpeg','bmp'=>'image/bmp']
+                    [strtolower(pathinfo($fs, PATHINFO_EXTENSION))] ?? 'image/jpeg';
+        }
+    } elseif (preg_match('~^https?://~', $url)) {
+        $ctx  = stream_context_create(['http' => ['timeout' => 6]]);
+        $data = @file_get_contents($url, false, $ctx);
+    }
+    return $cache[$url] = ($data !== false && $data !== null && $data !== '')
+        ? 'data:' . $mime . ';base64,' . base64_encode($data)
+        : $url;
+};
 
 $title       = $vision['title'] ?: 'Trip';
 $startDate   = tr_date($vision['start_date'] ?? '');
@@ -21,12 +55,12 @@ $priorityLabel = fn($p) => 'P' . max(1, min(5, (int)$p));
 $anchorOrder = ['locations','brands','people','seasons','time'];
 $anchorIcon  = ['locations'=>'📍','brands'=>'🏷️','people'=>'👤','seasons'=>'🗓️','time'=>'⏱️'];
 
-$mediaThumb = function(array $m): string {
+$mediaThumb = function(array $m) use ($assetUrl): string {
     if (!empty($m['provider']) && $m['provider'] === 'youtube' && !empty($m['provider_id'])) {
-        return 'https://img.youtube.com/vi/' . urlencode($m['provider_id']) . '/hqdefault.jpg';
+        return $assetUrl('https://img.youtube.com/vi/' . urlencode($m['provider_id']) . '/hqdefault.jpg');
     }
     if (!empty($m['uuid'])) {
-        return '/storage/thumbs/' . urlencode($m['uuid']) . '_thumb.jpg';
+        return $assetUrl('/storage/thumbs/' . urlencode($m['uuid']) . '_thumb.jpg');
     }
     return '';
 };
@@ -265,6 +299,40 @@ $pctOf = function (int $v, int $base): string {
       padding: 2.4rem 1rem; text-align: center; color: var(--muted); font-size: .9rem;
     }
 
+    /* Offline copy button (live page only) */
+    .dl-offline {
+      position: absolute; top: .9rem; right: .9rem; z-index: 2;
+      padding: .4rem .8rem; border-radius: 999px;
+      background: rgba(11,23,39,.72); color: #fff; font-size: .8rem; font-weight: 600;
+      backdrop-filter: blur(4px);
+    }
+    .dl-offline:hover { background: rgba(11,23,39,.9); text-decoration: none; }
+    .hero.no-cover .dl-offline { background: var(--accent); }
+    @media print { .dl-offline { display: none; } }
+
+    /* Cap the canvas snapshot height; wrapper keeps the aspect ratio true */
+    .trip-canvas-wrap { margin: 0 auto; }
+
+    /* Click-to-zoom lightbox (works offline too) */
+    #trip-lb {
+      position: fixed; inset: 0; z-index: 999; display: none;
+      align-items: center; justify-content: center;
+      background: rgba(11,23,39,.88); cursor: zoom-out; padding: 2vh 2vw;
+    }
+    #trip-lb.open { display: flex; }
+    #trip-lb img {
+      max-width: 96vw; max-height: 96vh; border-radius: 8px;
+      box-shadow: 0 20px 60px rgba(0,0,0,.5); background: #fff;
+    }
+    .ci img { cursor: zoom-in; }
+    @media print { #trip-lb { display: none !important; } }
+
+    /* Docs that couldn't be embedded in the offline copy */
+    .doc-onlineonly {
+      flex-shrink: 0; padding: .35rem .65rem; border-radius: 8px;
+      background: #fce8c9; color: #7c4910; font-size: .78rem; font-weight: 600;
+    }
+
     /* Footer */
     footer {
       margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--line);
@@ -302,6 +370,12 @@ $pctOf = function (int $v, int $base): string {
 <div class="wrap">
 
   <header class="hero <?= $coverUrl ? 'has-cover' : 'no-cover' ?>">
+    <?php if (!$export): ?>
+      <a class="dl-offline" href="/trips/<?= tr_e($vision['slug']) ?>/download"
+         title="Download a single-file copy that works without internet — images and documents included">
+        ⬇ Offline copy
+      </a>
+    <?php endif; ?>
     <?php if ($coverUrl): ?>
       <div class="hero-cover" style="background-image:url('<?= tr_e($coverUrl) ?>');"></div>
     <?php endif; ?>
@@ -447,7 +521,17 @@ $pctOf = function (int $v, int $base): string {
             </div>
           </div>
           <?php if (!empty($doc['uuid'])): ?>
-            <a class="download" href="/documents/<?= tr_e($doc['uuid']) ?>/download">Download</a>
+            <?php if (!$export): ?>
+              <a class="download" href="/documents/<?= tr_e($doc['uuid']) ?>/download">Download</a>
+            <?php elseif (!empty($docEmbeds[$doc['uuid']])): ?>
+              <!-- Embedded in this file — works fully offline -->
+              <a class="download" href="<?= $docEmbeds[$doc['uuid']] ?>"
+                 download="<?= tr_e(basename($name)) ?>">Download</a>
+            <?php else: ?>
+              <span class="doc-onlineonly" title="This file was too large to embed in the offline copy — download it online before you go offline">
+                ⚠ Online only
+              </span>
+            <?php endif; ?>
           <?php endif; ?>
         </li>
       <?php endforeach; ?>
@@ -485,6 +569,12 @@ $pctOf = function (int $v, int $base): string {
             return $a['id'] <=> $b['id'];
         });
       ?>
+      <?php
+        // Cap the snapshot's on-screen height at ~560px while preserving the
+        // true aspect ratio: for tall canvases, narrow the wrapper instead.
+        $capW = (int)round(560 * $cw / max(1, $ch));
+      ?>
+      <div class="trip-canvas-wrap" style="max-width:min(100%, <?= $capW ?>px);">
       <div class="trip-canvas" style="aspect-ratio: <?= $cw ?> / <?= $ch ?>;">
         <svg class="lines" viewBox="0 0 <?= $cw ?> <?= $ch ?>" preserveAspectRatio="none">
           <defs>
@@ -562,15 +652,39 @@ $pctOf = function (int $v, int $base): string {
           </div>
         <?php endforeach; ?>
       </div>
+      </div><!-- /.trip-canvas-wrap -->
     <?php elseif (empty($canvasItems)): ?>
       <div class="card canvas-empty">The mood board has no items yet.</div>
     <?php endif; ?>
   <?php endif; ?>
 
   <footer>
-    Generated <?= tr_e(date('M j, Y · H:i')) ?>
+    <?php if ($export): ?>
+      Offline copy of “<?= tr_e($title) ?>” · generated <?= tr_e(date('M j, Y · H:i')) ?>
+      — images and documents are embedded in this file.
+    <?php else: ?>
+      Generated <?= tr_e(date('M j, Y · H:i')) ?>
+    <?php endif; ?>
   </footer>
 
 </div>
+
+<!-- Click-to-zoom for canvas images (inline, so it works offline too) -->
+<div id="trip-lb"><img alt=""></div>
+<script>
+(function () {
+  var lb = document.getElementById('trip-lb');
+  if (!lb) return;
+  var lbImg = lb.querySelector('img');
+  document.addEventListener('click', function (e) {
+    var img = e.target.closest('.ci img');
+    if (img) { lbImg.src = img.src; lb.classList.add('open'); return; }
+    if (e.target === lb || e.target === lbImg) lb.classList.remove('open');
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') lb.classList.remove('open');
+  });
+})();
+</script>
 </body>
 </html>

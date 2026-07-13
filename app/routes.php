@@ -196,6 +196,7 @@ function route(string $uri): void
 
         // ── Trips (shareable read-only view of a Vision) ─────────────────────
         '/trips/([A-Za-z0-9]{6,16})'               => ['trip', 'show'],
+        '/trips/([A-Za-z0-9]{6,16})/download'      => ['trip', 'download'],
 
         // ── Vision AJAX (kept as-is) ──────────────────────────────────────────
         '/api/visions/([A-Za-z0-9]{6,16})/save'    => ['vision', 'ajax_save'],

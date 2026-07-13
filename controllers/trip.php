@@ -18,7 +18,13 @@ require_once __DIR__ . '/../models/document_model.php';
 
 class trip_controller
 {
-    public static function show(string $slug): void
+    /** GET /trips/{slug}/download — self-contained offline HTML copy. */
+    public static function download(string $slug): void
+    {
+        self::show($slug, true);
+    }
+
+    public static function show(string $slug, bool $export = false): void
     {
         global $db;
 
@@ -248,6 +254,52 @@ class trip_controller
             || !empty($documents)
             || $workflow;
 
+        if (!$export) {
+            include __DIR__ . '/../views/trip_show.php';
+            return;
+        }
+
+        // ── Offline export ────────────────────────────────────────────────
+        // Embed documents as data: URIs so the download links work with no
+        // internet. Files are AES-encrypted at rest — decrypt like download().
+        // Caps keep the HTML manageable: ≤8 MB per doc, ≤25 MB total (plain).
+        $docEmbeds  = [];  // uuid => data URI (or absent when too big / unreadable)
+        $embedTotal = 0;
+        $perDocCap  = 8  * 1024 * 1024;
+        $totalCap   = 25 * 1024 * 1024;
+        $storageDir = __DIR__ . '/../storage/private';
+        foreach ($documents as $doc) {
+            $uuid = $doc['uuid'] ?? '';
+            $size = (int)($doc['file_size'] ?? 0);
+            if ($uuid === '' || empty($doc['enc_key'])) continue;
+            if ($size > $perDocCap || ($embedTotal + $size) > $totalCap) continue;
+            $path = $storageDir . '/' . $uuid;
+            if (!is_file($path)) continue;
+            $data = @file_get_contents($path);
+            if ($data === false || strlen($data) < 17) continue;
+            $iv     = substr($data, 0, 16);
+            $cipher = substr($data, 16);
+            $key    = base64_decode($doc['enc_key'], true);
+            if ($key === false) continue;
+            $plain = openssl_decrypt($cipher, 'AES-256-CBC', $key, OPENSSL_RAW_DATA, $iv);
+            if ($plain === false) continue;
+            $embedTotal += strlen($plain);
+            $mime = $doc['mime_type'] ?: 'application/octet-stream';
+            $docEmbeds[$uuid] = 'data:' . $mime . ';base64,' . base64_encode($plain);
+        }
+
+        ob_start();
         include __DIR__ . '/../views/trip_show.php';
+        $html = ob_get_clean();
+
+        // Attachment filename: trip-{title}-{date}.html
+        $safe = strtolower(trim(preg_replace('/[^A-Za-z0-9]+/', '-', $vision['title'] ?: 'trip'), '-'));
+        if ($safe === '') $safe = 'trip';
+        $filename = 'trip-' . substr($safe, 0, 60) . '-' . date('Y-m-d') . '.html';
+
+        header('Content-Type: text/html; charset=utf-8');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Content-Length: ' . strlen($html));
+        echo $html;
     }
 }

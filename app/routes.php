@@ -194,9 +194,13 @@ function route(string $uri): void
         '/admin/users/([0-9]+)/impersonate'        => ['admin', 'impersonate'],
         '/admin/return'                            => ['admin', 'stopImpersonate'],
 
-        // ── Trips (shareable read-only view of a Vision) ─────────────────────
+        // ── Trips ─────────────────────────────────────────────────────────────
+        // /trips/{slug}   authenticated preview (owner + collaborators)
+        // /t/{token}      public share URL (unguessable, optional expiry)
         '/trips/([A-Za-z0-9]{6,16})'               => ['trip', 'show'],
         '/trips/([A-Za-z0-9]{6,16})/download'      => ['trip', 'download'],
+        '/t/([A-Za-z0-9]{16,64})'                  => ['trip', 'showByToken'],
+        '/t/([A-Za-z0-9]{16,64})/download'         => ['trip', 'downloadByToken'],
 
         // ── Vision AJAX (kept as-is) ──────────────────────────────────────────
         '/api/visions/([A-Za-z0-9]{6,16})/save'    => ['vision', 'ajax_save'],
@@ -205,6 +209,10 @@ function route(string $uri): void
                                                    => ['vision', 'overlay'],
         // Goals & Milestones (must come before generic /api/visions/{slug}/{section})
         '/api/visions/([A-Za-z0-9]{6,16})/goals'                 => ['vision', 'listGoals'],
+        // Trip share-link management (token + expiry; hyphen keeps it out of
+        // the generic {section} catch-all anyway, but be explicit)
+        '/api/visions/([A-Za-z0-9]{6,16})/trip-share'            => ['vision', 'tripShare'],
+
         // Roles & sharing (must come before the generic {section} catch-all)
         '/api/visions/([A-Za-z0-9]{6,16})/roles'                 => ['vision', 'listRoles'],
         '/api/visions/([A-Za-z0-9]{6,16})/roles/add'             => ['vision', 'addRole'],

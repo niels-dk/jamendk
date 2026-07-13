@@ -8,8 +8,12 @@
 function tr_e($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
 function tr_date($s) { return $s ? date('M j, Y', strtotime($s)) : ''; }
 
-$export    = $export    ?? false;
-$docEmbeds = $docEmbeds ?? [];
+$export     = $export     ?? false;
+$docEmbeds  = $docEmbeds  ?? [];
+$shareToken = $shareToken ?? null; // set when rendered via the public /t/{token} URL
+$downloadHref = $shareToken
+    ? '/t/' . $shareToken . '/download'
+    : '/trips/' . ($vision['slug'] ?? '') . '/download';
 
 // In export mode, turn any asset URL into a data: URI (local storage files
 // read from disk; remote thumbs fetched with a short timeout). Falls back
@@ -371,7 +375,7 @@ $pctOf = function (int $v, int $base): string {
 
   <header class="hero <?= $coverUrl ? 'has-cover' : 'no-cover' ?>">
     <?php if (!$export): ?>
-      <a class="dl-offline" href="/trips/<?= tr_e($vision['slug']) ?>/download"
+      <a class="dl-offline" href="<?= tr_e($downloadHref) ?>"
          title="Download a single-file copy that works without internet — images and documents included">
         ⬇ Offline copy
       </a>

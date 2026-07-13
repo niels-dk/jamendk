@@ -18,33 +18,81 @@ require_once __DIR__ . '/../models/document_model.php';
 
 class trip_controller
 {
-    /** GET /trips/{slug}/download — self-contained offline HTML copy. */
-    public static function download(string $slug): void
-    {
-        self::show($slug, true);
-    }
-
+    /** GET /trips/{slug} — authenticated preview for the owner/collaborators. */
     public static function show(string $slug, bool $export = false): void
     {
         global $db;
 
-        // Resolve the Vision
         $vision = vision_model::get($db, $slug);
         if (!$vision) {
             http_response_code(404);
             echo 'Trip not found';
             return;
         }
-        $visionId = (int)$vision['id'];
+
+        // The slug URL is now a PREVIEW for people on the board; the public
+        // share URL is the unguessable /t/{token} link.
+        require_login();
+        require_vision($db, $vision, 'view');
 
         // Master switch: if the owner hasn't published the trip, short-circuit
         // with a friendly "not published" page rather than rendering content.
-        $tripEnabled = !empty($vision['trip_enabled']);
-        if (!$tripEnabled) {
+        if (empty($vision['trip_enabled'])) {
             $title = $vision['title'] ?: 'Trip';
             include __DIR__ . '/../views/trip_disabled.php';
             return;
         }
+
+        self::render($vision, $export, null);
+    }
+
+    /** GET /trips/{slug}/download — offline copy (authenticated preview). */
+    public static function download(string $slug): void
+    {
+        self::show($slug, true);
+    }
+
+    /** GET /t/{token} — the public share URL (no login). */
+    public static function showByToken(string $token): void
+    {
+        self::byToken($token, false);
+    }
+
+    /** GET /t/{token}/download — offline copy via the public share URL. */
+    public static function downloadByToken(string $token): void
+    {
+        self::byToken($token, true);
+    }
+
+    private static function byToken(string $token, bool $export): void
+    {
+        global $db;
+        $vision = null;
+        try {
+            $st = $db->prepare("SELECT * FROM visions
+                                 WHERE trip_token = ?
+                                   AND trip_enabled = 1
+                                   AND deleted_at IS NULL
+                                   AND (trip_token_expires_at IS NULL OR trip_token_expires_at > NOW())
+                                 LIMIT 1");
+            $st->execute([$token]);
+            $vision = $st->fetch(PDO::FETCH_ASSOC) ?: null;
+        } catch (\Throwable $e) { /* column not migrated yet */ }
+
+        if (!$vision) {
+            http_response_code(404);
+            $title = 'Trip';
+            include __DIR__ . '/../views/trip_disabled.php';
+            return;
+        }
+        self::render($vision, $export, $token);
+    }
+
+    /** Shared renderer for both the preview and the public token URL. */
+    private static function render(array $vision, bool $export, ?string $shareToken): void
+    {
+        global $db;
+        $visionId = (int)$vision['id'];
 
         // Source dream lineage (visions promoted from a dream)
         $sourceDream = null;

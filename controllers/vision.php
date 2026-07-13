@@ -435,11 +435,32 @@ class vision_controller
             case 'basics':
                 $flag    = trim((string)($_POST['flag'] ?? ''));
                 $enabled = (int)($_POST['enabled'] ?? 0);
-                // Master switch: enables/disables the entire trip view
+                // Master switch: enables/disables the entire trip view.
+                // First publish mints the share token so the link exists
+                // the moment the switch flips on.
                 if ($flag === 'trip_enabled') {
                     $db->prepare("UPDATE visions SET trip_enabled=? WHERE id=?")
                        ->execute([$enabled ? 1 : 0, $id]);
-                    echo json_encode(['success' => true]);
+                    $share = null;
+                    if ($enabled) {
+                        try {
+                            $tq = $db->prepare("SELECT trip_token, trip_token_expires_at FROM visions WHERE id=?");
+                            $tq->execute([$id]);
+                            $row = $tq->fetch(PDO::FETCH_ASSOC);
+                            $token = $row['trip_token'] ?? null;
+                            if (!$token) {
+                                $token = bin2hex(random_bytes(16));
+                                $db->prepare("UPDATE visions SET trip_token=? WHERE id=?")
+                                   ->execute([$token, $id]);
+                            }
+                            $share = [
+                                'token'      => $token,
+                                'url'        => self::absoluteUrl('/t/' . $token),
+                                'expires_at' => $row['trip_token_expires_at'] ?? null,
+                            ];
+                        } catch (\Throwable $e) { /* token columns not migrated yet */ }
+                    }
+                    echo json_encode(['success' => true, 'share' => $share]);
                     return;
                 }
                 $allowed = ['relations','goals','budget','roles','contacts','documents','workflow'];
@@ -1220,6 +1241,61 @@ class vision_controller
 
 		$db->prepare("DELETE FROM vision_goals WHERE id=?")->execute([$gid]); // milestones cascade
 		echo json_encode(['success'=>true]);
+	}
+
+	/** Absolute URL for share links (scheme + host + path). */
+	private static function absoluteUrl(string $path): string
+	{
+		$scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+		$host   = $_SERVER['HTTP_HOST'] ?? 'localhost';
+		return $scheme . '://' . $host . $path;
+	}
+
+	/** GET/POST /api/visions/{slug}/trip-share
+	 *  GET  → current share state
+	 *  POST action=regenerate      → mint a new token (old link dies)
+	 *  POST action=expiry&days=N   → expire N days from now (0 = never) */
+	public static function tripShare(string $slug): void
+	{
+		header('Content-Type: application/json');
+		global $db;
+		$vision = vision_model::get($db, $slug);
+		api_require_vision($db, $vision, 'manage');
+		$id = (int)$vision['id'];
+
+		try {
+			$action = (string)($_POST['action'] ?? '');
+
+			if ($action === 'regenerate') {
+				$token = bin2hex(random_bytes(16));
+				$db->prepare("UPDATE visions SET trip_token=? WHERE id=?")->execute([$token, $id]);
+			} elseif ($action === 'expiry') {
+				$days = max(0, (int)($_POST['days'] ?? 0));
+				$expires = $days > 0 ? date('Y-m-d H:i:s', strtotime("+{$days} days")) : null;
+				$db->prepare("UPDATE visions SET trip_token_expires_at=? WHERE id=?")->execute([$expires, $id]);
+			}
+
+			// Ensure a token exists whenever the trip is published
+			$tq = $db->prepare("SELECT trip_enabled, trip_token, trip_token_expires_at FROM visions WHERE id=?");
+			$tq->execute([$id]);
+			$row = $tq->fetch(PDO::FETCH_ASSOC);
+			$token = $row['trip_token'] ?? null;
+			if (!$token && !empty($row['trip_enabled'])) {
+				$token = bin2hex(random_bytes(16));
+				$db->prepare("UPDATE visions SET trip_token=? WHERE id=?")->execute([$token, $id]);
+			}
+
+			echo json_encode([
+				'success'    => true,
+				'enabled'    => (bool)($row['trip_enabled'] ?? false),
+				'token'      => $token,
+				'url'        => $token ? self::absoluteUrl('/t/' . $token) : null,
+				'expires_at' => $row['trip_token_expires_at'] ?? null,
+			]);
+		} catch (\Throwable $e) {
+			http_response_code(500);
+			echo json_encode(['error' => 'Share columns missing — run the trip-share migration']);
+		}
 	}
 
 	/* ──────────────────────  Roles & sharing (board-level)  ────────────────────── */

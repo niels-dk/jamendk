@@ -5,23 +5,30 @@ class media_model
 {
     public static function create(PDO $db, ?int $visionId, string $uuid, string $fileName,
                                   string $mime, int $size, ?string $provider,
-                                  ?string $providerId, ?string $providerUrl, ?string $embedHtml): ?int
+                                  ?string $providerId, ?string $providerUrl, ?string $embedHtml,
+                                  ?int $uploaderId = null): ?int
     {
-        $sql = "INSERT INTO vision_media
+        // user_id (uploader) keeps orphan media private to whoever uploaded it.
+        // Falls back to the legacy column set if the migration hasn't run yet.
+        try {
+            $st = $db->prepare("INSERT INTO vision_media
+                (vision_id, user_id, uuid, file_name, mime_type, file_size, provider, provider_id, provider_url, embed_html, created_at, updated_at)
+                VALUES (:vid, :uid, :uuid, :name, :mime, :size, :prov, :pid, :purl, :embed, NOW(), NOW())");
+            $st->execute([
+                ':vid' => $visionId, ':uid' => $uploaderId, ':uuid' => $uuid, ':name' => $fileName,
+                ':mime' => $mime, ':size' => $size, ':prov' => $provider,
+                ':pid' => $providerId, ':purl' => $providerUrl, ':embed' => $embedHtml,
+            ]);
+        } catch (\Throwable $e) {
+            $st = $db->prepare("INSERT INTO vision_media
                 (vision_id, uuid, file_name, mime_type, file_size, provider, provider_id, provider_url, embed_html, created_at, updated_at)
-                VALUES (:vid, :uuid, :name, :mime, :size, :prov, :pid, :purl, :embed, NOW(), NOW())";
-        $st = $db->prepare($sql);
-        $st->execute([
-            ':vid'   => $visionId,
-            ':uuid'  => $uuid,
-            ':name'  => $fileName,
-            ':mime'  => $mime,
-            ':size'  => $size,
-            ':prov'  => $provider,
-            ':pid'   => $providerId,
-            ':purl'  => $providerUrl,
-            ':embed' => $embedHtml
-        ]);
+                VALUES (:vid, :uuid, :name, :mime, :size, :prov, :pid, :purl, :embed, NOW(), NOW())");
+            $st->execute([
+                ':vid' => $visionId, ':uuid' => $uuid, ':name' => $fileName,
+                ':mime' => $mime, ':size' => $size, ':prov' => $provider,
+                ':pid' => $providerId, ':purl' => $providerUrl, ':embed' => $embedHtml,
+            ]);
+        }
         $id = $db->lastInsertId();
         return $id ? (int)$id : null;
     }

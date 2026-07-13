@@ -21,6 +21,10 @@ ob_start();
     <?php if (!empty($next)): ?>
       <input type="hidden" name="next" value="<?= htmlspecialchars($next) ?>">
     <?php endif; ?>
+    <!-- Honeypot: hidden from humans, bots auto-fill it and get bounced -->
+    <div style="position:absolute;left:-9999px;top:-9999px;" aria-hidden="true">
+      <label>Website <input type="text" name="website" tabindex="-1" autocomplete="off"></label>
+    </div>
 
     <label style="display:flex;flex-direction:column;gap:.3rem;">
       <span style="font-size:.85rem;opacity:.8;">Name</span>

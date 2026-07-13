@@ -97,6 +97,65 @@ function mood_can(PDO $db, ?array $board, string $ability): bool
     return $vision ? vision_can($db, $vision, $ability) : false;
 }
 
+/**
+ * Can the current user perform $ability on a media item?
+ * A media item is reachable through its vision (vision_media.vision_id)
+ * and/or the mood boards it's attached to (mood_board_media). Access via
+ * ANY of those parents grants the ability. Orphan media (no parents)
+ * falls back to the uploader (vision_media.user_id) or site admin.
+ */
+function media_can(PDO $db, int $mediaId, string $ability): bool
+{
+    global $currentUserId;
+    if (is_admin()) return true;
+    if ($mediaId <= 0) return false;
+
+    try {
+        $st = $db->prepare("SELECT * FROM vision_media WHERE id = ? LIMIT 1");
+        $st->execute([$mediaId]);
+        $media = $st->fetch(PDO::FETCH_ASSOC);
+        if (!$media) return false;
+
+        // Parent vision
+        if (!empty($media['vision_id'])) {
+            $vs = $db->prepare("SELECT * FROM visions WHERE id = ? AND deleted_at IS NULL LIMIT 1");
+            $vs->execute([(int)$media['vision_id']]);
+            if (($vision = $vs->fetch(PDO::FETCH_ASSOC)) && vision_can($db, $vision, $ability)) {
+                return true;
+            }
+        }
+
+        // Any linked mood board
+        $bs = $db->prepare("SELECT mb.* FROM mood_boards mb
+                              JOIN mood_board_media mbm ON mbm.board_id = mb.id
+                             WHERE mbm.media_id = ? AND mb.deleted_at IS NULL");
+        $bs->execute([$mediaId]);
+        foreach ($bs->fetchAll(PDO::FETCH_ASSOC) as $board) {
+            if (mood_can($db, $board, $ability)) return true;
+        }
+
+        // Orphan: uploader only (column may be absent on older installs)
+        if ($currentUserId && !empty($media['user_id'])
+            && (int)$media['user_id'] === (int)$currentUserId) {
+            return true;
+        }
+    } catch (\Throwable $e) {
+        return false;
+    }
+    return false;
+}
+
+function api_require_media(PDO $db, int $mediaId, string $ability): void
+{
+    api_require_login();
+    if (!media_can($db, $mediaId, $ability)) {
+        http_response_code(404);
+        header('Content-Type: application/json');
+        echo json_encode(['error' => 'Not found']);
+        exit;
+    }
+}
+
 /* ── HTML-page guards ────────────────────────────────────────────────── */
 
 function require_vision(PDO $db, ?array $vision, string $ability): void

@@ -48,9 +48,9 @@ function route(string $uri): void
 		// Groups (creator/mood scoped)
 		'/api/moods/([A-Za-z0-9]{6,16})/groups' => ['media','groups_list'],
 		
-		// Global groups list/create
-		'/api/groups'            => ['group', 'list'],      // GET
-		'/api/groups/create'     => ['group', 'create'],    // POST
+		// (Removed dead '/api/groups' routes — controllers/group.php never
+		//  existed, so they 404'd; group creation happens via
+		//  document.groups_create and media.setGroup instead.)
 
 		// Assign or create group for a media item
 		'/api/media/([0-9]+)/group' => ['media', 'setGroup'], // POST

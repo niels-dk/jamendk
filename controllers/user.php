@@ -38,6 +38,10 @@ class user_controller
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!csrf_check($_POST['csrf_token'] ?? null)) {
                 $error = 'Your session expired. Please try again.';
+            } elseif (trim($_POST['website'] ?? '') !== '') {
+                // Honeypot: real users never see or fill this field.
+                // Pretend success so bots don't learn they were caught.
+                redirect('login');
             } else {
                 $name  = trim($_POST['name']  ?? '');
                 $email = trim($_POST['email'] ?? '');

@@ -7,6 +7,15 @@ require_once __DIR__ . '/../models/document_model.php';  // your document model
 
 class document_controller {
 
+    /** Guard: current user must be able to edit the doc's parent vision. */
+    private static function requireDocEdit(PDO $db, array $doc): void
+    {
+        $vis = $db->prepare("SELECT * FROM visions WHERE id=? LIMIT 1");
+        $vis->execute([(int)($doc['vision_id'] ?? 0)]);
+        $vision = $vis->fetch(PDO::FETCH_ASSOC) ?: null;
+        api_require_vision($db, $vision, 'edit');
+    }
+
     /** GET /visions/{slug}/overlay/documents */
     public static function overlay(string $slug): void {
         global $db;
@@ -20,6 +29,7 @@ class document_controller {
 
         $vision = vision_model::get($db, $slug);
         if (!$vision) { http_response_code(404); echo 'Vision not found'; return; }
+        require_vision($db, $vision, 'edit'); // overlay belongs to the edit UI
 
         // Load docs
         $docs = document_model::allForVision($db, (int)$vision['id']);
@@ -43,6 +53,7 @@ class document_controller {
 
 		$vision = vision_model::get($db, $slug);
 		if (!$vision) { http_response_code(404); echo json_encode(['error'=>'Vision not found']); return; }
+		api_require_vision($db, $vision, 'edit');
 
 		if (empty($_FILES['file'])) {
 			http_response_code(422);
@@ -205,9 +216,9 @@ class document_controller {
 			return;
 		}
 
-		// Security: ensure this user owns/can view this vision.
-		// If you already have a permission helper, call it here instead.
-		if ((int)$vision['user_id'] !== (int)$uid) {
+		// Owner, shared collaborator, or admin (groups themselves stay
+		// personal — the query below is scoped to the current user)
+		if (!vision_can($db, $vision, 'view')) {
 			http_response_code(403);
 			echo json_encode(['error' => 'Forbidden']);
 			return;
@@ -278,19 +289,23 @@ class document_controller {
 		$doc = document_model::findByUuid($db, $uuid);
 		if (!$doc) { http_response_code(404); echo json_encode(['error'=>'Document not found']); return; }
 
-		// Validate against media_groups (the same table groups_list reads from).
-		// Group must belong to the vision's owner, and either be unscoped or scoped to this vision.
-		if (!is_null($groupId)) {
-			$vis = $db->prepare("SELECT user_id, id FROM visions WHERE id=? LIMIT 1");
-			$vis->execute([(int)$doc['vision_id']]);
-			$visRow = $vis->fetch(PDO::FETCH_ASSOC);
-			if (!$visRow) { http_response_code(404); echo json_encode(['error'=>'Vision not found']); return; }
+		// Must be able to edit the doc's vision (owner, shared editor, admin)
+		global $currentUserId;
+		$vis = $db->prepare("SELECT * FROM visions WHERE id=? LIMIT 1");
+		$vis->execute([(int)$doc['vision_id']]);
+		$visRow = $vis->fetch(PDO::FETCH_ASSOC);
+		if (!$visRow) { http_response_code(404); echo json_encode(['error'=>'Vision not found']); return; }
+		api_require_vision($db, $visRow, 'edit');
 
+		// Validate against media_groups (the same table groups_list reads from).
+		// The group may belong to the current user OR the vision owner, and be
+		// either unscoped or scoped to this vision.
+		if (!is_null($groupId)) {
 			$st = $db->prepare("SELECT id FROM media_groups
-								WHERE id = ? AND user_id = ?
+								WHERE id = ? AND user_id IN (?, ?)
 								  AND (vision_id IS NULL OR vision_id = ?)
 								LIMIT 1");
-			$st->execute([$groupId, (int)$visRow['user_id'], (int)$visRow['id']]);
+			$st->execute([$groupId, (int)$currentUserId, (int)$visRow['user_id'], (int)$visRow['id']]);
 			if (!$st->fetch()) { http_response_code(422); echo json_encode(['error'=>'Invalid group for this vision']); return; }
 		}
 
@@ -314,10 +329,9 @@ class document_controller {
 			return;
 		}
 
-		// Optional: permission check based on vision_id of this doc
 		$doc = document_model::findByUuid($db, $uuid);
 		if (!$doc) { http_response_code(404); echo json_encode(['error'=>'Not found']); return; }
-		// TODO: auth check: user can edit this vision
+		self::requireDocEdit($db, $doc);
 
 		if (!document_model::updateStatus($db, $uuid, $status)) {
 			http_response_code(500);
@@ -335,6 +349,7 @@ class document_controller {
 
 		$doc = document_model::findByUuid($db, $uuid);
 		if (!$doc) { http_response_code(404); echo json_encode(['error'=>'Not found']); return; }
+		self::requireDocEdit($db, $doc);
 
 		$on = !empty($_POST['show_on_trip']) ? 1 : 0;
 		try {
@@ -348,7 +363,10 @@ class document_controller {
 	}
 
 
-    /** GET /documents/{uuid}/download */
+    /** GET /documents/{uuid}/download
+     *  Public BY DESIGN: the shareable trip page links to these, and the
+     *  32-hex uuid is an unguessable capability token. Do not add a login
+     *  gate here without also rethinking trip sharing. */
     public static function download(string $uuid): void {
         global $db;
 

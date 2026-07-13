@@ -11,15 +11,17 @@ class media_controller
     public static function upload(string $slug): void
     {
         header('Content-Type: application/json');
-        global $db;
+        global $db, $currentUserId;
 
         $vision = vision_model::get($db, $slug);
         $board  = null;
         if (!$vision) {
             $board = mood_model::get($db, $slug);
             if (!$board) { http_response_code(404); echo json_encode(['error'=>'Vision/Board not found']); return; }
+            api_require_mood($db, $board, 'edit');
             $visionId = $board['vision_id'] ? (int)$board['vision_id'] : null;
         } else {
+            api_require_vision($db, $vision, 'edit');
             $visionId = (int)$vision['id'];
         }
 
@@ -165,9 +167,11 @@ class media_controller
             // Continue without thumbs if generation fails
         }
 
+        global $currentUserId;
         $mediaId = media_model::create(
             $db, $visionId, $uuid, $origName, $mime, $size,
-            null, null, null, null
+            null, null, null, null,
+            $currentUserId ? (int)$currentUserId : null
         );
         if (!$mediaId) {
             @unlink($destPath);
@@ -212,12 +216,8 @@ class media_controller
 			return;
 		}
 
-		// Optional: check that the current user owns the board
-		// if (!empty($currentUserId) && (int)$board['user_id'] !== (int)$currentUserId) {
-		//     http_response_code(403);
-		//     echo json_encode(['success' => false, 'error' => 'Forbidden']);
-		//     return;
-		// }
+		// Owner, shared collaborator (via parent vision), or admin
+		api_require_mood($db, $board, 'view');
 
 		// Read filters from the query string
 		$q       = isset($_GET['q']) ? trim($_GET['q']) : '';
@@ -325,9 +325,11 @@ class media_controller
 		header('Content-Type: application/json');
 		global $db;
 
+		// Must be able to edit the media (via its vision/board parents)
+		api_require_media($db, (int)$mediaId, 'edit');
+
 		// Inputs from client
-		$boardId  = $boardParam; // IMPORTANT: start with the explicit query param
-		//$boardId   = isset($_POST['board_id'])   ? (int)$_POST['board_id']   : null;
+		$boardId   = isset($_POST['board_id'])   ? (int)$_POST['board_id']   : null;
 		$visionId  = isset($_POST['vision_id'])  ? (int)$_POST['vision_id']  : null;
 		$groupId   = isset($_POST['group_id'])   ? (int)$_POST['group_id']   : 0;
 		$groupName = trim($_POST['group_name'] ?? '');
@@ -485,15 +487,17 @@ class media_controller
     public static function link(string $slug): void
     {
         header('Content-Type: application/json');
-        global $db;
+        global $db, $currentUserId;
 
         $vision = vision_model::get($db, $slug);
         $board  = null;
         if (!$vision) {
             $board = mood_model::get($db, $slug);
             if (!$board) { http_response_code(404); echo json_encode(['error'=>'Vision/Board not found']); return; }
+            api_require_mood($db, $board, 'edit');
             $visionId = $board['vision_id'] ? (int)$board['vision_id'] : null;
         } else {
+            api_require_vision($db, $vision, 'edit');
             $visionId = (int)$vision['id'];
         }
 
@@ -534,7 +538,8 @@ class media_controller
         $uuid = bin2hex(random_bytes(16));
         $mediaId = media_model::create(
             $db, $visionId, $uuid, $title, 'video/youtube', 0,
-            'youtube', $vid, $canonical, $embed
+            'youtube', $vid, $canonical, $embed,
+            $currentUserId ? (int)$currentUserId : null
         );
         if (!$mediaId) { http_response_code(500); echo json_encode(['error'=>'DB insert failed']); return; }
 
@@ -583,11 +588,13 @@ class media_controller
 				echo json_encode(['error' => 'Not found']);
 				return;
 			}
+			api_require_mood($db, $board, 'view');
 			$visionId = $board['vision_id'] ? (int)$board['vision_id'] : null;
 			if (!$boardId) {
 				$boardId = (int)$board['id'];
 			}
 		} else {
+			api_require_vision($db, $vision, 'view');
 			$visionId = (int)$vision['id'];
 		}
 
@@ -617,6 +624,7 @@ class media_controller
         global $db;
         $board = mood_model::get($db, $slug);
         if (!$board) { http_response_code(404); echo json_encode(['error'=>'Board not found']); return; }
+        api_require_mood($db, $board, 'edit');
         $boardId = (int)$board['id'];
 
         $ids = $_POST['media_id'] ?? $_POST['media_ids'] ?? [];
@@ -637,6 +645,7 @@ class media_controller
         global $db;
         $board = mood_model::get($db, $slug);
         if (!$board) { http_response_code(404); echo json_encode(['error'=>'Board not found']); return; }
+        api_require_mood($db, $board, 'edit');
         $boardId = (int)$board['id'];
 
         $mid = (int)($_POST['media_id'] ?? 0);
@@ -661,6 +670,7 @@ class media_controller
 
         $mid = (int)($_POST['media_id'] ?? 0);
         if (!$mid) { http_response_code(400); echo json_encode(['error'=>'media_id required']); return; }
+        api_require_media($db, $mid, 'edit');
 
         $q1 = $db->prepare("SELECT COUNT(*) FROM mood_board_media WHERE media_id=?");
         $q1->execute([$mid]);
@@ -737,6 +747,11 @@ class media_controller
 
         $mid = (int)$mediaId;
         if ($mid <= 0) { http_response_code(400); echo json_encode(['error'=>'Invalid media id']); return; }
+
+        // Reads need view access, writes need edit — resolved via the
+        // media's parent vision / attached boards.
+        $ability = (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') ? 'edit' : 'view';
+        api_require_media($db, $mid, $ability);
 
         // Ensure media exists
         $media = media_model::findById($db, $mid);
@@ -864,9 +879,10 @@ class media_controller
 		// Resolve mood board ? get user + (optional) vision
 		$board = mood_model::get($db, $slug);
 		if (!$board) { http_response_code(404); echo json_encode(['error'=>'Board not found']); return; }
+		api_require_mood($db, $board, 'view');
 
-		// Current user (prefer session), else board owner
-		$userId = !empty($_SESSION['user']['id']) ? (int)$_SESSION['user']['id'] : (int)($board['user_id'] ?? 0);
+		// Groups are personal — list the CURRENT user's groups in this scope
+		$userId = !empty($_SESSION['user']['id']) ? (int)$_SESSION['user']['id'] : 0;
 		if ($userId <= 0) { http_response_code(401); echo json_encode(['error'=>'Unauthorized']); return; }
 
 		$visionId = !empty($board['vision_id']) ? (int)$board['vision_id'] : null;

@@ -105,7 +105,7 @@ class trip_controller
 
         // Section-level visibility (vision_presentation row, with sensible defaults)
         $defaults = [
-            'relations' => 1, 'goals' => 1, 'budget' => 1, 'roles' => 0,
+            'relations' => 1, 'itinerary' => 1, 'goals' => 1, 'budget' => 1, 'roles' => 0,
             'contacts'  => 1, 'documents' => 1, 'workflow' => 1,
         ];
         $st = $db->prepare("SELECT * FROM vision_presentation WHERE vision_id=?");
@@ -238,8 +238,24 @@ class trip_controller
             }
         }
 
-        // Budget (only if marked visible on trip)
+        // Itinerary (per-entry show_on_trip), grouped by day in the template
+        $itinerary = [];
+        if ($sectionVisible('itinerary')) {
+            try {
+                $iq = $db->prepare("
+                    SELECT day_date, start_time, title, location, notes
+                      FROM vision_itinerary
+                     WHERE vision_id = ? AND show_on_trip = 1
+                     ORDER BY day_date ASC, (start_time IS NULL) ASC, start_time ASC, id ASC
+                ");
+                $iq->execute([$visionId]);
+                $itinerary = $iq->fetchAll(PDO::FETCH_ASSOC);
+            } catch (\Throwable $e) { /* not migrated yet */ }
+        }
+
+        // Budget (only if marked visible on trip) + line-item breakdown
         $budget = null;
+        $budgetItems = [];
         if ($sectionVisible('budget')) {
             $bs = $db->prepare("
                 SELECT currency, amount_cents, show_on_trip
@@ -249,6 +265,16 @@ class trip_controller
             ");
             $bs->execute([$visionId]);
             $budget = $bs->fetch(PDO::FETCH_ASSOC) ?: null;
+            if ($budget) {
+                try {
+                    $bi = $db->prepare("SELECT label, amount_cents, paid
+                                          FROM vision_budget_items
+                                         WHERE vision_id = ? AND show_on_trip = 1
+                                         ORDER BY sort_order, id");
+                    $bi->execute([$visionId]);
+                    $budgetItems = $bi->fetchAll(PDO::FETCH_ASSOC);
+                } catch (\Throwable $e) { /* not migrated yet */ }
+            }
         }
 
         // Contacts (per-contact show_on_trip)
@@ -296,6 +322,7 @@ class trip_controller
         $hasAnyContent = !empty($vision['description'])
             || !empty($anchors)
             || $mood
+            || !empty($itinerary)
             || !empty($goals)
             || $budget
             || !empty($contacts)

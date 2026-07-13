@@ -147,6 +147,7 @@ class vision_controller
                 return (int)$st->fetchColumn();
             };
             $sidebarBadges['goals']     = $cnt("SELECT COUNT(*) FROM vision_goals WHERE vision_id=? AND status != 'cancelled'");
+            $sidebarBadges['itinerary'] = $cnt("SELECT COUNT(*) FROM vision_itinerary WHERE vision_id=?");
             $sidebarBadges['contacts']  = $cnt("SELECT COUNT(*) FROM vision_contacts WHERE vision_id=?");
             $sidebarBadges['documents'] = $cnt("SELECT COUNT(*) FROM vision_documents WHERE vision_id=?");
             $sidebarBadges['budget']    = $cnt("SELECT COUNT(*) FROM vision_budget WHERE vision_id=?");
@@ -380,13 +381,21 @@ class vision_controller
             $ms->execute([$vision['mood_id']]);
             $linkedMood = $ms->fetch(PDO::FETCH_ASSOC) ?: null;
         }
-        // For budget overlay: load existing budget row
+        // For budget overlay: load existing budget row + line items
         $budget = null;
+        $budgetItems = [];
         if ($section === 'budget') {
             $bs = $db->prepare("SELECT currency, amount_cents, show_on_dashboard, show_on_trip
                                 FROM vision_budget WHERE vision_id = ? LIMIT 1");
             $bs->execute([(int)$vision['id']]);
             $budget = $bs->fetch(PDO::FETCH_ASSOC) ?: null;
+            try {
+                $bi = $db->prepare("SELECT id, label, amount_cents, paid
+                                      FROM vision_budget_items
+                                     WHERE vision_id = ? ORDER BY sort_order, id");
+                $bi->execute([(int)$vision['id']]);
+                $budgetItems = $bi->fetchAll(PDO::FETCH_ASSOC);
+            } catch (\Throwable $e) { /* not migrated yet */ }
         }
         $partial = __DIR__.'/../views/partials/overlay_'.$section.'.php';
         if (!file_exists($partial)) { http_response_code(404); echo 'Overlay not found'; return; }
@@ -463,7 +472,7 @@ class vision_controller
                     echo json_encode(['success' => true, 'share' => $share]);
                     return;
                 }
-                $allowed = ['relations','goals','budget','roles','contacts','documents','workflow'];
+                $allowed = ['relations','itinerary','goals','budget','roles','contacts','documents','workflow'];
                 if ($flag !== '' && in_array($flag, $allowed, true)) {
                     $st = $db->prepare("SELECT vision_id FROM vision_presentation WHERE vision_id=?");
                     $st->execute([$id]);
@@ -606,12 +615,21 @@ class vision_controller
 		$row = $st->fetch(PDO::FETCH_ASSOC);
 
 		// Return empty defaults instead of 404 so the overlay can render cleanly.
-		echo json_encode($row ?: [
+		$out = $row ?: [
 			'currency' => null,
 			'amount_cents' => null,
 			'show_on_dashboard' => 0,
 			'show_on_trip' => 0,
-		]);
+		];
+		$out['items'] = [];
+		try {
+			$it = $db->prepare("SELECT id, label, amount_cents, paid, show_on_trip
+								  FROM vision_budget_items
+								 WHERE vision_id = ? ORDER BY sort_order, id");
+			$it->execute([(int)$vision['id']]);
+			$out['items'] = $it->fetchAll(PDO::FETCH_ASSOC);
+		} catch (\Throwable $e) { /* table not migrated yet */ }
+		echo json_encode($out);
 	}
 
 	/** POST /api/visions/{slug}/budget */
@@ -634,6 +652,32 @@ class vision_controller
 			return;
 		}
 
+		// Optional line items: parallel arrays replace the whole set (same
+		// pattern as goal milestones). When items exist, the stored total
+		// becomes their sum so the two can never drift apart.
+		$labels  = $_POST['item_labels']  ?? null;
+		$amounts = $_POST['item_amounts'] ?? [];
+		$paids   = $_POST['item_paids']   ?? [];
+
+		if (is_array($labels)) {
+			try {
+				$db->prepare("DELETE FROM vision_budget_items WHERE vision_id = ?")
+				   ->execute([(int)$vision['id']]);
+				$ins = $db->prepare("INSERT INTO vision_budget_items
+					(vision_id, label, amount_cents, paid, sort_order) VALUES (?,?,?,?,?)");
+				$sum = 0; $order = 0;
+				foreach ($labels as $i => $label) {
+					$label = trim((string)$label);
+					$amt   = (int)($amounts[$i] ?? 0);
+					if ($label === '' || $amt < 0) continue;
+					$ins->execute([(int)$vision['id'], mb_substr($label, 0, 150), $amt,
+								   !empty($paids[$i]) ? 1 : 0, $order++]);
+					$sum += $amt;
+				}
+				if ($order > 0) $cents = $sum; // items win over the manual total
+			} catch (\Throwable $e) { /* items table not migrated yet */ }
+		}
+
 		$sql = "INSERT INTO vision_budget (vision_id, currency, amount_cents, show_on_dashboard, show_on_trip)
 				VALUES (?,?,?,?,?)
 				ON DUPLICATE KEY UPDATE
@@ -643,7 +687,7 @@ class vision_controller
 				  show_on_trip = VALUES(show_on_trip)";
 		$ok = $db->prepare($sql)->execute([(int)$vision['id'], $cur, $cents, $dash, $trip]);
 
-		echo json_encode(['success' => (bool)$ok]);
+		echo json_encode(['success' => (bool)$ok, 'amount_cents' => $cents]);
 	}
 
 	/** GET /api/currencies[?q=...] */
@@ -867,6 +911,95 @@ class vision_controller
 
 		$db->prepare("DELETE FROM vision_contacts WHERE id=?")->execute([$vcIdNum]);
 		echo json_encode(['success'=>true]);
+	}
+
+	/* ──────────────────────────  Itinerary  ────────────────────────── */
+
+	/** GET /api/visions/{slug}/itinerary */
+	public static function listItinerary(string $slug): void
+	{
+		header('Content-Type: application/json');
+		global $db;
+		$vision = vision_model::get($db, $slug);
+		api_require_vision($db, $vision, 'view');
+		try {
+			$st = $db->prepare("SELECT id, day_date, start_time, title, location, notes, show_on_trip
+								  FROM vision_itinerary
+								 WHERE vision_id = ?
+								 ORDER BY day_date ASC, (start_time IS NULL) ASC, start_time ASC, id ASC");
+			$st->execute([(int)$vision['id']]);
+			echo json_encode(['success' => true, 'entries' => $st->fetchAll(PDO::FETCH_ASSOC)]);
+		} catch (\Throwable $e) {
+			echo json_encode(['success' => true, 'entries' => [], 'migration_missing' => true]);
+		}
+	}
+
+	/** Shared field parsing for itinerary create/update. */
+	private static function itineraryFields(): ?array
+	{
+		$day   = trim((string)($_POST['day_date'] ?? ''));
+		$title = trim((string)($_POST['title'] ?? ''));
+		if ($day === '' || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $day) || $title === '') return null;
+		$time = trim((string)($_POST['start_time'] ?? ''));
+		return [
+			'day_date'     => $day,
+			'start_time'   => preg_match('/^\d{2}:\d{2}(:\d{2})?$/', $time) ? $time : null,
+			'title'        => mb_substr($title, 0, 255),
+			'location'     => mb_substr(trim((string)($_POST['location'] ?? '')), 0, 255) ?: null,
+			'notes'        => mb_substr(trim((string)($_POST['notes'] ?? '')), 0, 2000) ?: null,
+			'show_on_trip' => !empty($_POST['show_on_trip']) ? 1 : 0,
+		];
+	}
+
+	/** POST /api/visions/{slug}/itinerary/create */
+	public static function createItineraryItem(string $slug): void
+	{
+		header('Content-Type: application/json');
+		global $db;
+		$vision = vision_model::get($db, $slug);
+		api_require_vision($db, $vision, 'edit');
+
+		$f = self::itineraryFields();
+		if (!$f) { http_response_code(422); echo json_encode(['error' => 'Date and title required']); return; }
+
+		$db->prepare("INSERT INTO vision_itinerary
+			(vision_id, day_date, start_time, title, location, notes, show_on_trip)
+			VALUES (?,?,?,?,?,?,?)")
+		   ->execute([(int)$vision['id'], $f['day_date'], $f['start_time'], $f['title'],
+					  $f['location'], $f['notes'], $f['show_on_trip']]);
+		echo json_encode(['success' => true, 'entry_id' => (int)$db->lastInsertId()]);
+	}
+
+	/** POST /api/visions/{slug}/itinerary/{id} */
+	public static function updateItineraryItem(string $slug, string $entryId): void
+	{
+		header('Content-Type: application/json');
+		global $db;
+		$vision = vision_model::get($db, $slug);
+		api_require_vision($db, $vision, 'edit');
+
+		$f = self::itineraryFields();
+		if (!$f) { http_response_code(422); echo json_encode(['error' => 'Date and title required']); return; }
+
+		$db->prepare("UPDATE vision_itinerary
+						 SET day_date=?, start_time=?, title=?, location=?, notes=?, show_on_trip=?
+					   WHERE id=? AND vision_id=?")
+		   ->execute([$f['day_date'], $f['start_time'], $f['title'], $f['location'],
+					  $f['notes'], $f['show_on_trip'], (int)$entryId, (int)$vision['id']]);
+		echo json_encode(['success' => true]);
+	}
+
+	/** POST/DELETE /api/visions/{slug}/itinerary/{id}/delete */
+	public static function deleteItineraryItem(string $slug, string $entryId): void
+	{
+		header('Content-Type: application/json');
+		global $db;
+		$vision = vision_model::get($db, $slug);
+		api_require_vision($db, $vision, 'edit');
+
+		$db->prepare("DELETE FROM vision_itinerary WHERE id=? AND vision_id=?")
+		   ->execute([(int)$entryId, (int)$vision['id']]);
+		echo json_encode(['success' => true]);
 	}
 
 	/* ──────────────────────────  Goals & Milestones  ────────────────────────── */

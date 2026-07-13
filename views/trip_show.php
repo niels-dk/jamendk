@@ -93,6 +93,14 @@ if (!$coverUrl && !empty($moodMedia)) {
 $pctOf = function (int $v, int $base): string {
     return number_format(($v / max(1, $base)) * 100, 4, '.', '') . '%';
 };
+
+// Plain-text place → Google Maps search link (no API key needed).
+// Offline the link needs internet to open, but the text stays readable.
+$mapUrl = fn(string $place): string =>
+    'https://www.google.com/maps/search/?api=1&query=' . urlencode($place);
+
+$itinerary   = $itinerary   ?? [];
+$budgetItems = $budgetItems ?? [];
 ?>
 <!doctype html>
 <html lang="en">
@@ -303,16 +311,51 @@ $pctOf = function (int $v, int $base): string {
       padding: 2.4rem 1rem; text-align: center; color: var(--muted); font-size: .9rem;
     }
 
-    /* Offline copy button (live page only) */
-    .dl-offline {
+    /* Hero action pills (offline copy / print) */
+    .hero-actions {
       position: absolute; top: .9rem; right: .9rem; z-index: 2;
-      padding: .4rem .8rem; border-radius: 999px;
-      background: rgba(11,23,39,.72); color: #fff; font-size: .8rem; font-weight: 600;
-      backdrop-filter: blur(4px);
+      display: flex; gap: .4rem;
     }
-    .dl-offline:hover { background: rgba(11,23,39,.9); text-decoration: none; }
-    .hero.no-cover .dl-offline { background: var(--accent); }
-    @media print { .dl-offline { display: none; } }
+    .hero-pill {
+      padding: .4rem .8rem; border-radius: 999px; border: 0; cursor: pointer;
+      background: rgba(11,23,39,.72); color: #fff; font-size: .8rem; font-weight: 600;
+      backdrop-filter: blur(4px); font-family: inherit;
+    }
+    .hero-pill:hover { background: rgba(11,23,39,.9); text-decoration: none; }
+    .hero.no-cover .hero-pill { background: var(--accent); }
+    @media print { .hero-actions { display: none; } }
+
+    /* Itinerary */
+    .itin-day-head {
+      font-size: .8rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em;
+      color: var(--muted); margin: 1rem 0 .35rem;
+    }
+    .itin-day-head:first-child { margin-top: 0; }
+    .itin-entry {
+      display: flex; align-items: flex-start; gap: .8rem;
+      padding: .6rem .9rem;
+    }
+    .itin-entry .when {
+      flex-shrink: 0; width: 52px; font-family: ui-monospace, "SF Mono", Menlo, monospace;
+      font-size: .85rem; color: var(--muted); padding-top: .1rem;
+    }
+    .itin-entry .what { min-width: 0; flex: 1; }
+    .itin-entry .what .t { font-weight: 700; color: var(--ink); }
+    .itin-entry .what .loc { font-size: .85rem; margin-top: .15rem; }
+    .itin-entry .what .n { font-size: .85rem; color: var(--muted); margin-top: .2rem; white-space: pre-wrap; }
+
+    /* Budget breakdown */
+    .budget-items { width: 100%; border-collapse: collapse; margin-top: .2rem; }
+    .budget-items td {
+      padding: .45rem .2rem; border-bottom: 1px solid var(--line); font-size: .92rem;
+    }
+    .budget-items td.amt { text-align: right; font-family: ui-monospace, "SF Mono", Menlo, monospace; white-space: nowrap; }
+    .budget-items td.paid { text-align: right; width: 60px; }
+    .budget-items tr.total td { border-bottom: 0; font-weight: 800; color: var(--ink); padding-top: .6rem; }
+    .paid-tag {
+      display: inline-block; padding: .05rem .45rem; border-radius: 999px;
+      background: #d2f0d8; color: #1b5a2c; font-size: .7rem; font-weight: 700;
+    }
 
     /* Cap the canvas snapshot height; wrapper keeps the aspect ratio true */
     .trip-canvas-wrap { margin: 0 auto; }
@@ -374,12 +417,18 @@ $pctOf = function (int $v, int $base): string {
 <div class="wrap">
 
   <header class="hero <?= $coverUrl ? 'has-cover' : 'no-cover' ?>">
-    <?php if (!$export): ?>
-      <a class="dl-offline" href="<?= tr_e($downloadHref) ?>"
-         title="Download a single-file copy that works without internet — images and documents included">
-        ⬇ Offline copy
-      </a>
-    <?php endif; ?>
+    <div class="hero-actions">
+      <?php if (!$export): ?>
+        <a class="hero-pill" href="<?= tr_e($downloadHref) ?>"
+           title="Download a single-file copy that works without internet — images and documents included">
+          ⬇ Offline copy
+        </a>
+      <?php endif; ?>
+      <button type="button" class="hero-pill" onclick="window.print()"
+              title="Print, or choose 'Save as PDF' as the printer">
+        🖨 Print / PDF
+      </button>
+    </div>
     <?php if ($coverUrl): ?>
       <div class="hero-cover" style="background-image:url('<?= tr_e($coverUrl) ?>');"></div>
     <?php endif; ?>
@@ -413,6 +462,28 @@ $pctOf = function (int $v, int $base): string {
     </div>
   <?php endif; ?>
 
+  <?php if (!empty($itinerary)): ?>
+    <h2>Itinerary</h2>
+    <?php $itinDay = null; ?>
+    <?php foreach ($itinerary as $en): ?>
+      <?php if ($en['day_date'] !== $itinDay): $itinDay = $en['day_date']; ?>
+        <div class="itin-day-head">📅 <?= tr_e(date('l · M j, Y', strtotime($itinDay))) ?></div>
+      <?php endif; ?>
+      <div class="card itin-entry">
+        <span class="when"><?= $en['start_time'] ? tr_e(substr($en['start_time'], 0, 5)) : '·' ?></span>
+        <span class="what">
+          <span class="t"><?= tr_e($en['title']) ?></span>
+          <?php if (!empty($en['location'])): ?>
+            <div class="loc">📍 <a href="<?= tr_e($mapUrl($en['location'])) ?>" target="_blank" rel="noopener"><?= tr_e($en['location']) ?></a></div>
+          <?php endif; ?>
+          <?php if (!empty($en['notes'])): ?>
+            <div class="n"><?= tr_e($en['notes']) ?></div>
+          <?php endif; ?>
+        </span>
+      </div>
+    <?php endforeach; ?>
+  <?php endif; ?>
+
   <?php if (!empty($anchors) && array_filter($anchors)): ?>
     <h2>Anchors</h2>
     <div class="anchor-grid">
@@ -421,7 +492,12 @@ $pctOf = function (int $v, int $base): string {
         <div class="card anchor-block">
           <h4><?= ($anchorIcon[$key] ?? '') ?> <?= tr_e(ucfirst($key)) ?></h4>
           <?php foreach ($anchors[$key] as $val): ?>
-            <span class="chip"><?= tr_e($val) ?></span>
+            <?php if ($key === 'locations'): ?>
+              <a class="chip" href="<?= tr_e($mapUrl($val)) ?>" target="_blank" rel="noopener"
+                 title="Open in Google Maps">📍 <?= tr_e($val) ?></a>
+            <?php else: ?>
+              <span class="chip"><?= tr_e($val) ?></span>
+            <?php endif; ?>
           <?php endforeach; ?>
         </div>
       <?php endforeach; ?>
@@ -477,10 +553,29 @@ $pctOf = function (int $v, int $base): string {
 
   <?php if ($budget): ?>
     <h2>Budget</h2>
-    <div class="card budget">
-      <span class="amount"><?= number_format(($budget['amount_cents'] ?? 0) / 100, 2, '.', ',') ?></span>
-      <span class="cur"><?= tr_e($budget['currency'] ?? '') ?></span>
-    </div>
+    <?php if (!empty($budgetItems)): ?>
+      <div class="card" style="padding:1rem 1.3rem;">
+        <table class="budget-items">
+          <?php foreach ($budgetItems as $bi): ?>
+            <tr>
+              <td><?= tr_e($bi['label']) ?></td>
+              <td class="paid"><?= !empty($bi['paid']) ? '<span class="paid-tag">paid</span>' : '' ?></td>
+              <td class="amt"><?= number_format(((int)$bi['amount_cents']) / 100, 2, '.', ',') ?></td>
+            </tr>
+          <?php endforeach; ?>
+          <tr class="total">
+            <td>Total</td>
+            <td></td>
+            <td class="amt"><?= number_format(($budget['amount_cents'] ?? 0) / 100, 2, '.', ',') ?> <?= tr_e($budget['currency'] ?? '') ?></td>
+          </tr>
+        </table>
+      </div>
+    <?php else: ?>
+      <div class="card budget">
+        <span class="amount"><?= number_format(($budget['amount_cents'] ?? 0) / 100, 2, '.', ',') ?></span>
+        <span class="cur"><?= tr_e($budget['currency'] ?? '') ?></span>
+      </div>
+    <?php endif; ?>
   <?php endif; ?>
 
   <?php if (!empty($contacts)): ?>
@@ -664,8 +759,20 @@ $pctOf = function (int $v, int $base): string {
 
   <footer>
     <?php if ($export): ?>
+      <?php
+        // Point stale copies back at the live version (token from the vision
+        // row — present whether the export came via slug preview or /t/ URL).
+        $liveToken = $shareToken ?: (string)($vision['trip_token'] ?? '');
+        $liveUrl   = $liveToken
+          ? ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http')
+            . '://' . ($_SERVER['HTTP_HOST'] ?? '') . '/t/' . $liveToken
+          : '';
+      ?>
       Offline copy of “<?= tr_e($title) ?>” · generated <?= tr_e(date('M j, Y · H:i')) ?>
       — images and documents are embedded in this file.
+      <?php if ($liveUrl): ?>
+        <br>Latest version: <a href="<?= tr_e($liveUrl) ?>"><?= tr_e($liveUrl) ?></a>
+      <?php endif; ?>
     <?php else: ?>
       Generated <?= tr_e(date('M j, Y · H:i')) ?>
     <?php endif; ?>

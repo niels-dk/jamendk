@@ -213,6 +213,12 @@ function route(string $uri): void
         // the generic {section} catch-all anyway, but be explicit)
         '/api/visions/([A-Za-z0-9]{6,16})/trip-share'            => ['vision', 'tripShare'],
 
+        // Itinerary (day-by-day trip schedule)
+        '/api/visions/([A-Za-z0-9]{6,16})/itinerary'                 => ['vision', 'listItinerary'],
+        '/api/visions/([A-Za-z0-9]{6,16})/itinerary/create'          => ['vision', 'createItineraryItem'],
+        '/api/visions/([A-Za-z0-9]{6,16})/itinerary/([0-9]+)'        => ['vision', 'updateItineraryItem'],
+        '/api/visions/([A-Za-z0-9]{6,16})/itinerary/([0-9]+)/delete' => ['vision', 'deleteItineraryItem'],
+
         // Roles & sharing (must come before the generic {section} catch-all)
         '/api/visions/([A-Za-z0-9]{6,16})/roles'                 => ['vision', 'listRoles'],
         '/api/visions/([A-Za-z0-9]{6,16})/roles/add'             => ['vision', 'addRole'],

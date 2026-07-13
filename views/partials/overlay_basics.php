@@ -3,7 +3,7 @@
 // Expects: $vision (id, start_date, end_date, slug, trip_enabled), $presentationFlags (assoc)
 
 $defaults = [
-  'relations'=>1,'goals'=>1,'budget'=>1,'roles'=>0,'contacts'=>1,'documents'=>1,'workflow'=>1
+  'relations'=>1,'itinerary'=>1,'goals'=>1,'budget'=>1,'roles'=>0,'contacts'=>1,'documents'=>1,'workflow'=>1
 ];
 $flags = array_replace($defaults, $presentationFlags ?? []);
 

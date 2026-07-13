@@ -165,6 +165,7 @@ function dt($s){ return $s ? date('M j, Y', strtotime($s)) : ''; }
           'goal_assigned' => ['📋', 'assigned you'],
           'goal_resolved' => ['✅', 'resolved'],
           'goal_returned' => ['↩',  'sent back'],
+          'goal_comment'  => ['💬', 'commented on'],
         ];
       ?>
       <h2 style="margin:0 0 .2rem;font-size:1.25rem;">🔔 Task updates</h2>

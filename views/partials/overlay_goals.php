@@ -1,12 +1,13 @@
 <?php
 $slug = htmlspecialchars($vision['slug'] ?? '', ENT_QUOTES);
+$goalsUid = (int)($currentUserId ?? ($GLOBALS['currentUserId'] ?? 0));
 ?>
 
 <div class="overlay-header">
   <h2>Goals &amp; Milestones</h2>
 </div>
 
-<div id="goalsWrap" data-slug="<?= $slug ?>">
+<div id="goalsWrap" data-slug="<?= $slug ?>" data-uid="<?= $goalsUid ?>">
   <div id="goalsList" class="goals-list"></div>
   <button type="button" id="btnAddGoal" class="btn btn-primary">+ Add goal</button>
 
@@ -61,6 +62,23 @@ $slug = htmlspecialchars($vision['slug'] ?? '', ENT_QUOTES);
       <h4 style="margin-top:1rem;">Milestones</h4>
       <div id="milestonesWrap"></div>
       <button type="button" id="btnAddMilestone" class="btn btn-secondary">+ Add milestone</button>
+
+      <!-- Assignee actions (resolve when it's yours) / owner reopen -->
+      <div id="goalAssignActions" style="margin-top:.9rem; display:none; gap:.5rem; flex-wrap:wrap;">
+        <button type="button" class="btn" id="btnResolveGoal"
+                style="background:#15351f;border:1px solid #1e5530;color:#7ed99a;">✓ Mark resolved</button>
+        <button type="button" class="btn" id="btnReopenGoal" hidden>↺ Reopen</button>
+      </div>
+
+      <!-- Comments -->
+      <h4 style="margin-top:1.1rem;">Comments</h4>
+      <div id="goalComments" style="display:flex;flex-direction:column;gap:.4rem;margin-bottom:.5rem;"></div>
+      <div style="display:flex;gap:.4rem;align-items:flex-start;">
+        <textarea id="goalCommentBox" rows="2" placeholder="Write a comment…"
+                  style="flex:1;background:#15161A;border:1px solid #2b3346;color:#ddd;
+                         border-radius:6px;padding:.4rem .55rem;resize:vertical;margin:0;"></textarea>
+        <button type="button" class="btn btn-primary" id="btnAddComment" style="flex-shrink:0;">Send</button>
+      </div>
 
       <div style="margin-top:1rem; display:flex; align-items:center; gap:.6rem;">
         <button type="button" class="btn" id="btnCloseGoal">Close</button>
@@ -165,6 +183,7 @@ $slug = htmlspecialchars($vision['slug'] ?? '', ENT_QUOTES);
   const wrap     = document.getElementById('goalsWrap');
   if (!wrap) return;
   const slug     = wrap.dataset.slug;
+  const myUid    = String(wrap.dataset.uid || '');
   const list     = wrap.querySelector('#goalsList');
   const card     = wrap.querySelector('#goalFormCard');
   const form     = wrap.querySelector('#goalForm');
@@ -175,6 +194,12 @@ $slug = htmlspecialchars($vision['slug'] ?? '', ENT_QUOTES);
   const delBtn   = wrap.querySelector('#btnDeleteGoal');
   const addMs    = wrap.querySelector('#btnAddMilestone');
   const assigneeSel = wrap.querySelector('#goalAssignee');
+  const assignActions = wrap.querySelector('#goalAssignActions');
+  const resolveBtn = wrap.querySelector('#btnResolveGoal');
+  const reopenBtn  = wrap.querySelector('#btnReopenGoal');
+  const commentsBox = wrap.querySelector('#goalComments');
+  const commentInput = wrap.querySelector('#goalCommentBox');
+  const addCommentBtn = wrap.querySelector('#btnAddComment');
 
   const STATUS_LABELS = {
     not_started: 'Not started', in_progress: 'In progress',
@@ -259,7 +284,90 @@ $slug = htmlspecialchars($vision['slug'] ?? '', ENT_QUOTES);
     msWrap.innerHTML = '';
     status.textContent = '';
     delBtn.hidden = true;
+    if (assignActions) assignActions.style.display = 'none';
+    if (commentsBox) commentsBox.innerHTML = '';
+    if (commentInput) commentInput.value = '';
   }
+
+  // ── Comments ──
+  function renderComments(rows) {
+    if (!commentsBox) return;
+    if (!rows || !rows.length) {
+      commentsBox.innerHTML = '<div style="opacity:.5;font-size:.85em;">No comments yet.</div>';
+      return;
+    }
+    commentsBox.innerHTML = rows.map(c => {
+      const mine = String(c.user_id) === myUid;
+      const when = (c.created_at || '').replace('T',' ').slice(0,16);
+      return `
+        <div style="padding:.45rem .6rem;border-radius:8px;
+                    background:${mine ? 'rgba(58,118,210,.14)' : 'rgba(255,255,255,.04)'};
+                    border:1px solid ${mine ? 'rgba(58,118,210,.35)' : '#2b3346'};">
+          <div style="font-size:.75em;opacity:.6;margin-bottom:.15rem;">
+            ${escapeHtml(c.author || 'User')} · ${escapeHtml(when)}
+          </div>
+          <div style="font-size:.9em;white-space:pre-wrap;">${escapeHtml(c.body || '')}</div>
+        </div>`;
+    }).join('');
+    commentsBox.scrollTop = commentsBox.scrollHeight;
+  }
+  async function loadComments(gid) {
+    if (!gid) { renderComments([]); return; }
+    try {
+      const res = await fetch(`/api/visions/${slug}/goals/${gid}/comments`);
+      const j = await res.json();
+      renderComments(j?.comments || []);
+    } catch { renderComments([]); }
+  }
+  addCommentBtn?.addEventListener('click', async () => {
+    const gid = form.querySelector('[name="goal_id"]').value.trim();
+    const body = commentInput.value.trim();
+    if (!gid) { alert('Save the goal first, then comment.'); return; }
+    if (!body) return;
+    addCommentBtn.disabled = true;
+    try {
+      const p = new URLSearchParams(); p.set('body', body);
+      const res = await fetch(`/api/visions/${slug}/goals/${gid}/comments/add`, {
+        method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:p.toString()
+      });
+      const j = await res.json();
+      if (j?.success) { commentInput.value = ''; loadComments(gid); }
+      else alert(j?.error || 'Comment failed');
+    } catch { alert('Network error'); }
+    finally { addCommentBtn.disabled = false; }
+  });
+
+  // ── Resolve / reopen ──
+  function updateAssignActions(g) {
+    if (!assignActions) return;
+    const gid = g.id;
+    const iAmAssignee = String(g.assigned_user_id ?? '') === myUid && myUid !== '';
+    const isDone = g.status === 'done' || g.assignment_status === 'resolved';
+    // Show resolve to the assignee while it's still open; reopen to anyone with edit rights once done.
+    let show = false;
+    if (iAmAssignee && !isDone) { resolveBtn.hidden = false; show = true; } else { resolveBtn.hidden = true; }
+    if (isDone) { reopenBtn.hidden = false; show = true; } else { reopenBtn.hidden = true; }
+    assignActions.style.display = show ? 'flex' : 'none';
+  }
+  async function goalAction(kind) {
+    const gid = form.querySelector('[name="goal_id"]').value.trim();
+    if (!gid) return;
+    const note = (kind === 'resolve')
+      ? (prompt('Add a note for the assigner (optional):') ?? '')
+      : '';
+    if (kind === 'resolve' && note === null) return;
+    try {
+      const p = new URLSearchParams(); if (note) p.set('note', note);
+      const res = await fetch(`/api/visions/${slug}/goals/${gid}/${kind}`, {
+        method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:p.toString()
+      });
+      const j = await res.json();
+      if (j?.success) { hideForm(); loadList(); }
+      else alert(j?.error || 'Action failed');
+    } catch { alert('Network error'); }
+  }
+  resolveBtn?.addEventListener('click', () => goalAction('resolve'));
+  reopenBtn?.addEventListener('click', () => goalAction('reopen'));
   function showForm() { card.hidden = false; card.scrollIntoView({ behavior:'smooth', block:'nearest' }); }
   function hideForm() { card.hidden = true; clearForm(); }
 
@@ -294,6 +402,9 @@ $slug = htmlspecialchars($vision['slug'] ?? '', ENT_QUOTES);
       const returned = (g.assignment_status === 'returned' && active)
         ? `<span class="returned-pill">↩ Returned</span>`
         : '';
+      const resolved = (g.assignment_status === 'resolved')
+        ? `<span class="assignee-pill" style="background:#15351f;color:#7ed99a;border-color:#1e5530;">✓ Resolved</span>`
+        : '';
       return `
         <div class="goal-row ${cls}" data-id="${g.id}">
           <div class="goal-main">
@@ -303,6 +414,7 @@ $slug = htmlspecialchars($vision['slug'] ?? '', ENT_QUOTES);
               <span class="stat-pill" data-s="${g.status}">${STATUS_LABELS[g.status] || g.status}</span>
               ${assignee}
               ${returned}
+              ${resolved}
               ${dateLabel}
               ${msDueLabel}
               <span class="goal-progress">${progress}</span>
@@ -423,6 +535,8 @@ $slug = htmlspecialchars($vision['slug'] ?? '', ENT_QUOTES);
       form.show_on_trip.checked = (g.show_on_trip == null) ? true : !!+g.show_on_trip;
       (g.milestones || []).forEach(m => addMsRow(m.text, !!+m.done, m.due_date || '', m.assigned_user_id || ''));
       delBtn.hidden = false;
+      updateAssignActions(g);
+      loadComments(g.id);
       showForm();
     } catch { alert('Failed to load goal'); }
   });

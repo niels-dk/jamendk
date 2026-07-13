@@ -216,6 +216,9 @@ function route(string $uri): void
         '/api/visions/([A-Za-z0-9]{6,16})/goals/([0-9]+)/delete' => ['vision', 'deleteGoal'],
         '/api/visions/([A-Za-z0-9]{6,16})/goals/([0-9]+)/resolve' => ['vision', 'resolveGoal'],
         '/api/visions/([A-Za-z0-9]{6,16})/goals/([0-9]+)/return'  => ['vision', 'returnGoal'],
+        '/api/visions/([A-Za-z0-9]{6,16})/goals/([0-9]+)/reopen'  => ['vision', 'reopenGoal'],
+        '/api/visions/([A-Za-z0-9]{6,16})/goals/([0-9]+)/comments' => ['vision', 'listGoalComments'],
+        '/api/visions/([A-Za-z0-9]{6,16})/goals/([0-9]+)/comments/add' => ['vision', 'addGoalComment'],
         '/api/notifications/([0-9]+)/ack'                        => ['user', 'ackNotification'],
         '/api/visions/([A-Za-z0-9]{6,16})/([a-z]+)'
                                                    => ['vision', 'saveSection'],

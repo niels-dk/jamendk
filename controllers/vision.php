@@ -366,7 +366,7 @@ class vision_controller
     public static function overlay(string $slug, string $section): void
     {
         require_login();
-        global $db;
+        global $db, $currentUserId;
         $vision = vision_model::get($db, $slug);
         require_vision($db, $vision, 'edit');
         // load presentation flags so basics overlay can pre-check toggles
@@ -904,10 +904,11 @@ class vision_controller
 				  LEFT JOIN users au ON au.id = g.assigned_user_id
 				 WHERE g.vision_id = ?
 				 GROUP BY g.id, au.name, au.email
-				 ORDER BY (g.status IN ('done','cancelled')) ASC,
+				 ORDER BY (g.status IN ('done','cancelled')) ASC,  -- finished sink to the bottom
+						  (g.due_date IS NULL) ASC,                -- dated goals first
+						  g.due_date ASC,                          -- soonest due first
+						  FIELD(g.status,'awaiting','in_progress','not_started'),
 						  g.priority ASC,
-						  (g.due_date IS NULL) ASC,
-						  g.due_date ASC,
 						  g.id ASC";
 		$st = $db->prepare($sql);
 		$st->execute([(int)$vision['id']]);
@@ -1122,6 +1123,86 @@ class vision_controller
 			add_notification($db, $recipient, 'goal_returned', (int)$vision['id'], (int)$goal['id'], (int)$currentUserId, $note);
 		}
 		echo json_encode(['success'=>true]);
+	}
+
+	/** POST /api/visions/{slug}/goals/{id}/reopen — owner/editor puts it back to open. */
+	public static function reopenGoal(string $slug, string $goalId): void
+	{
+		header('Content-Type: application/json');
+		global $db;
+		$vision = vision_model::get($db, $slug);
+		api_require_vision($db, $vision, 'edit');
+		$db->prepare("UPDATE vision_goals
+						 SET status='in_progress', completed_at=NULL, assignment_status='open'
+					   WHERE id=? AND vision_id=?")
+		   ->execute([(int)$goalId, (int)$vision['id']]);
+		echo json_encode(['success'=>true]);
+	}
+
+	/* ──────────────────────────  Goal comments  ────────────────────────── */
+
+	/** GET /api/visions/{slug}/goals/{id}/comments */
+	public static function listGoalComments(string $slug, string $goalId): void
+	{
+		header('Content-Type: application/json');
+		global $db;
+		$vision = vision_model::get($db, $slug);
+		api_require_vision($db, $vision, 'view');
+
+		$chk = $db->prepare("SELECT id FROM vision_goals WHERE id=? AND vision_id=?");
+		$chk->execute([(int)$goalId, (int)$vision['id']]);
+		if (!$chk->fetch()) { http_response_code(404); echo json_encode(['error'=>'Goal not found']); return; }
+
+		$st = $db->prepare("
+			SELECT c.id, c.body, c.created_at, c.user_id, u.name AS author
+			  FROM goal_comments c
+			  JOIN users u ON u.id = c.user_id
+			 WHERE c.goal_id = ?
+			 ORDER BY c.created_at ASC, c.id ASC
+		");
+		$st->execute([(int)$goalId]);
+		echo json_encode(['comments' => $st->fetchAll(PDO::FETCH_ASSOC)]);
+	}
+
+	/** POST /api/visions/{slug}/goals/{id}/comments  body: body */
+	public static function addGoalComment(string $slug, string $goalId): void
+	{
+		header('Content-Type: application/json');
+		global $db, $currentUserId;
+		$vision = vision_model::get($db, $slug);
+		api_require_vision($db, $vision, 'view');
+
+		$g = $db->prepare("SELECT * FROM vision_goals WHERE id=? AND vision_id=?");
+		$g->execute([(int)$goalId, (int)$vision['id']]);
+		$goal = $g->fetch(PDO::FETCH_ASSOC);
+		if (!$goal) { http_response_code(404); echo json_encode(['error'=>'Goal not found']); return; }
+
+		$body = trim((string)($_POST['body'] ?? ''));
+		if ($body === '') { http_response_code(422); echo json_encode(['error'=>'Empty comment']); return; }
+		$body = mb_substr($body, 0, 4000);
+
+		$db->prepare("INSERT INTO goal_comments (goal_id, user_id, body) VALUES (?,?,?)")
+		   ->execute([(int)$goalId, (int)$currentUserId, $body]);
+		$cid = (int)$db->lastInsertId();
+
+		// Notify the other involved parties (assignee, assigner, owner) — not myself
+		$targets = array_unique(array_filter([
+			(int)($goal['assigned_user_id'] ?? 0),
+			(int)($goal['assigned_by_user_id'] ?? 0),
+			(int)$vision['user_id'],
+		]));
+		foreach ($targets as $uid) {
+			if ($uid && $uid !== (int)$currentUserId) {
+				add_notification($db, $uid, 'goal_comment', (int)$vision['id'], (int)$goalId, (int)$currentUserId, $body);
+			}
+		}
+
+		$me = $db->prepare("SELECT name FROM users WHERE id=?");
+		$me->execute([(int)$currentUserId]);
+		echo json_encode(['success'=>true, 'comment'=>[
+			'id'=>$cid, 'body'=>$body, 'user_id'=>(int)$currentUserId,
+			'author'=>(string)$me->fetchColumn(), 'created_at'=>date('Y-m-d H:i:s'),
+		]]);
 	}
 
 	/** DELETE /api/visions/{slug}/goals/{id}/delete */

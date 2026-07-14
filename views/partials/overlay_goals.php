@@ -8,7 +8,7 @@ $goalsUid = (int)($currentUserId ?? ($GLOBALS['currentUserId'] ?? 0));
 </div>
 
 <div id="goalsWrap" data-slug="<?= $slug ?>" data-uid="<?= $goalsUid ?>">
-  <div id="goalsList" class="goals-list"></div>
+  <div id="goalsList" class="goals-list"><div style="opacity:.5;font-size:.9em;">Loading…</div></div>
   <button type="button" id="btnAddGoal" class="btn btn-primary">+ Add goal</button>
 
   <div id="goalFormCard" class="card" hidden style="margin-top:1rem;">
@@ -235,7 +235,8 @@ $goalsUid = (int)($currentUserId ?? ($GLOBALS['currentUserId'] ?? 0));
       else loose.push(m);
     });
     const opt = m =>
-      `<option value="${m.user_id}" ${String(m.user_id) === sel ? 'selected' : ''}>${escapeHtml(memberLabel(m))}</option>`;
+      `<option value="${m.user_id}" ${String(m.user_id) === sel ? 'selected' : ''}>` +
+      `${escapeHtml(memberLabel(m))}${m.offBoard ? ' · not on board yet' : ''}</option>`;
     let html = `<option value="">${placeholder}</option>`;
     Object.keys(groups).sort().forEach(tn => {
       html += `<optgroup label="👥 ${escapeHtml(tn)}">${groups[tn].map(opt).join('')}</optgroup>`;
@@ -253,13 +254,18 @@ $goalsUid = (int)($currentUserId ?? ($GLOBALS['currentUserId'] ?? 0));
       const j   = await res.json();
       members = (j?.members || []).map(m => ({ user_id: m.user_id, name: m.name, email: m.email }));
     } catch { members = []; }
-    // Cross-reference the current user's teams to tag each board member
+    // Merge in the current user's team members: tag everyone with their team,
+    // and include teammates who aren't on the board yet — assigning to them
+    // auto-adds them to the board with their team default role.
     try {
       const tr = await fetch('/api/teams');
       const tj = await tr.json();
       (tj?.teams || []).forEach(t => {
         (t.members || []).forEach(mm => {
           (teamOf[mm.user_id] ||= []).push(t.name);
+          if (!members.some(m => String(m.user_id) === String(mm.user_id))) {
+            members.push({ user_id: mm.user_id, name: mm.name, email: mm.email, offBoard: true });
+          }
         });
       });
     } catch { /* teams optional */ }
@@ -340,14 +346,12 @@ $goalsUid = (int)($currentUserId ?? ($GLOBALS['currentUserId'] ?? 0));
   // ── Resolve / reopen ──
   function updateAssignActions(g) {
     if (!assignActions) return;
-    const gid = g.id;
-    const iAmAssignee = String(g.assigned_user_id ?? '') === myUid && myUid !== '';
     const isDone = g.status === 'done' || g.assignment_status === 'resolved';
-    // Show resolve to the assignee while it's still open; reopen to anyone with edit rights once done.
-    let show = false;
-    if (iAmAssignee && !isDone) { resolveBtn.hidden = false; show = true; } else { resolveBtn.hidden = true; }
-    if (isDone) { reopenBtn.hidden = false; show = true; } else { reopenBtn.hidden = true; }
-    assignActions.style.display = show ? 'flex' : 'none';
+    // Everyone in this overlay has edit rights, and the endpoint accepts
+    // assignee-or-editor — so: Resolve while open, Reopen once done.
+    resolveBtn.hidden = isDone;
+    reopenBtn.hidden  = !isDone;
+    assignActions.style.display = 'flex';
   }
   async function goalAction(kind) {
     const gid = form.querySelector('[name="goal_id"]').value.trim();
@@ -449,37 +453,44 @@ $goalsUid = (int)($currentUserId ?? ($GLOBALS['currentUserId'] ?? 0));
   }
 
   let saveTimer;
+  async function doSave() {
+    if (!form.title.value.trim()) { status.textContent = ''; return; }
+    const gid = form.querySelector('[name="goal_id"]').value.trim();
+    const url = gid
+      ? `/api/visions/${slug}/goals/${gid}`
+      : `/api/visions/${slug}/goals/create`;
+    status.textContent = 'Saving…';
+    try {
+      const res = await fetch(url, { method:'POST', body: collectFormData() });
+      const j   = await res.json();
+      if (j && j.success) {
+        if (!gid && j.goal_id) {
+          form.querySelector('[name="goal_id"]').value = j.goal_id;
+          delBtn.hidden = false;
+        }
+        status.textContent = 'Saved';
+        loadList();
+      } else {
+        status.textContent = '⚠ ' + (j?.error || 'Save failed');
+      }
+    } catch (e) {
+      status.textContent = '⚠ Network error';
+      console.error(e);
+    }
+  }
   function autoSave() {
     clearTimeout(saveTimer);
-    saveTimer = setTimeout(async () => {
-      if (!form.title.value.trim()) { status.textContent = ''; return; }
-      const gid = form.querySelector('[name="goal_id"]').value.trim();
-      const url = gid
-        ? `/api/visions/${slug}/goals/${gid}`
-        : `/api/visions/${slug}/goals/create`;
-      status.textContent = 'Saving…';
-      try {
-        const res = await fetch(url, { method:'POST', body: collectFormData() });
-        const j   = await res.json();
-        if (j && j.success) {
-          if (!gid && j.goal_id) {
-            form.querySelector('[name="goal_id"]').value = j.goal_id;
-            delBtn.hidden = false;
-          }
-          status.textContent = 'Saved';
-          loadList();
-        } else {
-          status.textContent = '⚠ ' + (j?.error || 'Save failed');
-        }
-      } catch (e) {
-        status.textContent = '⚠ Network error';
-        console.error(e);
-      }
-    }, 500);
+    saveTimer = setTimeout(doSave, 500);
   }
 
   addBtn.addEventListener('click', () => { clearForm(); showForm(); form.title.focus(); });
-  closeBtn.addEventListener('click', hideForm);
+  // Flush any pending debounce before closing, so a change made right
+  // before Close (e.g. flipping a toggle or a date) is never lost.
+  closeBtn.addEventListener('click', async () => {
+    clearTimeout(saveTimer);
+    await doSave();
+    hideForm();
+  });
 
   addMs.addEventListener('click', () => { addMsRow(''); });
 
@@ -497,7 +508,7 @@ $goalsUid = (int)($currentUserId ?? ($GLOBALS['currentUserId'] ?? 0));
   });
   msWrap.addEventListener('input', autoSave);
 
-  ['title','description','status','priority','due_date','assigned_user_id'].forEach(name => {
+  ['title','description','status','priority','due_date','assigned_user_id','show_on_trip'].forEach(name => {
     const el = form.querySelector(`[name="${name}"]`);
     if (!el) return;
     el.addEventListener('change', autoSave);

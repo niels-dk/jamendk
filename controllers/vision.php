@@ -674,7 +674,9 @@ class vision_controller
 								   !empty($paids[$i]) ? 1 : 0, $order++]);
 					$sum += $amt;
 				}
-				if ($order > 0) $cents = $sum; // items win over the manual total
+				// The manual total stays authoritative (it's the overall budget);
+				// if the user left it empty/zero, fall back to the items sum.
+				if ($order > 0 && $cents <= 0) $cents = $sum;
 			} catch (\Throwable $e) { /* items table not migrated yet */ }
 		}
 
@@ -1038,6 +1040,35 @@ class vision_controller
 		return (bool)$st->fetchColumn();
 	}
 
+	/**
+	 * Assignment target check. If the user isn't on the board but IS a member
+	 * of one of the assigner's teams, auto-add them with their team default
+	 * role (the vision_roles insert also triggers their new-share notice).
+	 * Returns true when the user ends up on the board.
+	 */
+	private static function ensureAssignableOnBoard(PDO $db, array $vision, int $userId): bool
+	{
+		global $currentUserId;
+		if (self::isOnBoard($db, $vision, $userId)) return true;
+		try {
+			$tm = $db->prepare("SELECT tm.default_role
+								  FROM team_members tm
+								  JOIN teams t ON t.id = tm.team_id
+								 WHERE t.owner_user_id = ? AND tm.user_id = ?
+								 LIMIT 1");
+			$tm->execute([(int)$currentUserId, $userId]);
+			$role = $tm->fetchColumn();
+			if ($role) {
+				$db->prepare("INSERT INTO vision_roles (vision_id, user_id, role)
+							  VALUES (?,?,?)
+							  ON DUPLICATE KEY UPDATE role = role")
+				   ->execute([(int)$vision['id'], $userId, $role]);
+				return true;
+			}
+		} catch (\Throwable $e) { /* teams not migrated */ }
+		return false;
+	}
+
 	/** GET /api/visions/{slug}/goals */
 	public static function listGoals(string $slug): void
 	{
@@ -1114,8 +1145,8 @@ class vision_controller
 
 		// Assignee must actually be on the board
 		$assignedTo = (int)($_POST['assigned_user_id'] ?? 0) ?: null;
-		if ($assignedTo && !self::isOnBoard($db, $vision, $assignedTo)) {
-			http_response_code(422); echo json_encode(['error'=>'Assignee is not on this board']); return;
+		if ($assignedTo && !self::ensureAssignableOnBoard($db, $vision, $assignedTo)) {
+			http_response_code(422); echo json_encode(['error'=>'Assignee is not on this board or in your teams']); return;
 		}
 
 		$db->beginTransaction();
@@ -1177,8 +1208,8 @@ class vision_controller
 		$newAssignee  = array_key_exists('assigned_user_id', $_POST)
 			? ((int)$_POST['assigned_user_id'] ?: null)
 			: $prevAssignee;
-		if ($newAssignee && !self::isOnBoard($db, $vision, $newAssignee)) {
-			http_response_code(422); echo json_encode(['error'=>'Assignee is not on this board']); return;
+		if ($newAssignee && !self::ensureAssignableOnBoard($db, $vision, $newAssignee)) {
+			http_response_code(422); echo json_encode(['error'=>'Assignee is not on this board or in your teams']); return;
 		}
 		$assignedBy       = $existing['assigned_by_user_id'];
 		$assignmentStatus = $existing['assignment_status'] ?: 'open';
@@ -1490,7 +1521,12 @@ class vision_controller
 		$us = $db->prepare("SELECT id, name, email FROM users WHERE email = ? LIMIT 1");
 		$us->execute([$email]);
 		$user = $us->fetch(PDO::FETCH_ASSOC);
-		if (!$user) { http_response_code(404); echo json_encode(['error'=>'No user with that email']); return; }
+		if (!$user) {
+			// Deliberately ambiguous — don't confirm whether an account exists,
+			// so the form can't be used to probe who is registered here.
+			echo json_encode(['success' => true, 'unknown' => true]);
+			return;
+		}
 		if ((int)$user['id'] === (int)$vision['user_id']) {
 			http_response_code(422); echo json_encode(['error'=>'That user is already the owner']); return;
 		}

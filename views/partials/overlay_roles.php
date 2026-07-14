@@ -144,7 +144,12 @@ $slug = htmlspecialchars($vision['slug'] ?? '', ENT_QUOTES);
         body: p.toString()
       });
       const j = await res.json();
-      if (j && j.success) {
+      if (j && j.success && j.unknown) {
+        // Ambiguous on purpose — never confirm whether an account exists
+        status.textContent = '⚠ If a creator with that email exists, they\'ll appear in the list above.';
+        email.value = '';
+        load();
+      } else if (j && j.success) {
         status.textContent = 'Added';
         email.value = '';
         load();

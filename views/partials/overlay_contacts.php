@@ -7,7 +7,7 @@ $slug = htmlspecialchars($vision['slug'] ?? '', ENT_QUOTES);
 </div>
 
 <div id="contactsWrap" data-slug="<?= $slug ?>">
-  <div id="contactsList" class="contact-list"></div>
+  <div id="contactsList" class="contact-list"><div style="opacity:.5;font-size:.9em;">Loading…</div></div>
   <button type="button" id="btnAddContact" class="btn btn-primary">+ Add contact</button>
 
   <div id="contactFormCard" class="card" hidden style="margin-top:1rem;">

@@ -554,19 +554,41 @@ $budgetItems = $budgetItems ?? [];
   <?php if ($budget): ?>
     <h2>Budget</h2>
     <?php if (!empty($budgetItems)): ?>
+      <?php
+        $biSum   = 0;
+        foreach ($budgetItems as $bi) $biSum += (int)$bi['amount_cents'];
+        $biTotal = (int)($budget['amount_cents'] ?? 0);
+        if ($biTotal <= 0) $biTotal = $biSum;          // no manual budget → lines define it
+        $biLeft  = $biTotal - $biSum;
+        $fmt     = fn(int $c) => number_format($c / 100, 2, '.', ',');
+      ?>
       <div class="card" style="padding:1rem 1.3rem;">
         <table class="budget-items">
           <?php foreach ($budgetItems as $bi): ?>
             <tr>
               <td><?= tr_e($bi['label']) ?></td>
               <td class="paid"><?= !empty($bi['paid']) ? '<span class="paid-tag">paid</span>' : '' ?></td>
-              <td class="amt"><?= number_format(((int)$bi['amount_cents']) / 100, 2, '.', ',') ?></td>
+              <td class="amt"><?= $fmt((int)$bi['amount_cents']) ?></td>
             </tr>
           <?php endforeach; ?>
+          <?php if ($biTotal !== $biSum): ?>
+            <tr>
+              <td style="color:var(--muted);">Planned so far</td>
+              <td></td>
+              <td class="amt" style="color:var(--muted);"><?= $fmt($biSum) ?></td>
+            </tr>
+            <tr>
+              <td style="color:<?= $biLeft < 0 ? '#a01a36' : 'var(--muted)' ?>;">
+                <?= $biLeft < 0 ? 'Over budget' : 'Remaining' ?>
+              </td>
+              <td></td>
+              <td class="amt" style="color:<?= $biLeft < 0 ? '#a01a36' : 'var(--muted)' ?>;"><?= $fmt(abs($biLeft)) ?></td>
+            </tr>
+          <?php endif; ?>
           <tr class="total">
-            <td>Total</td>
+            <td>Total budget</td>
             <td></td>
-            <td class="amt"><?= number_format(($budget['amount_cents'] ?? 0) / 100, 2, '.', ',') ?> <?= tr_e($budget['currency'] ?? '') ?></td>
+            <td class="amt"><?= $fmt($biTotal) ?> <?= tr_e($budget['currency'] ?? '') ?></td>
           </tr>
         </table>
       </div>

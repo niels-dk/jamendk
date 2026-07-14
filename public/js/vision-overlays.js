@@ -32,12 +32,23 @@ document.addEventListener('DOMContentLoaded', () => {
   // so we can restore it when the overlay closes.
   let _autoCollapsedSidebar = false;
 
-  // Open overlay – always fetch fresh so values reflect latest DB state
+  // Open overlay – always fetch fresh so values reflect latest DB state.
+  // Show the panel immediately with a spinner so slow responses don't
+  // look like a dead click.
   async function openOverlay(slug, section, trigger) {
+    overlayContent.innerHTML = `
+      <div class="ov-loading" style="display:flex;align-items:center;justify-content:center;
+                                     gap:.6rem;padding:3rem 1rem;opacity:.7;">
+        <span style="width:18px;height:18px;border:2px solid #3a76d2;border-top-color:transparent;
+                     border-radius:50%;display:inline-block;animation:ovspin .7s linear infinite;"></span>
+        Loading…
+      </div>
+      <style>@keyframes ovspin { to { transform: rotate(360deg); } }</style>`;
+    showOverlay(trigger);
+
     const res = await fetch(`/visions/${slug}/overlay/${section}`, { cache: 'no-store' });
     if (!res.ok) {
       overlayContent.innerHTML = `<p>Error loading overlay.</p>`;
-      showOverlay();
       return;
     }
     const html = await res.text();

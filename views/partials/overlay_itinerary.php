@@ -13,7 +13,9 @@ $slug = htmlspecialchars($vision['slug'] ?? '', ENT_QUOTES);
     of the published trip page.
   </p>
 
-  <div id="itinList" style="display:flex;flex-direction:column;gap:.45rem;margin-bottom:.6rem;"></div>
+  <div id="itinList" style="display:flex;flex-direction:column;gap:.45rem;margin-bottom:.6rem;">
+    <div style="opacity:.5;font-size:.9em;">Loading…</div>
+  </div>
   <button type="button" id="btnAddItin" class="btn btn-primary">+ Add entry</button>
 
   <div id="itinFormCard" class="card" hidden style="margin-top:1rem;">
@@ -175,42 +177,46 @@ $slug = htmlspecialchars($vision['slug'] ?? '', ENT_QUOTES);
   }
 
   let saveTimer;
+  async function doSave() {
+    if (!form.title.value.trim() || !form.day_date.value) { status.textContent = ''; return; }
+    const eid = form.querySelector('[name="entry_id"]').value.trim();
+    const url = eid
+      ? `/api/visions/${slug}/itinerary/${eid}`
+      : `/api/visions/${slug}/itinerary/create`;
+    status.textContent = 'Saving…';
+    try {
+      const res = await fetch(url, {
+        method:'POST',
+        headers:{'Content-Type':'application/x-www-form-urlencoded'},
+        body: collect().toString()
+      });
+      const j = await res.json();
+      if (j?.success) {
+        if (!eid && j.entry_id) {
+          form.querySelector('[name="entry_id"]').value = j.entry_id;
+          delBtn.hidden = false;
+        }
+        status.textContent = 'Saved';
+        loadList();
+      } else status.textContent = '⚠ ' + (j?.error || 'Save failed');
+    } catch { status.textContent = '⚠ Network error'; }
+  }
   function autoSave() {
     clearTimeout(saveTimer);
-    saveTimer = setTimeout(async () => {
-      if (!form.title.value.trim() || !form.day_date.value) { status.textContent = ''; return; }
-      const eid = form.querySelector('[name="entry_id"]').value.trim();
-      const url = eid
-        ? `/api/visions/${slug}/itinerary/${eid}`
-        : `/api/visions/${slug}/itinerary/create`;
-      status.textContent = 'Saving…';
-      try {
-        const res = await fetch(url, {
-          method:'POST',
-          headers:{'Content-Type':'application/x-www-form-urlencoded'},
-          body: collect().toString()
-        });
-        const j = await res.json();
-        if (j?.success) {
-          if (!eid && j.entry_id) {
-            form.querySelector('[name="entry_id"]').value = j.entry_id;
-            delBtn.hidden = false;
-          }
-          status.textContent = 'Saved';
-          loadList();
-        } else status.textContent = '⚠ ' + (j?.error || 'Save failed');
-      } catch { status.textContent = '⚠ Network error'; }
-    }, 500);
+    saveTimer = setTimeout(doSave, 500);
   }
 
   addBtn.addEventListener('click', () => { clearForm(); showForm(); form.day_date.focus(); });
-  closeBtn.addEventListener('click', hideForm);
+  // Flush any pending save so a date/time change right before Close isn't lost
+  closeBtn.addEventListener('click', async () => {
+    clearTimeout(saveTimer);
+    await doSave();
+    hideForm();
+  });
 
   form.querySelectorAll('input, textarea').forEach(el => {
     el.addEventListener('change', autoSave);
-    if (el.tagName === 'INPUT' && el.type === 'text' || el.tagName === 'TEXTAREA') {
-      el.addEventListener('input', autoSave);
-    }
+    el.addEventListener('input', autoSave); // date/time/checkbox fire this too in modern browsers
   });
 
   delBtn.addEventListener('click', async () => {

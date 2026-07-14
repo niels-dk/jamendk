@@ -141,16 +141,23 @@ $showTrip = !empty($budget['show_on_trip']);
   }
   function refreshTotal() {
     const rows = itemRows().filter(r => r.querySelector('.bi-label').value.trim() !== '');
-    if (!rows.length) {
-      amount.readOnly = false;
-      if (totalHint) totalHint.textContent = '';
-      return;
-    }
+    if (!rows.length) { if (totalHint) totalHint.textContent = ''; return; }
     let sum = 0;
     rows.forEach(r => { sum += toCents(r.querySelector('.bi-amount').value) ?? 0; });
-    amount.value = (sum / 100).toFixed(2);
-    amount.readOnly = true;
-    if (totalHint) totalHint.textContent = '= sum of line items';
+    const total = toCents(amount.value) ?? 0;
+    if (total <= 0) {
+      // No overall budget set → the lines define the total
+      // (don't clobber the field while the user is typing in it)
+      if (document.activeElement !== amount) amount.value = (sum / 100).toFixed(2);
+      if (totalHint) totalHint.textContent = '= sum of line items';
+    } else {
+      const left = total - sum;
+      if (totalHint) {
+        totalHint.textContent =
+          `· lines ${(sum / 100).toFixed(2)} · ${left >= 0 ? 'remaining' : 'OVER by'} ${(Math.abs(left) / 100).toFixed(2)}`;
+        totalHint.style.color = left < 0 ? '#f08792' : '';
+      }
+    }
   }
   addItem?.addEventListener('click', () => { addItemRow(); });
   itemsBox?.addEventListener('click', e => {
@@ -227,10 +234,11 @@ $showTrip = !empty($budget['show_on_trip']);
 
   let amtTimer;
   amount.addEventListener('input', () => {
+    refreshTotal(); // update the lines/remaining hint live
     clearTimeout(amtTimer);
     amtTimer = setTimeout(save, 400);
   });
-  amount.addEventListener('blur', save);
+  amount.addEventListener('blur', () => { refreshTotal(); save(); });
 
   form.querySelectorAll('.switch-input').forEach(cb => {
     cb.addEventListener('change', save);

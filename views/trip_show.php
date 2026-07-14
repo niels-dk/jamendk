@@ -927,13 +927,83 @@ $SHOT_LIGHT_LABEL = ['sunrise'=>'🌅 sunrise','golden'=>'🌇 golden hour','mid
 })();
 </script>
 
+<?php if (!$export): ?>
+<!-- Offline support: the service worker caches this page (and thumbnails)
+     on every visit, so the shot list still opens in the field with no signal. -->
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(function () {});
+}
+</script>
+<?php endif; ?>
+
 <?php if ($canCheckShots): ?>
 <!-- Shot check-off: only rendered for logged-in editors; the API re-verifies
-     permissions on every call, so this is a convenience, not the gate. -->
+     permissions on every call, so this is a convenience, not the gate.
+     Offline: ticks are applied locally, queued in localStorage, and synced
+     automatically when the connection returns — the digital pencil. -->
 <script>
 (function () {
   var slug = <?= json_encode((string)($vision['slug'] ?? '')) ?>;
   if (!slug) return;
+  var QKEY = 'shotQueue:' + slug;
+  var pill = document.getElementById('shotsProgressPill');
+  var pillBase = pill ? pill.textContent.trim() : '';
+
+  function loadQ() {
+    try { return JSON.parse(localStorage.getItem(QKEY)) || {}; } catch (e) { return {}; }
+  }
+  function saveQ(q) {
+    var n = Object.keys(q).length;
+    if (n) localStorage.setItem(QKEY, JSON.stringify(q));
+    else localStorage.removeItem(QKEY);
+    if (pill) pill.textContent = pillBase + (n ? ' · ' + n + ' waiting to sync' : '');
+  }
+
+  function send(id, status) {
+    return fetch('/api/visions/' + slug + '/shots/' + id + '/status', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ status: status }).toString()
+    }).then(function (r) { return r.json(); });
+  }
+
+  var flushing = false;
+  function flush() {
+    if (flushing) return;
+    var q = loadQ();
+    var ids = Object.keys(q);
+    if (!ids.length) return;
+    flushing = true;
+    var chain = Promise.resolve();
+    ids.forEach(function (id) {
+      chain = chain.then(function () {
+        return send(id, q[id]).then(function (j) {
+          if (j && j.success) { delete q[id]; saveQ(q); }
+          // Server said no (e.g. rights revoked) → drop it rather than retry forever
+          else { delete q[id]; saveQ(q); }
+        });
+        // Network still down → keep in queue, a later flush retries
+      });
+    });
+    chain.catch(function () {}).then(function () { flushing = false; });
+  }
+
+  // Re-apply queued ticks to the UI (a cached page shows the server's last
+  // known state — the queue holds what happened since).
+  (function restore() {
+    var q = loadQ();
+    Object.keys(q).forEach(function (id) {
+      var entry = document.querySelector('.shot-entry[data-shot-id="' + id + '"]');
+      if (!entry) return;
+      var done = q[id] === 'captured';
+      entry.classList.toggle('done', done);
+      var cb = entry.querySelector('.shot-cb');
+      if (cb) cb.checked = done;
+    });
+    saveQ(q); // refreshes the "waiting to sync" hint
+  })();
+
   document.addEventListener('change', function (e) {
     var cb = e.target;
     if (!cb.classList || !cb.classList.contains('shot-cb') || cb.disabled) return;
@@ -941,23 +1011,77 @@ $SHOT_LIGHT_LABEL = ['sunrise'=>'🌅 sunrise','golden'=>'🌇 golden hour','mid
     if (!entry) return;
     var id = entry.dataset.shotId;
     var status = cb.checked ? 'captured' : 'planned';
-    cb.disabled = true;
-    fetch('/api/visions/' + slug + '/shots/' + id + '/status', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({ status: status }).toString()
-    }).then(function (r) { return r.json(); }).then(function (j) {
-      cb.disabled = false;
-      if (j && j.success) {
-        entry.classList.toggle('done', status === 'captured');
-      } else {
-        cb.checked = !cb.checked;   // revert on failure
+    entry.classList.toggle('done', status === 'captured'); // optimistic — like a pencil
+    send(id, status).then(function (j) {
+      if (j && !j.success) {
+        // Real server rejection → revert
+        cb.checked = !cb.checked;
+        entry.classList.toggle('done', cb.checked);
       }
     }).catch(function () {
-      cb.disabled = false;
-      cb.checked = !cb.checked;
+      // Offline → keep the tick, queue it, sync later
+      var q = loadQ();
+      q[id] = status;
+      saveQ(q);
     });
   });
+
+  window.addEventListener('online', flush);
+  flush(); // sync anything left over from the last offline session
+})();
+</script>
+<?php endif; ?>
+
+<?php if ($export && !empty($shots)): ?>
+<!-- Offline copy: checkboxes work like a pencil on a printout — ticks are
+     saved on this device (localStorage) and restored when the file is
+     reopened. They do NOT update the live page. -->
+<script>
+(function () {
+  var KEY = 'tripTicks:' + <?= json_encode((string)($shareToken ?: ($vision['trip_token'] ?? $vision['slug'] ?? 'trip'))) ?>;
+  var pill = document.getElementById('shotsProgressPill');
+
+  function load() {
+    try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { return {}; }
+  }
+  function save(t) { try { localStorage.setItem(KEY, JSON.stringify(t)); } catch (e) {} }
+
+  function recount() {
+    if (!pill) return;
+    var entries = document.querySelectorAll('.shot-entry');
+    var done = 0, musts = 0, mustsDone = 0;
+    entries.forEach(function (en) {
+      var isDone = en.classList.contains('done');
+      var isMust = !!en.querySelector('.must-tag');
+      if (isDone) done++;
+      if (isMust) { musts++; if (isDone) mustsDone++; }
+    });
+    pill.textContent = '🎬 ' + done + ' of ' + entries.length + ' shots captured'
+      + (musts ? ' · must-haves ' + mustsDone + '/' + musts : '')
+      + ' · saved on this device';
+  }
+
+  var ticks = load();
+  document.querySelectorAll('.shot-entry').forEach(function (entry) {
+    var cb = entry.querySelector('.shot-cb');
+    if (!cb) return;
+    cb.disabled = false;
+    cb.classList.add('live');
+    cb.title = 'Tick like a pencil — saved on this device only';
+    var id = entry.dataset.shotId;
+    if (id in ticks) {
+      var done = !!ticks[id];
+      cb.checked = done;
+      entry.classList.toggle('done', done);
+    }
+    cb.addEventListener('change', function () {
+      entry.classList.toggle('done', cb.checked);
+      ticks[id] = cb.checked;
+      save(ticks);
+      recount();
+    });
+  });
+  recount();
 })();
 </script>
 <?php endif; ?>

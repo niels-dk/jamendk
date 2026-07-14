@@ -1,6 +1,6 @@
 // sw.js
 
-const CACHE = 'shell-v9';
+const CACHE = 'shell-v10';
 const SHELL_URLS = [
   '/', 
   '/dashboard', 
@@ -37,11 +37,43 @@ self.addEventListener('fetch', e => {
   const req = e.request;
   const url = new URL(req.url);
 
-  // 1) HTML navigations: network‐first, fallback to shell
+  // 1) HTML navigations: network-first. Trip pages (/t/… and /trips/…) are
+  //    cached on every successful load so the shot list still opens in the
+  //    field with no signal; anything else falls back to the app shell.
   if (req.mode === 'navigate') {
-    e.respondWith(
-      fetch(req).catch(() => caches.match('/', { ignoreSearch: true }))
-    );
+    e.respondWith((async () => {
+      try {
+        const netRes = await fetch(req);
+        if (url.pathname.startsWith('/t/') || url.pathname.startsWith('/trips/')) {
+          const cache = await caches.open(CACHE);
+          cache.put(req, netRes.clone());
+        }
+        return netRes;
+      } catch (_err) {
+        return (await caches.match(req, { ignoreSearch: true }))
+            || (await caches.match('/', { ignoreSearch: true }))
+            || new Response('Offline', { status: 503 });
+      }
+    })());
+    return;
+  }
+
+  // 1b) Thumbnails (mood refs, canvas images): cache-first so reference
+  //     images on a cached trip page render offline too.
+  if (req.method === 'GET' && url.origin === location.origin &&
+      url.pathname.startsWith('/storage/thumbs/')) {
+    e.respondWith((async () => {
+      const cached = await caches.match(req);
+      if (cached) return cached;
+      try {
+        const netRes = await fetch(req);
+        const cache = await caches.open(CACHE);
+        cache.put(req, netRes.clone());
+        return netRes;
+      } catch (_err) {
+        return new Response('', { status: 504 });
+      }
+    })());
     return;
   }
 

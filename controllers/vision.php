@@ -505,10 +505,12 @@ class vision_controller
         }
     }
 	
-	/** Helper: resolve a vision by slug (fallback) */
+	/** Helper: resolve a vision by slug (fallback).
+	 *  Must return the FULL row — the permission layer reads user_id, and a
+	 *  partial row made every ownership check fail (contacts 404'd as empty). */
 	private static function findVisionBySlug(PDO $db, string $slug): ?array
 	{
-		$st = $db->prepare("SELECT id, slug FROM visions WHERE slug=? LIMIT 1");
+		$st = $db->prepare("SELECT * FROM visions WHERE slug=? AND deleted_at IS NULL LIMIT 1");
 		$st->execute([$slug]);
 		return $st->fetch(PDO::FETCH_ASSOC) ?: null;
 	}

@@ -105,7 +105,8 @@ class trip_controller
 
         // Section-level visibility (vision_presentation row, with sensible defaults)
         $defaults = [
-            'relations' => 1, 'itinerary' => 1, 'goals' => 1, 'budget' => 1, 'roles' => 0,
+            'relations' => 1, 'anchors' => 1, 'itinerary' => 1, 'shots' => 1,
+            'goals' => 1, 'budget' => 1, 'roles' => 0,
             'contacts'  => 1, 'documents' => 1, 'workflow' => 1,
         ];
         $st = $db->prepare("SELECT * FROM vision_presentation WHERE vision_id=?");
@@ -115,8 +116,8 @@ class trip_controller
             return (int)($vp[$k] ?? $defaults[$k] ?? 0) === 1;
         };
 
-        // Anchors (no per-anchor flag — included whenever the vision has any)
-        $anchors = vision_model::getAnchors($db, $visionId);
+        // Anchors (section toggle; no per-anchor flag)
+        $anchors = $sectionVisible('anchors') ? vision_model::getAnchors($db, $visionId) : [];
 
         // Linked mood board + canvas snapshot
         $mood = null;
@@ -253,6 +254,51 @@ class trip_controller
             } catch (\Throwable $e) { /* not migrated yet */ }
         }
 
+        // Shots (capture list) — per-shot show_on_trip; dropped shots excluded.
+        // Captured shots stay visible (dimmed) so progress is felt in the field.
+        $shots = [];
+        if ($sectionVisible('shots')) {
+            try {
+                $sq = $db->prepare("
+                    SELECT id, day_date, title, shot_type, how_notes, light, location,
+                           priority, status
+                      FROM vision_shots
+                     WHERE vision_id = ? AND show_on_trip = 1 AND status != 'dropped'
+                     ORDER BY (day_date IS NULL) ASC, day_date ASC, sort_order ASC, id ASC
+                ");
+                $sq->execute([$visionId]);
+                $shots = $sq->fetchAll(PDO::FETCH_ASSOC);
+                if ($shots) {
+                    $sIds = array_map('intval', array_column($shots, 'id'));
+                    $in   = implode(',', array_fill(0, count($sIds), '?'));
+                    $rq   = $db->prepare("
+                        SELECT r.shot_id, vm.uuid, vm.provider, vm.provider_id
+                          FROM vision_shot_refs r
+                          JOIN vision_media vm ON vm.id = r.media_id
+                         WHERE r.shot_id IN ($in)");
+                    $rq->execute($sIds);
+                    $refsByShot = [];
+                    foreach ($rq->fetchAll(PDO::FETCH_ASSOC) as $r) {
+                        $thumb = (($r['provider'] ?? '') === 'youtube' && !empty($r['provider_id']))
+                            ? 'https://img.youtube.com/vi/' . rawurlencode($r['provider_id']) . '/hqdefault.jpg'
+                            : (!empty($r['uuid']) ? '/storage/thumbs/' . rawurlencode($r['uuid']) . '_thumb.jpg' : '');
+                        if ($thumb) $refsByShot[(int)$r['shot_id']][] = $thumb;
+                    }
+                    foreach ($shots as &$s) $s['ref_thumbs'] = $refsByShot[(int)$s['id']] ?? [];
+                    unset($s);
+                }
+            } catch (\Throwable $e) { /* not migrated yet */ }
+        }
+
+        // Can the current viewer check shots off? Only a logged-in user with
+        // edit rights — a leaked share link must never be able to write.
+        $canCheckShots = false;
+        if (!$export && $shots) {
+            try {
+                $canCheckShots = function_exists('vision_can') && vision_can($db, $vision, 'edit');
+            } catch (\Throwable $e) { /* stay read-only */ }
+        }
+
         // Budget (only if marked visible on trip) + line-item breakdown
         $budget = null;
         $budgetItems = [];
@@ -322,6 +368,7 @@ class trip_controller
         $hasAnyContent = !empty($vision['description'])
             || !empty($anchors)
             || $mood
+            || !empty($shots)
             || !empty($itinerary)
             || !empty($goals)
             || $budget

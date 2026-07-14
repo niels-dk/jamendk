@@ -148,6 +148,9 @@ class vision_controller
             };
             $sidebarBadges['goals']     = $cnt("SELECT COUNT(*) FROM vision_goals WHERE vision_id=? AND status != 'cancelled'");
             $sidebarBadges['itinerary'] = $cnt("SELECT COUNT(*) FROM vision_itinerary WHERE vision_id=?");
+            try {
+                $sidebarBadges['shots'] = $cnt("SELECT COUNT(*) FROM vision_shots WHERE vision_id=? AND status='planned'");
+            } catch (\Throwable $e) { /* shots migration not run yet */ }
             $sidebarBadges['contacts']  = $cnt("SELECT COUNT(*) FROM vision_contacts WHERE vision_id=?");
             $sidebarBadges['documents'] = $cnt("SELECT COUNT(*) FROM vision_documents WHERE vision_id=?");
             $sidebarBadges['budget']    = $cnt("SELECT COUNT(*) FROM vision_budget WHERE vision_id=?");
@@ -397,6 +400,29 @@ class vision_controller
                 $budgetItems = $bi->fetchAll(PDO::FETCH_ASSOC);
             } catch (\Throwable $e) { /* not migrated yet */ }
         }
+        // For shots overlay: the linked mood board's images become the pickable
+        // visual references, so the mood board doubles as the shot brief.
+        $shotRefMedia = [];
+        if ($section === 'shots' && $linkedMood) {
+            try {
+                $mb = $db->prepare("SELECT id FROM mood_boards WHERE slug=? AND deleted_at IS NULL LIMIT 1");
+                $mb->execute([$linkedMood['slug']]);
+                $moodId = (int)$mb->fetchColumn();
+                if ($moodId) {
+                    $mm = $db->prepare("
+                        SELECT vm.id, vm.uuid, vm.mime_type, vm.provider, vm.provider_id
+                          FROM vision_media vm
+                          INNER JOIN mood_board_media mbm ON mbm.media_id = vm.id
+                         WHERE mbm.board_id = ?
+                         ORDER BY mbm.added_at DESC, vm.id DESC");
+                    $mm->execute([$moodId]);
+                    foreach ($mm->fetchAll(PDO::FETCH_ASSOC) as $m) {
+                        $thumb = self::shotRefThumb($m);
+                        if ($thumb) $shotRefMedia[] = ['media_id' => (int)$m['id'], 'thumb' => $thumb];
+                    }
+                }
+            } catch (\Throwable $e) { /* tables missing — picker just stays empty */ }
+        }
         $partial = __DIR__.'/../views/partials/overlay_'.$section.'.php';
         if (!file_exists($partial)) { http_response_code(404); echo 'Overlay not found'; return; }
         // include partial; it will echo HTML
@@ -472,7 +498,7 @@ class vision_controller
                     echo json_encode(['success' => true, 'share' => $share]);
                     return;
                 }
-                $allowed = ['relations','itinerary','goals','budget','roles','contacts','documents','workflow'];
+                $allowed = ['relations','anchors','itinerary','shots','goals','budget','roles','contacts','documents','workflow'];
                 if ($flag !== '' && in_array($flag, $allowed, true)) {
                     $st = $db->prepare("SELECT vision_id FROM vision_presentation WHERE vision_id=?");
                     $st->execute([$id]);
@@ -1003,6 +1029,167 @@ class vision_controller
 
 		$db->prepare("DELETE FROM vision_itinerary WHERE id=? AND vision_id=?")
 		   ->execute([(int)$entryId, (int)$vision['id']]);
+		echo json_encode(['success' => true]);
+	}
+
+	/* ──────────────────────────  Shots (capture list)  ────────────────────────── */
+
+	/** Thumbnail URL for a media row (uuid/provider fields). */
+	private static function shotRefThumb(array $m): string
+	{
+		if (($m['provider'] ?? '') === 'youtube' && !empty($m['provider_id'])) {
+			return 'https://img.youtube.com/vi/' . rawurlencode($m['provider_id']) . '/hqdefault.jpg';
+		}
+		return !empty($m['uuid']) ? '/storage/thumbs/' . rawurlencode($m['uuid']) . '_thumb.jpg' : '';
+	}
+
+	/** GET /api/visions/{slug}/shots */
+	public static function listShots(string $slug): void
+	{
+		header('Content-Type: application/json');
+		global $db;
+		$vision = vision_model::get($db, $slug);
+		api_require_vision($db, $vision, 'view');
+		try {
+			$st = $db->prepare("SELECT id, day_date, title, shot_type, how_notes, light, location,
+									   priority, status, show_on_trip
+								  FROM vision_shots
+								 WHERE vision_id = ? AND status != 'dropped'
+								 ORDER BY (day_date IS NULL) ASC, day_date ASC, sort_order ASC, id ASC");
+			$st->execute([(int)$vision['id']]);
+			$shots = $st->fetchAll(PDO::FETCH_ASSOC);
+			// Pinned reference thumbs per shot
+			if ($shots) {
+				$ids = array_map('intval', array_column($shots, 'id'));
+				$in  = implode(',', array_fill(0, count($ids), '?'));
+				$rq  = $db->prepare("SELECT r.shot_id, r.media_id, vm.uuid, vm.provider, vm.provider_id
+									   FROM vision_shot_refs r
+									   JOIN vision_media vm ON vm.id = r.media_id
+									  WHERE r.shot_id IN ($in)");
+				$rq->execute($ids);
+				$refsByShot = [];
+				foreach ($rq->fetchAll(PDO::FETCH_ASSOC) as $r) {
+					$refsByShot[(int)$r['shot_id']][] = [
+						'media_id' => (int)$r['media_id'],
+						'thumb'    => self::shotRefThumb($r),
+					];
+				}
+				foreach ($shots as &$s) $s['refs'] = $refsByShot[(int)$s['id']] ?? [];
+				unset($s);
+			}
+			echo json_encode(['success' => true, 'shots' => $shots]);
+		} catch (\Throwable $e) {
+			echo json_encode(['success' => true, 'shots' => [], 'migration_missing' => true]);
+		}
+	}
+
+	/** Shared field parsing for shot create/update. Title is the only required field. */
+	private static function shotFields(): ?array
+	{
+		$title = trim((string)($_POST['title'] ?? ''));
+		if ($title === '') return null;
+		$day = trim((string)($_POST['day_date'] ?? ''));
+		return [
+			'day_date'     => preg_match('/^\d{4}-\d{2}-\d{2}$/', $day) ? $day : null,
+			'title'        => mb_substr($title, 0, 255),
+			'shot_type'    => mb_substr(trim((string)($_POST['shot_type'] ?? '')), 0, 30) ?: null,
+			'how_notes'    => mb_substr(trim((string)($_POST['how_notes'] ?? '')), 0, 2000) ?: null,
+			'light'        => mb_substr(trim((string)($_POST['light'] ?? '')), 0, 30) ?: null,
+			'location'     => mb_substr(trim((string)($_POST['location'] ?? '')), 0, 255) ?: null,
+			'priority'     => !empty($_POST['priority']) ? 1 : 0,
+			'show_on_trip' => !empty($_POST['show_on_trip']) ? 1 : 0,
+		];
+	}
+
+	/** Replace a shot's pinned references when the client sends refs (CSV of media ids). */
+	private static function saveShotRefs(PDO $db, int $shotId, int $visionId): void
+	{
+		if (!isset($_POST['refs'])) return; // client didn't touch refs
+		$ids = array_filter(array_map('intval', explode(',', (string)$_POST['refs'])));
+		$db->prepare("DELETE FROM vision_shot_refs WHERE shot_id=?")->execute([$shotId]);
+		if (!$ids) return;
+		// Only allow media that belongs to this vision's library
+		$in = implode(',', array_fill(0, count($ids), '?'));
+		$ok = $db->prepare("SELECT id FROM vision_media WHERE id IN ($in)");
+		$ok->execute($ids);
+		$ins = $db->prepare("INSERT IGNORE INTO vision_shot_refs (shot_id, media_id) VALUES (?,?)");
+		foreach ($ok->fetchAll(PDO::FETCH_COLUMN) as $mid) $ins->execute([$shotId, (int)$mid]);
+	}
+
+	/** POST /api/visions/{slug}/shots/create */
+	public static function createShot(string $slug): void
+	{
+		header('Content-Type: application/json');
+		global $db;
+		$vision = vision_model::get($db, $slug);
+		api_require_vision($db, $vision, 'edit');
+
+		$f = self::shotFields();
+		if (!$f) { http_response_code(422); echo json_encode(['error' => 'Title required']); return; }
+
+		$db->prepare("INSERT INTO vision_shots
+			(vision_id, day_date, title, shot_type, how_notes, light, location, priority, show_on_trip)
+			VALUES (?,?,?,?,?,?,?,?,?)")
+		   ->execute([(int)$vision['id'], $f['day_date'], $f['title'], $f['shot_type'],
+					  $f['how_notes'], $f['light'], $f['location'], $f['priority'], $f['show_on_trip']]);
+		$shotId = (int)$db->lastInsertId();
+		self::saveShotRefs($db, $shotId, (int)$vision['id']);
+		echo json_encode(['success' => true, 'shot_id' => $shotId]);
+	}
+
+	/** POST /api/visions/{slug}/shots/{id} */
+	public static function updateShot(string $slug, string $shotId): void
+	{
+		header('Content-Type: application/json');
+		global $db;
+		$vision = vision_model::get($db, $slug);
+		api_require_vision($db, $vision, 'edit');
+
+		$f = self::shotFields();
+		if (!$f) { http_response_code(422); echo json_encode(['error' => 'Title required']); return; }
+
+		$db->prepare("UPDATE vision_shots
+						 SET day_date=?, title=?, shot_type=?, how_notes=?, light=?, location=?,
+							 priority=?, show_on_trip=?
+					   WHERE id=? AND vision_id=?")
+		   ->execute([$f['day_date'], $f['title'], $f['shot_type'], $f['how_notes'], $f['light'],
+					  $f['location'], $f['priority'], $f['show_on_trip'],
+					  (int)$shotId, (int)$vision['id']]);
+		self::saveShotRefs($db, (int)$shotId, (int)$vision['id']);
+		echo json_encode(['success' => true]);
+	}
+
+	/** POST /api/visions/{slug}/shots/{id}/status — check off / reopen from
+	 *  the overlay or the trip page (any logged-in user with edit rights). */
+	public static function setShotStatus(string $slug, string $shotId): void
+	{
+		header('Content-Type: application/json');
+		global $db;
+		$vision = vision_model::get($db, $slug);
+		api_require_vision($db, $vision, 'edit');
+
+		$status = (string)($_POST['status'] ?? '');
+		if (!in_array($status, ['planned', 'captured'], true)) {
+			http_response_code(422); echo json_encode(['error' => 'Bad status']); return;
+		}
+		$db->prepare("UPDATE vision_shots
+						 SET status=?, captured_at=" . ($status === 'captured' ? 'NOW()' : 'NULL') . "
+					   WHERE id=? AND vision_id=?")
+		   ->execute([$status, (int)$shotId, (int)$vision['id']]);
+		echo json_encode(['success' => true, 'status' => $status]);
+	}
+
+	/** POST /api/visions/{slug}/shots/{id}/delete */
+	public static function deleteShot(string $slug, string $shotId): void
+	{
+		header('Content-Type: application/json');
+		global $db;
+		$vision = vision_model::get($db, $slug);
+		api_require_vision($db, $vision, 'edit');
+
+		$db->prepare("DELETE FROM vision_shot_refs WHERE shot_id=?")->execute([(int)$shotId]);
+		$db->prepare("DELETE FROM vision_shots WHERE id=? AND vision_id=?")
+		   ->execute([(int)$shotId, (int)$vision['id']]);
 		echo json_encode(['success' => true]);
 	}
 

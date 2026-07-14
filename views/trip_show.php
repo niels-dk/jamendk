@@ -101,6 +101,31 @@ $mapUrl = fn(string $place): string =>
 
 $itinerary   = $itinerary   ?? [];
 $budgetItems = $budgetItems ?? [];
+$shots       = $shots       ?? [];
+$canCheckShots = $canCheckShots ?? false;
+
+// Group shots by day; NULL day = "Anytime". The day flow below merges
+// itinerary entries and shots chronologically so a day reads as
+// "where you'll be + what you came to capture there".
+$shotsByDay = [];
+$shotsAnytime = [];
+foreach ($shots as $s) {
+    if (!empty($s['day_date'])) $shotsByDay[$s['day_date']][] = $s;
+    else $shotsAnytime[] = $s;
+}
+$itinByDay = [];
+foreach ($itinerary as $en) $itinByDay[$en['day_date']][] = $en;
+$allDays = array_unique(array_merge(array_keys($itinByDay), array_keys($shotsByDay)));
+sort($allDays);
+
+$shotDone  = count(array_filter($shots, fn($s) => $s['status'] === 'captured'));
+$shotMusts = array_filter($shots, fn($s) => !empty($s['priority']));
+$shotMustsDone = count(array_filter($shotMusts, fn($s) => $s['status'] === 'captured'));
+
+$SHOT_TYPE_LABEL = ['drone'=>'🚁 Drone','broll'=>'🎥 B-roll','interview'=>'🎤 Interview',
+                    'timelapse'=>'⏱ Timelapse','photo'=>'📷 Photo','pov'=>'🎬 POV','other'=>'✨'];
+$SHOT_LIGHT_LABEL = ['sunrise'=>'🌅 sunrise','golden'=>'🌇 golden hour','midday'=>'☀️ midday',
+                     'blue'=>'🌆 blue hour','night'=>'🌙 night'];
 ?>
 <!doctype html>
 <html lang="en">
@@ -344,6 +369,42 @@ $budgetItems = $budgetItems ?? [];
     .itin-entry .what .loc { font-size: .85rem; margin-top: .15rem; }
     .itin-entry .what .n { font-size: .85rem; color: var(--muted); margin-top: .2rem; white-space: pre-wrap; }
 
+    /* Shots (capture list) */
+    .shot-entry {
+      display: flex; align-items: flex-start; gap: .7rem;
+      padding: .6rem .9rem;
+      border-left: 3px solid var(--accent);
+    }
+    .shot-entry.done { opacity: .55; }
+    .shot-entry.done .t { text-decoration: line-through; }
+    .shot-cb {
+      flex-shrink: 0; width: 1.25rem; height: 1.25rem; margin-top: .1rem;
+      accent-color: var(--accent);
+    }
+    .shot-cb.live { cursor: pointer; }
+    .shot-entry .what { min-width: 0; flex: 1; }
+    .shot-entry .t { font-weight: 700; color: var(--ink); }
+    .shot-entry .meta {
+      display: flex; flex-wrap: wrap; gap: .3rem .6rem;
+      font-size: .8rem; color: var(--muted); margin-top: .2rem;
+    }
+    .shot-entry .how { font-size: .88rem; color: var(--ink-soft); margin-top: .25rem; white-space: pre-wrap; }
+    .shot-entry .refs { display: flex; gap: .3rem; margin-top: .4rem; flex-wrap: wrap; }
+    .shot-entry .refs img {
+      width: 64px; height: 64px; object-fit: cover; border-radius: 6px;
+      border: 1px solid var(--line); cursor: zoom-in;
+    }
+    .must-tag {
+      display: inline-block; padding: .05rem .45rem; border-radius: 999px;
+      background: #fdf3d7; color: #7c5a10; font-size: .72rem; font-weight: 700;
+    }
+    .shots-progress {
+      display: inline-flex; align-items: center; gap: .35rem;
+      padding: .12rem .6rem; border-radius: 999px;
+      background: var(--accent-soft); color: #18467a;
+      font-size: .8rem; font-weight: 600;
+    }
+
     /* Budget breakdown */
     .budget-items { width: 100%; border-collapse: collapse; margin-top: .2rem; }
     .budget-items td {
@@ -445,6 +506,12 @@ $budgetItems = $budgetItems ?? [];
         <?php if (!empty($sourceDream)): ?>
           <span>From Dream: <?= tr_e($sourceDream['title'] ?: 'Untitled') ?></span>
         <?php endif; ?>
+        <?php if (!empty($shots)): ?>
+          <span class="shots-progress" id="shotsProgressPill">
+            🎬 <?= $shotDone ?> of <?= count($shots) ?> shots captured<?=
+              $shotMusts ? ' · must-haves ' . $shotMustsDone . '/' . count($shotMusts) : '' ?>
+          </span>
+        <?php endif; ?>
       </div>
       <?php if (!empty($vision['description'])): ?>
         <div class="hero-desc"><?= $vision['description'] ?></div>
@@ -462,26 +529,66 @@ $budgetItems = $budgetItems ?? [];
     </div>
   <?php endif; ?>
 
-  <?php if (!empty($itinerary)): ?>
+  <?php
+    // One shot card — shared by the day flow and the Anytime section.
+    $renderShot = function (array $s) use ($canCheckShots, $mapUrl, $assetUrl, $SHOT_TYPE_LABEL, $SHOT_LIGHT_LABEL) {
+        $done = $s['status'] === 'captured';
+        ?>
+        <div class="card shot-entry <?= $done ? 'done' : '' ?>" data-shot-id="<?= (int)$s['id'] ?>">
+          <input type="checkbox" class="shot-cb <?= $canCheckShots ? 'live' : '' ?>"
+                 <?= $done ? 'checked' : '' ?> <?= $canCheckShots ? '' : 'disabled' ?>
+                 title="<?= $canCheckShots ? ($done ? 'Reopen' : 'Mark captured') : 'Captured status' ?>">
+          <span class="what">
+            <span class="t"><?= tr_e($s['title']) ?></span>
+            <span class="meta">
+              <?php if (!empty($s['priority'])): ?><span class="must-tag">★ must</span><?php endif; ?>
+              <?php if (!empty($s['shot_type'])): ?><span><?= tr_e($SHOT_TYPE_LABEL[$s['shot_type']] ?? $s['shot_type']) ?></span><?php endif; ?>
+              <?php if (!empty($s['light'])): ?><span><?= tr_e($SHOT_LIGHT_LABEL[$s['light']] ?? $s['light']) ?></span><?php endif; ?>
+              <?php if (!empty($s['location'])): ?>
+                <span>📍 <a href="<?= tr_e($mapUrl($s['location'])) ?>" target="_blank" rel="noopener"><?= tr_e($s['location']) ?></a></span>
+              <?php endif; ?>
+            </span>
+            <?php if (!empty($s['how_notes'])): ?>
+              <div class="how"><?= tr_e($s['how_notes']) ?></div>
+            <?php endif; ?>
+            <?php if (!empty($s['ref_thumbs'])): ?>
+              <span class="refs">
+                <?php foreach ($s['ref_thumbs'] as $thumb): ?>
+                  <img src="<?= tr_e($assetUrl($thumb)) ?>" alt="Reference" loading="lazy">
+                <?php endforeach; ?>
+              </span>
+            <?php endif; ?>
+          </span>
+        </div>
+        <?php
+    };
+  ?>
+
+  <?php if (!empty($allDays)): ?>
     <h2>Itinerary</h2>
-    <?php $itinDay = null; ?>
-    <?php foreach ($itinerary as $en): ?>
-      <?php if ($en['day_date'] !== $itinDay): $itinDay = $en['day_date']; ?>
-        <div class="itin-day-head">📅 <?= tr_e(date('l · M j, Y', strtotime($itinDay))) ?></div>
-      <?php endif; ?>
-      <div class="card itin-entry">
-        <span class="when"><?= $en['start_time'] ? tr_e(substr($en['start_time'], 0, 5)) : '·' ?></span>
-        <span class="what">
-          <span class="t"><?= tr_e($en['title']) ?></span>
-          <?php if (!empty($en['location'])): ?>
-            <div class="loc">📍 <a href="<?= tr_e($mapUrl($en['location'])) ?>" target="_blank" rel="noopener"><?= tr_e($en['location']) ?></a></div>
-          <?php endif; ?>
-          <?php if (!empty($en['notes'])): ?>
-            <div class="n"><?= tr_e($en['notes']) ?></div>
-          <?php endif; ?>
-        </span>
-      </div>
+    <?php foreach ($allDays as $day): ?>
+      <div class="itin-day-head">📅 <?= tr_e(date('l · M j, Y', strtotime($day))) ?></div>
+      <?php foreach ($itinByDay[$day] ?? [] as $en): ?>
+        <div class="card itin-entry">
+          <span class="when"><?= $en['start_time'] ? tr_e(substr($en['start_time'], 0, 5)) : '·' ?></span>
+          <span class="what">
+            <span class="t"><?= tr_e($en['title']) ?></span>
+            <?php if (!empty($en['location'])): ?>
+              <div class="loc">📍 <a href="<?= tr_e($mapUrl($en['location'])) ?>" target="_blank" rel="noopener"><?= tr_e($en['location']) ?></a></div>
+            <?php endif; ?>
+            <?php if (!empty($en['notes'])): ?>
+              <div class="n"><?= tr_e($en['notes']) ?></div>
+            <?php endif; ?>
+          </span>
+        </div>
+      <?php endforeach; ?>
+      <?php foreach ($shotsByDay[$day] ?? [] as $s) $renderShot($s); ?>
     <?php endforeach; ?>
+  <?php endif; ?>
+
+  <?php if (!empty($shotsAnytime)): ?>
+    <h2>Shots — keep an eye out</h2>
+    <?php foreach ($shotsAnytime as $s) $renderShot($s); ?>
   <?php endif; ?>
 
   <?php if (!empty($anchors) && array_filter($anchors)): ?>
@@ -810,7 +917,7 @@ $budgetItems = $budgetItems ?? [];
   if (!lb) return;
   var lbImg = lb.querySelector('img');
   document.addEventListener('click', function (e) {
-    var img = e.target.closest('.ci img');
+    var img = e.target.closest('.ci img, .shot-entry .refs img');
     if (img) { lbImg.src = img.src; lb.classList.add('open'); return; }
     if (e.target === lb || e.target === lbImg) lb.classList.remove('open');
   });
@@ -819,5 +926,40 @@ $budgetItems = $budgetItems ?? [];
   });
 })();
 </script>
+
+<?php if ($canCheckShots): ?>
+<!-- Shot check-off: only rendered for logged-in editors; the API re-verifies
+     permissions on every call, so this is a convenience, not the gate. -->
+<script>
+(function () {
+  var slug = <?= json_encode((string)($vision['slug'] ?? '')) ?>;
+  if (!slug) return;
+  document.addEventListener('change', function (e) {
+    var cb = e.target;
+    if (!cb.classList || !cb.classList.contains('shot-cb') || cb.disabled) return;
+    var entry = cb.closest('.shot-entry');
+    if (!entry) return;
+    var id = entry.dataset.shotId;
+    var status = cb.checked ? 'captured' : 'planned';
+    cb.disabled = true;
+    fetch('/api/visions/' + slug + '/shots/' + id + '/status', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ status: status }).toString()
+    }).then(function (r) { return r.json(); }).then(function (j) {
+      cb.disabled = false;
+      if (j && j.success) {
+        entry.classList.toggle('done', status === 'captured');
+      } else {
+        cb.checked = !cb.checked;   // revert on failure
+      }
+    }).catch(function () {
+      cb.disabled = false;
+      cb.checked = !cb.checked;
+    });
+  });
+})();
+</script>
+<?php endif; ?>
 </body>
 </html>

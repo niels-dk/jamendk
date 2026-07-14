@@ -219,6 +219,13 @@ function route(string $uri): void
         '/api/visions/([A-Za-z0-9]{6,16})/itinerary/([0-9]+)'        => ['vision', 'updateItineraryItem'],
         '/api/visions/([A-Za-z0-9]{6,16})/itinerary/([0-9]+)/delete' => ['vision', 'deleteItineraryItem'],
 
+        // Shots (capture list — what to film, where, when, how)
+        '/api/visions/([A-Za-z0-9]{6,16})/shots'                 => ['vision', 'listShots'],
+        '/api/visions/([A-Za-z0-9]{6,16})/shots/create'          => ['vision', 'createShot'],
+        '/api/visions/([A-Za-z0-9]{6,16})/shots/([0-9]+)'        => ['vision', 'updateShot'],
+        '/api/visions/([A-Za-z0-9]{6,16})/shots/([0-9]+)/status' => ['vision', 'setShotStatus'],
+        '/api/visions/([A-Za-z0-9]{6,16})/shots/([0-9]+)/delete' => ['vision', 'deleteShot'],
+
         // Roles & sharing (must come before the generic {section} catch-all)
         '/api/visions/([A-Za-z0-9]{6,16})/roles'                 => ['vision', 'listRoles'],
         '/api/visions/([A-Za-z0-9]{6,16})/roles/add'             => ['vision', 'addRole'],

@@ -29,6 +29,7 @@ $dot = function (string $key) use ($badges): string {
   <a href="#basics"    data-overlay="basics"><span>Basics</span></a>
   <a href="#relations" data-overlay="relations"><span>Relations</span><?= $dot('relations') ?></a>
   <a href="#itinerary" data-overlay="itinerary"><span>Itinerary</span><?= $badge('itinerary') ?></a>
+  <a href="#shots"     data-overlay="shots"><span>Shots</span><?= $badge('shots') ?></a>
   <a href="#goals"     data-overlay="goals"><span>Goals &amp; Milestones</span><?= $badge('goals') ?></a>
   <a href="#budget"    data-overlay="budget"><span>Budget</span><?= $dot('budget') ?></a>
   <a href="#roles"     data-overlay="roles"><span>Roles &amp; Permissions</span></a>

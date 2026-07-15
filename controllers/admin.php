@@ -62,6 +62,21 @@ class admin_controller
         $mailDriver = defined('MAIL_DRIVER') ? MAIL_DRIVER : 'mail (default — no MAIL_DRIVER set)';
         $mailFrom   = defined('MAIL_FROM') ? MAIL_FROM : (defined('MAIL_USER') ? MAIL_USER : '(auto)');
 
+        // Config readout for debugging auth failures. The password's LENGTH is
+        // shown but never its value: a length that doesn't match what you typed
+        // is the tell-tale of a PHP quoting/escaping problem, and it gives that
+        // answer without putting the secret on screen.
+        $mailCfg = [
+            'MAIL_DRIVER'    => defined('MAIL_DRIVER')    ? MAIL_DRIVER    : null,
+            'MAIL_HOST'      => defined('MAIL_HOST')      ? MAIL_HOST      : null,
+            'MAIL_PORT'      => defined('MAIL_PORT')      ? MAIL_PORT      : null,
+            'MAIL_USER'      => defined('MAIL_USER')      ? MAIL_USER      : null,
+            'MAIL_FROM'      => defined('MAIL_FROM')      ? MAIL_FROM      : null,
+            'MAIL_FROM_NAME' => defined('MAIL_FROM_NAME') ? MAIL_FROM_NAME : null,
+            'MAIL_SITE_HOST' => defined('MAIL_SITE_HOST') ? MAIL_SITE_HOST : null,
+        ];
+        $mailPassLen = defined('MAIL_PASS') ? strlen((string)MAIL_PASS) : null;
+
         $pageTitle = 'Mail log';
         $noSidebar = true;
         ob_start();

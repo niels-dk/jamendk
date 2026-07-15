@@ -73,6 +73,43 @@ $TYPE_LABEL = [
         Send test email
       </button>
     </form>
+
+    <!-- Config readout. Values are shown so typos are visible; the password
+         is shown only as a length, which is what exposes a quoting bug. -->
+    <details style="margin-top:.9rem;">
+      <summary style="cursor:pointer;font-size:.84rem;color:#8fb1d8;">
+        Show mail config (no secrets)
+      </summary>
+      <table style="margin-top:.6rem;font-size:.82rem;border-collapse:collapse;">
+        <?php foreach ($mailCfg as $k => $v): ?>
+          <tr>
+            <td style="padding:.2rem .8rem .2rem 0;color:#8593a6;font-family:monospace;">
+              <?= $e($k) ?>
+            </td>
+            <td style="padding:.2rem 0;font-family:monospace;
+                       color:<?= $v === null ? '#e8c267' : '#eaeaea' ?>;">
+              <?= $v === null ? 'not set' : $e($v) ?>
+            </td>
+          </tr>
+        <?php endforeach; ?>
+        <tr>
+          <td style="padding:.2rem .8rem .2rem 0;color:#8593a6;font-family:monospace;">
+            MAIL_PASS
+          </td>
+          <td style="padding:.2rem 0;font-family:monospace;
+                     color:<?= $mailPassLen === null ? '#e8c267' : '#eaeaea' ?>;">
+            <?php if ($mailPassLen === null): ?>
+              not set
+            <?php else: ?>
+              set · <?= (int)$mailPassLen ?> characters
+              <span style="color:#8593a6;">
+                — if that isn't the length you typed, PHP quoting ate part of it
+              </span>
+            <?php endif; ?>
+          </td>
+        </tr>
+      </table>
+    </details>
   </div>
 
   <?php if (empty($rows)): ?>

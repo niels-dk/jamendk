@@ -268,7 +268,12 @@ class Mailer
                 if (!self::cmd($fp, 'AUTH LOGIN', [334], $error)) return false;
                 if (!self::cmd($fp, base64_encode($user), [334], $error, true)) return false;
                 if (!self::cmd($fp, base64_encode($pass), [235], $error, true)) {
-                    $error = 'SMTP: authentication rejected — check MAIL_USER / MAIL_PASS';
+                    // Append, never overwrite: cmd() already captured the
+                    // server's own words ("535 …"), which are the only thing
+                    // that says WHY it was rejected. Replacing them with a
+                    // guess leaves nothing to debug from.
+                    $error .= ' [auth rejected — verify MAIL_USER is the full address'
+                            . ' and MAIL_PASS is the mailbox password]';
                     return false;
                 }
             }

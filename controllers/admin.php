@@ -32,6 +32,80 @@ class admin_controller
         include __DIR__ . '/../views/layout.php';
     }
 
+    /**
+     * GET /admin/mail — what the app has tried to send, and what failed.
+     * The one place to look when someone says "I never got the email".
+     */
+    public static function mailLog(): void
+    {
+        require_admin();
+        // $currentUser is read by the view to prefill the test-send address
+        global $db, $currentUser;
+
+        $rows = [];
+        $stats = ['sent' => 0, 'failed' => 0];
+        $migrationMissing = false;
+        try {
+            $rows = $db->query("SELECT * FROM mail_log
+                                 ORDER BY created_at DESC, id DESC
+                                 LIMIT 200")->fetchAll(PDO::FETCH_ASSOC);
+            foreach ($db->query("SELECT status, COUNT(*) c FROM mail_log
+                                  WHERE created_at > (NOW() - INTERVAL 7 DAY)
+                                  GROUP BY status")->fetchAll(PDO::FETCH_ASSOC) as $r) {
+                $stats[$r['status']] = (int)$r['c'];
+            }
+        } catch (\Throwable $e) {
+            $migrationMissing = true;
+        }
+
+        // Surface the active transport so a misconfigured driver is obvious
+        $mailDriver = defined('MAIL_DRIVER') ? MAIL_DRIVER : 'mail (default — no MAIL_DRIVER set)';
+        $mailFrom   = defined('MAIL_FROM') ? MAIL_FROM : (defined('MAIL_USER') ? MAIL_USER : '(auto)');
+
+        $pageTitle = 'Mail log';
+        $noSidebar = true;
+        ob_start();
+        include __DIR__ . '/../views/admin_mail.php';
+        $content = ob_get_clean();
+        include __DIR__ . '/../views/layout.php';
+    }
+
+    /**
+     * POST /admin/mail/test — send one real email to the admin, so
+     * deliverability can be proven before a user ever hits Register.
+     */
+    public static function mailTest(): void
+    {
+        require_admin();
+        require_once __DIR__ . '/../app/mailer.php';
+        global $currentUser;
+
+        if (!csrf_check($_POST['csrf_token'] ?? null)) {
+            $_SESSION['flash_admin'] = '⚠ Your session expired. Please try again.';
+            redirect('/admin/mail');
+        }
+
+        $to = trim($_POST['to'] ?? '') ?: (string)($currentUser['email'] ?? '');
+        if (!filter_var($to, FILTER_VALIDATE_EMAIL)) {
+            $_SESSION['flash_admin'] = '⚠ That address doesn\'t look right.';
+            redirect('/admin/mail');
+        }
+
+        $html = Mailer::layout(
+            'Mail is working',
+            '<p style="margin:0;">If you are reading this, DreamBoard can send email:
+             SMTP authenticated, and this message reached a real inbox.</p>
+             <p style="margin:14px 0 0;font-size:13px;color:#5a6878;">
+             Sent from the admin mail log at ' . htmlspecialchars(date('M j, Y · H:i')) . '.</p>'
+        );
+        $ok = Mailer::send($to, 'DreamBoard test email', $html, 'test');
+
+        $_SESSION['flash_admin'] = $ok
+            ? '✓ Test email sent to ' . $to . ' — check the inbox (and the spam folder).'
+            : '⚠ Send failed. The error is in the log below.';
+        redirect('/admin/mail');
+    }
+
     /** Resolve target user or emit 404 JSON. */
     private static function targetUser(PDO $db, string $userId): ?array
     {

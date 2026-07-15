@@ -18,6 +18,13 @@ function route(string $uri): void
         '/register'           => ['user', 'register'],
         '/logout'             => ['user', 'logout'],
 
+        // Email verification + password reset. Tokens are 64 hex chars
+        // (32 random bytes); the stored copy is a SHA-256 of this value.
+        '/verify-resend'          => ['user', 'resendVerification'],
+        '/verify/([a-f0-9]{64})'  => ['user', 'verifyEmail'],
+        '/forgot'                 => ['user', 'forgotPassword'],
+        '/reset/([a-f0-9]{64})'   => ['user', 'resetPassword'],
+
         '/api/moods/search'                                  => ['vision','searchMoods'],
         '/api/visions/([A-Za-z0-9]{6,16})/relations'         => ['vision','saveRelations'],
         '/api/visions/([A-Za-z0-9]{6,16})/relations/mood'    => ['vision','removeMood'],
@@ -187,6 +194,8 @@ function route(string $uri): void
         '/api/teams/([0-9]+)/members/([0-9]+)/delete' => ['team', 'removeMember'],
 
         // ── Admin (site administration, require_admin inside) ────────────────
+        '/admin/mail'                              => ['admin', 'mailLog'],
+        '/admin/mail/test'                         => ['admin', 'mailTest'],
         '/admin/users'                             => ['admin', 'users'],
         '/admin/users/([0-9]+)/role'               => ['admin', 'setRole'],
         '/admin/users/([0-9]+)/password'           => ['admin', 'setPassword'],

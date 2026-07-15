@@ -1,12 +1,24 @@
 <?php
 require_once __DIR__ . '/../models/User.php';
+require_once __DIR__ . '/../app/mailer.php';
 
 class user_controller
 {
     /** GET /login  (form)  |  POST /login  (authenticate) */
     public static function login(): void
     {
-        $error = null;
+        $error  = null;
+        $notice = null;
+        // Set when the password was right but the address isn't confirmed —
+        // the view uses it to offer a resend link.
+        $unverifiedEmail = null;
+
+        // One-shot notices handed over by register / verify / reset.
+        if (!empty($_SESSION['flash'])) {
+            $notice = $_SESSION['flash'];
+            unset($_SESSION['flash']);
+        }
+
         // Remember where the user was trying to go (set as ?next=)
         $next = self::safeNext($_REQUEST['next'] ?? '');
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -18,8 +30,15 @@ class user_controller
                 if (!$email || !$pass) {
                     $error = 'Please enter both email and password.';
                 } else if ($user = User::authenticate($email, $pass)) {
-                    self::loginUser($user);
-                    redirect($next ?: 'dashboard');
+                    // Correct password, but the address was never confirmed.
+                    // Refuse the session — this is what makes bot signups inert.
+                    if (User::needsVerification($user)) {
+                        $unverifiedEmail = $user['email'] ?? $email;
+                        $error = 'Please confirm your email address before signing in.';
+                    } else {
+                        self::loginUser($user);
+                        redirect($next ?: 'dashboard');
+                    }
                 } else {
                     $error = 'Invalid email or password.';
                 }
@@ -53,24 +72,183 @@ class user_controller
                 } else if (strlen($pass) < 6) {
                     $error = 'Password must be at least 6 characters.';
                 } else if (User::emailExists($email)) {
-                    $error = 'An account with that email already exists.';
+                    // Never confirm that an address is taken — that turns this
+                    // form into an account-existence oracle. The real owner
+                    // gets an email explaining what happened instead.
+                    $existing = User::findByEmail($email);
+                    if ($existing && !Mailer::rateLimited($email, 'reset_notice', 2, 60)) {
+                        $raw = User::issueResetToken((int)$existing['id']);
+                        if ($raw) {
+                            Mailer::sendAlreadyRegistered($email, $existing['name'] ?? '', $raw);
+                        }
+                    }
+                    self::flashToLogin($next);
                 } else {
                     $newId = User::create($name, $email, $pass);
                     if (!$newId) {
                         $error = 'Could not create the account. Please try again.';
                     } else {
-                        $user = User::find($newId);
-                        if ($user) {
-                            self::loginUser($user);
-                            redirect($next ?: 'dashboard');
+                        // No auto-login: the account stays inert until the
+                        // address is confirmed.
+                        $raw = User::issueVerifyToken($newId);
+                        if ($raw) {
+                            Mailer::sendVerification($email, $name, $raw);
                         }
-                        $error = 'Account created — please sign in.';
-                        redirect('login' . ($next ? '?next=' . urlencode($next) : ''));
+                        self::flashToLogin($next);
                     }
                 }
             }
         }
         include __DIR__ . '/../views/register.php';
+    }
+
+    /** Identical outcome whether the address was new or already taken. */
+    private static function flashToLogin(string $next = ''): void
+    {
+        $_SESSION['flash'] = 'Check your inbox — we sent you a link to confirm '
+                           . 'your email address. It may take a minute to arrive.';
+        redirect('login' . ($next ? '?next=' . urlencode($next) : ''));
+    }
+
+    /** GET /verify/{token} — confirm an address and burn the link. */
+    public static function verifyEmail(string $token): void
+    {
+        $user = User::findByVerifyToken($token);
+        if (!$user) {
+            // Expired or already used. Offer a fresh one rather than a dead end.
+            $error = 'That confirmation link has expired or was already used.';
+            $pageTitle = 'Link expired';
+            $noSidebar = true;
+            ob_start();
+            include __DIR__ . '/../views/verify_resend.php';
+            $content = ob_get_clean();
+            include __DIR__ . '/../views/layout.php';
+            return;
+        }
+
+        User::markVerified((int)$user['id']);
+        // Confirming proves control of the mailbox, so sign them straight in.
+        // No flash here: only /login consumes it, so setting one would leave
+        // a stale "confirmed" notice to surface on a later sign-in.
+        self::loginUser($user);
+        redirect('dashboard');
+    }
+
+    /** GET/POST /verify-resend — send a fresh confirmation link. */
+    public static function resendVerification(): void
+    {
+        $error = null; $notice = null;
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            if (!csrf_check($_POST['csrf_token'] ?? null)) {
+                $error = 'Your session expired. Please try again.';
+            } else {
+                $email = trim($_POST['email'] ?? '');
+                if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                    $error = 'That email address doesn\'t look right.';
+                } else {
+                    $user = User::findByEmail($email);
+                    // Only unverified accounts get a link; everyone sees the
+                    // same message regardless.
+                    if ($user && User::needsVerification($user)
+                        && !Mailer::rateLimited($email, 'verify', 3, 60)) {
+                        $raw = User::issueVerifyToken((int)$user['id']);
+                        if ($raw) {
+                            Mailer::sendVerification($email, $user['name'] ?? '', $raw);
+                        }
+                    }
+                    $notice = 'If that address needs confirming, a new link is on its way.';
+                }
+            }
+        }
+
+        $pageTitle = 'Resend confirmation';
+        $noSidebar = true;
+        ob_start();
+        include __DIR__ . '/../views/verify_resend.php';
+        $content = ob_get_clean();
+        include __DIR__ . '/../views/layout.php';
+    }
+
+    /** GET/POST /forgot — request a password-reset link. */
+    public static function forgotPassword(): void
+    {
+        $error = null; $notice = null;
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            if (!csrf_check($_POST['csrf_token'] ?? null)) {
+                $error = 'Your session expired. Please try again.';
+            } elseif (trim($_POST['website'] ?? '') !== '') {
+                $notice = 'If an account exists for that address, a reset link is on its way.';
+            } else {
+                $email = trim($_POST['email'] ?? '');
+                if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                    $error = 'That email address doesn\'t look right.';
+                } else {
+                    $user = User::findByEmail($email);
+                    if ($user && !Mailer::rateLimited($email, 'reset', 3, 60)) {
+                        $raw = User::issueResetToken((int)$user['id']);
+                        if ($raw) {
+                            Mailer::sendPasswordReset($email, $user['name'] ?? '', $raw);
+                        }
+                    }
+                    // Same answer whether or not the account exists.
+                    $notice = 'If an account exists for that address, a reset link is on its way.';
+                }
+            }
+        }
+
+        $pageTitle = 'Forgot password';
+        $noSidebar = true;
+        ob_start();
+        include __DIR__ . '/../views/forgot.php';
+        $content = ob_get_clean();
+        include __DIR__ . '/../views/layout.php';
+    }
+
+    /** GET/POST /reset/{token} — choose a new password. */
+    public static function resetPassword(string $token): void
+    {
+        $error = null;
+        $user  = User::findByResetToken($token);
+
+        if (!$user) {
+            $error = 'That reset link has expired or was already used.';
+            $pageTitle = 'Link expired';
+            $noSidebar = true;
+            ob_start();
+            include __DIR__ . '/../views/reset_expired.php';
+            $content = ob_get_clean();
+            include __DIR__ . '/../views/layout.php';
+            return;
+        }
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            if (!csrf_check($_POST['csrf_token'] ?? null)) {
+                $error = 'Your session expired. Please try again.';
+            } else {
+                $new     = (string)($_POST['new_password'] ?? '');
+                $confirm = (string)($_POST['confirm_password'] ?? '');
+                if (strlen($new) < 6) {
+                    $error = 'Password must be at least 6 characters.';
+                } elseif ($new !== $confirm) {
+                    $error = 'Passwords don\'t match.';
+                } else {
+                    User::resetPassword((int)$user['id'], $new);
+                    // Force a fresh sign-in with the new password rather than
+                    // handing out a session from an emailed link.
+                    $_SESSION['flash'] = 'Password updated — you can sign in now.';
+                    redirect('login');
+                }
+            }
+        }
+
+        $pageTitle = 'Choose a new password';
+        $noSidebar = true;
+        ob_start();
+        include __DIR__ . '/../views/reset.php';
+        $content = ob_get_clean();
+        include __DIR__ . '/../views/layout.php';
     }
 
     /** GET/POST /account — edit own profile (name, email, password). */

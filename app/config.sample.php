@@ -13,25 +13,35 @@
 // ]);
 
 /* ── Mail ─────────────────────────────────────────────────────────────────
+ *
+ * MAIL_FROM is the setting that decides inbox vs spam. It must be a real
+ * mailbox on this domain: it becomes both the From: header AND the envelope
+ * sender, so SPF is checked against jamen.dk (which authorises DreamHost's
+ * IPs) and aligns with From:. That alignment is what DMARC wants.
+ *
  * Driver options:
- *   'smtp' — authenticated send through DreamHost. Correct SPF/DKIM, best
- *            deliverability. Requires a real mailbox (you have dream@jamen.dk).
- *   'mail' — PHP mail(). Zero config, weaker deliverability. The fallback.
- *   'log'  — writes to mail_log without sending. Useful for local testing.
+ *   'mail' — PHP mail(). Zero credentials. With MAIL_FROM set it passes
+ *            DMARC on SPF alignment alone. Start here.
+ *   'smtp' — authenticated send. Adds a DKIM signature on top of SPF, which
+ *            is stronger, but needs the mailbox password to be correct.
+ *   'log'  — writes to mail_log without sending. Useful for testing.
  */
-define('MAIL_DRIVER',    'smtp');
-define('MAIL_HOST',      'smtp.dreamhost.com');
-define('MAIL_PORT',      465);                 // 465 = implicit SSL; 587 = STARTTLS
-define('MAIL_USER',      'dream@jamen.dk');    // full address is the SMTP username
+define('MAIL_DRIVER',    'mail');
 
-// Single quotes: the password may contain " # $ etc., and single-quoted PHP
-// strings don't interpret them. If it contains a literal ' escape it as \'.
-define('MAIL_PASS',      'PUT-THE-MAILBOX-PASSWORD-HERE');
-
-// MUST be a real mailbox on this domain or DKIM/SPF alignment breaks and
-// mail lands in spam. Reuse the SMTP mailbox unless you create another.
+// MUST be a real mailbox on this domain. This is the important line.
 define('MAIL_FROM',      'dream@jamen.dk');
 define('MAIL_FROM_NAME', 'DreamBoard');
+
+/* ── SMTP (only needed when MAIL_DRIVER is 'smtp') ──────────────────────── */
+// define('MAIL_HOST', 'smtp.dreamhost.com');
+// define('MAIL_PORT', 465);                  // 465 = implicit SSL; 587 = STARTTLS
+// define('MAIL_USER', 'dream@jamen.dk');     // full address is the username
+//
+// Single quotes: the password may contain " # $ etc., and single-quoted PHP
+// strings don't interpret them. If it contains a literal ' escape it as \'.
+// Check the character count on /admin/mail matches the password you typed —
+// a short count means the quoting ate part of it.
+// define('MAIL_PASS', 'PUT-THE-MAILBOX-PASSWORD-HERE');
 
 // Host used to build links inside emails. Pin it so a link never points at
 // a staging host — email is read long after the request that generated it.

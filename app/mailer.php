@@ -172,7 +172,21 @@ class Mailer
         ];
     }
 
-    /** Transport 1: PHP mail() — zero config, weaker deliverability. */
+    /**
+     * Transport 1: PHP mail().
+     *
+     * The 5th argument is what makes this viable. Without it, sendmail uses
+     * the shell user as the envelope sender (Return-Path:
+     * dh_xxxx@iad1-shared-b7-42.dreamhost.com). Receivers check SPF against
+     * THAT domain, not the From: header — so SPF passes for dreamhost.com
+     * while the From: says jamen.dk. The two don't align, DMARC fails, and
+     * Gmail bins it.
+     *
+     * Passing -f sets the envelope sender to our own domain, so SPF is
+     * evaluated against jamen.dk's record (which authorises DreamHost's IPs
+     * via include:netblocks.dreamhost.com) and aligns with From:. DMARC only
+     * needs SPF *or* DKIM to align, so this can pass without SMTP auth.
+     */
     private static function phpMailSend(string $to, string $subject, string $html): bool
     {
         $boundary = 'b' . bin2hex(random_bytes(12));
@@ -180,7 +194,14 @@ class Mailer
         $body     = self::buildMessage($html, $boundary);
         // mail() supplies its own Date/To/Subject.
         $headers  = array_values(array_filter($headers, fn($h) => stripos($h, 'Date:') !== 0));
-        return @mail($to, self::encodeHeader($subject), $body, implode("\r\n", $headers));
+
+        // -f lands on the sendmail command line, so only ever pass a value we
+        // have proven is a bare email address — never raw config text.
+        $from   = self::fromAddress();
+        $params = filter_var($from, FILTER_VALIDATE_EMAIL) ? '-f' . $from : '';
+
+        return @mail($to, self::encodeHeader($subject), $body,
+                     implode("\r\n", $headers), $params);
     }
 
     /** Read one SMTP reply (handles multi-line "250-..." continuations). */

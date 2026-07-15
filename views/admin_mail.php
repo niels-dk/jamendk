@@ -32,16 +32,27 @@ $TYPE_LABEL = [
     </div>
   <?php endif; ?>
 
-  <?php if (!defined('MAIL_DRIVER') || MAIL_DRIVER !== 'smtp'): ?>
+  <?php if (!defined('MAIL_FROM') && !defined('MAIL_USER')): ?>
+    <div style="background:rgba(208,80,80,.15);border:1px solid rgba(208,80,80,.4);
+                color:#f3b3b3;padding:.8rem 1rem;border-radius:8px;margin-bottom:1rem;
+                font-size:.9rem;line-height:1.5;">
+      <strong>MAIL_FROM is not set — sending as an invented address.</strong><br>
+      With neither <code>MAIL_FROM</code> nor <code>MAIL_USER</code> defined, mail
+      goes out from <code>noreply@</code> your site host, which isn't a real mailbox.
+      Set <code>MAIL_FROM</code> to a mailbox that exists (e.g.
+      <code>dream@jamen.dk</code>) in <code>app/config.php</code>. This alone
+      fixes the From address and is required for DMARC to align.
+    </div>
+  <?php elseif (!defined('MAIL_DRIVER') || MAIL_DRIVER !== 'smtp'): ?>
     <div style="background:rgba(232,194,103,.12);border:1px solid rgba(232,194,103,.4);
                 color:#e8c267;padding:.8rem 1rem;border-radius:8px;margin-bottom:1rem;
                 font-size:.9rem;line-height:1.5;">
-      <strong>SMTP is not configured — mail is going out via PHP mail().</strong><br>
-      That means the envelope sender is your shell user at dreamhost.com, not
-      <code>jamen.dk</code>, so the message isn't DKIM-signed for your domain and
-      DMARC alignment fails. Gmail treats that as spam. Add the <code>MAIL_*</code>
-      block from <code>app/config.sample.php</code> to <code>app/config.php</code>
-      on the server to fix it.
+      <strong>Using PHP mail() rather than authenticated SMTP.</strong><br>
+      This is workable: the envelope sender is forced to
+      <code><?= $e(defined('MAIL_FROM') ? MAIL_FROM : MAIL_USER) ?></code>, so SPF is
+      checked against your own domain and should align with the From: header —
+      enough for DMARC to pass on SPF alone. SMTP is still preferable because it
+      adds a DKIM signature (a second, stronger proof), but it isn't required.
     </div>
   <?php endif; ?>
 

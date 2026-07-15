@@ -34,6 +34,17 @@ global $currentUserId;
     background:#15161A; border:1px solid #2b3346; color:#ddd;
     padding:.35rem .5rem; border-radius:6px; min-width:88px;
   }
+  #adminUsers .u-verified { white-space:nowrap; }
+  #adminUsers .v-badge {
+    display:inline-block; padding:.1rem .5rem; border-radius:999px;
+    font-size:.75em; font-weight:700;
+  }
+  #adminUsers .v-ok      { background:rgba(127,201,141,.15); color:#7fc98d; }
+  #adminUsers .v-pending { background:rgba(232,194,103,.15); color:#e8c267; }
+  #adminUsers .au-verify {
+    display:inline-block; margin-left:.3rem; padding:.2rem .5rem;
+    font-size:.75em; cursor:pointer;
+  }
   #adminUsers .u-actions { white-space:nowrap; }
   #adminUsers .u-actions .btn, #adminUsers .u-actions a.btn {
     display:inline-block; padding:.3rem .6rem; font-size:.82em;
@@ -48,6 +59,7 @@ global $currentUserId;
         <th>#</th>
         <th>User</th>
         <th>Boards</th>
+        <th>Email</th>
         <th>Role</th>
         <th>Joined</th>
         <th>Last login</th>
@@ -76,6 +88,24 @@ global $currentUserId;
           </td>
           <td class="u-boards" title="Dreams · Visions · Moods">
             🔮 <?= (int)$u['dreams'] ?> &nbsp; 👁️ <?= (int)$u['visions'] ?> &nbsp; 🎭 <?= (int)$u['moods'] ?>
+          </td>
+          <td class="u-verified">
+            <?php if (!array_key_exists('email_verified_at', $u)): ?>
+              <span style="opacity:.4;font-size:.82em;">n/a</span>
+            <?php elseif (!empty($u['email_verified_at'])): ?>
+              <span class="v-badge v-ok"
+                    title="Confirmed <?= au_e(date('Y-m-d H:i', strtotime($u['email_verified_at']))) ?>">
+                ✓ Verified
+              </span>
+            <?php else: ?>
+              <span class="v-badge v-pending" title="This account cannot sign in until the address is confirmed">
+                ⏳ Pending
+              </span>
+              <button type="button" class="btn au-verify"
+                      title="Confirm this address by hand — use when the email never arrived">
+                Verify now
+              </button>
+            <?php endif; ?>
           </td>
           <td>
             <select class="au-role" <?= $isSelf ? 'disabled title="You can\'t change your own role"' : '' ?>>
@@ -150,6 +180,15 @@ global $currentUserId;
     if (!row) return;
     const id = row.dataset.id;
 
+    if (e.target.closest('.au-verify')) {
+      const email = row.querySelector('.u-mail')?.textContent?.trim() || 'this account';
+      if (!confirm(`Confirm ${email} by hand?\n\nOnly do this if you know the address is real — it lets the account sign in without clicking the emailed link.`)) return;
+      if (await post(`/admin/users/${id}/verify`, {})) {
+        row.querySelector('.u-verified').innerHTML =
+          '<span class="v-badge v-ok">✓ Verified</span>';
+      }
+      return;
+    }
     if (e.target.closest('.au-pass')) {
       const pass = prompt('New password (min 6 characters):');
       if (pass === null) return;

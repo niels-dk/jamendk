@@ -120,6 +120,28 @@ class admin_controller
         return $u;
     }
 
+    /**
+     * POST /admin/users/{id}/verify — manually confirm an address.
+     * The escape hatch for when a link never arrives: without it, a delivery
+     * failure would lock a real user out with no way back in.
+     */
+    public static function verifyUser(string $userId): void
+    {
+        require_admin();
+        header('Content-Type: application/json');
+        global $db;
+        if (!self::targetUser($db, $userId)) return;
+        try {
+            $db->prepare('UPDATE users SET email_verified_at = NOW(),
+                                 verify_token = NULL, verify_expires_at = NULL
+                           WHERE id = ?')->execute([(int)$userId]);
+            echo json_encode(['success' => true, 'verified_at' => date('Y-m-d H:i')]);
+        } catch (\Throwable $e) {
+            http_response_code(500);
+            echo json_encode(['error' => 'Run the email-verification migration first']);
+        }
+    }
+
     /** POST /admin/users/{id}/role  body: role=admin|user */
     public static function setRole(string $userId): void
     {

@@ -32,6 +32,19 @@ $TYPE_LABEL = [
     </div>
   <?php endif; ?>
 
+  <?php if (!defined('MAIL_DRIVER') || MAIL_DRIVER !== 'smtp'): ?>
+    <div style="background:rgba(232,194,103,.12);border:1px solid rgba(232,194,103,.4);
+                color:#e8c267;padding:.8rem 1rem;border-radius:8px;margin-bottom:1rem;
+                font-size:.9rem;line-height:1.5;">
+      <strong>SMTP is not configured — mail is going out via PHP mail().</strong><br>
+      That means the envelope sender is your shell user at dreamhost.com, not
+      <code>jamen.dk</code>, so the message isn't DKIM-signed for your domain and
+      DMARC alignment fails. Gmail treats that as spam. Add the <code>MAIL_*</code>
+      block from <code>app/config.sample.php</code> to <code>app/config.php</code>
+      on the server to fix it.
+    </div>
+  <?php endif; ?>
+
   <!-- Transport + test -->
   <div style="background:rgba(255,255,255,.04);border:1px solid #2b3346;
               border-radius:10px;padding:1rem 1.1rem;margin-bottom:1.2rem;">

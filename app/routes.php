@@ -198,6 +198,7 @@ function route(string $uri): void
         '/admin/mail/test'                         => ['admin', 'mailTest'],
         '/admin/users'                             => ['admin', 'users'],
         '/admin/users/([0-9]+)/role'               => ['admin', 'setRole'],
+        '/admin/users/([0-9]+)/verify'             => ['admin', 'verifyUser'],
         '/admin/users/([0-9]+)/password'           => ['admin', 'setPassword'],
         '/admin/users/([0-9]+)/delete'             => ['admin', 'deleteUser'],
         '/admin/users/([0-9]+)/impersonate'        => ['admin', 'impersonate'],

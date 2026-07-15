@@ -37,8 +37,8 @@ $loggedIn = (bool)$me;
       <?php endif; ?>
       <a class="btn btn-ghost" href="/logout">Logout</a>
     <?php else: ?>
-      <a class="btn btn-primary" href="/login">Login</a>
-      <a class="btn btn-ghost" href="/register">+ New Creator</a>
+      <a class="btn btn-ghost" href="/login">Sign in</a>
+      <a class="btn btn-primary" href="/register">Create account</a>
     <?php endif; ?>
   </nav>
 </header>

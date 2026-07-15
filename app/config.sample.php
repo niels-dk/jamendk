@@ -46,3 +46,10 @@ define('MAIL_FROM_NAME', 'DreamBoard');
 // Host used to build links inside emails. Pin it so a link never points at
 // a staging host — email is read long after the request that generated it.
 define('MAIL_SITE_HOST', 'jamen.dk');
+
+/* ── Landing page ────────────────────────────────────────────────────────
+ * Token of a published Trip to show strangers as a live example. The
+ * "See a real Trip page" button on the landing page stays hidden until this
+ * is set — a half-filled example is worse than none.
+ */
+// define('DEMO_TRIP_TOKEN', 'your-published-trip-token');

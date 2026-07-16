@@ -17,6 +17,34 @@ $dashEmpty = empty($boardSets['dream']) && empty($boardSets['vision'])
   <?php unset($_SESSION['flash_home']); ?>
 <?php endif; ?>
 
+<?php foreach (($incomingTransfers ?? []) as $it): ?>
+  <div style="background:rgba(58,118,210,.12);border:1px solid rgba(58,118,210,.4);
+              border-radius:12px;padding:1rem 1.2rem;margin:0 0 1.2rem;">
+    <div style="font-weight:700;color:#eaf0f7;margin-bottom:.25rem;">
+      🤝 <?= t($it['from_name'] ?: $it['from_email']) ?> wants to hand you their account
+    </div>
+    <p style="color:#9bb0c5;font-size:.9rem;margin:.2rem 0 .8rem;">
+      Accepting makes you the owner of their <?= t($it['summary_text']) ?>.
+      <?php if (!empty($it['note'])): ?>
+        <br><span style="color:#cfdbe8;">“<?= t($it['note']) ?>”</span>
+      <?php endif; ?>
+    </p>
+    <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
+      <form method="post" action="/transfer/<?= (int)$it['id'] ?>/accept"
+            onsubmit="return confirm('Accept and take ownership of <?= t(addslashes($it['summary_text'])) ?>? This can\'t be undone.');">
+        <input type="hidden" name="csrf_token" value="<?= t(csrf_token()) ?>">
+        <button type="submit" style="padding:.5rem 1rem;border:0;border-radius:8px;
+                background:#3a76d2;color:#fff;font-weight:600;cursor:pointer;">Accept</button>
+      </form>
+      <form method="post" action="/transfer/<?= (int)$it['id'] ?>/decline">
+        <input type="hidden" name="csrf_token" value="<?= t(csrf_token()) ?>">
+        <button type="submit" style="padding:.5rem 1rem;border:1px solid #2b3346;border-radius:8px;
+                background:transparent;color:#cfdbe8;cursor:pointer;">Decline</button>
+      </form>
+    </div>
+  </div>
+<?php endforeach; ?>
+
 <?php
 // Founding Creator badge — in-app value anchor, no email (your call).
 // Frames the free plan as a gift with a promise, never a countdown to a bill.

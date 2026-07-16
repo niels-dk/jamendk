@@ -30,9 +30,14 @@ class user_controller
                 if (!$email || !$pass) {
                     $error = 'Please enter both email and password.';
                 } else if ($user = User::authenticate($email, $pass)) {
+                    // Account blocked (e.g. the person left and an admin
+                    // deactivated it during a handover).
+                    if (!empty($user['deactivated_at'])) {
+                        $error = 'This account has been deactivated. Contact support if that\'s a mistake.';
+                    }
                     // Correct password, but the address was never confirmed.
                     // Refuse the session — this is what makes bot signups inert.
-                    if (User::needsVerification($user)) {
+                    elseif (User::needsVerification($user)) {
                         $unverifiedEmail = $user['email'] ?? $email;
                         $error = 'Please confirm your email address before signing in.';
                     } else {
@@ -305,6 +310,17 @@ class user_controller
                 }
             }
         }
+
+        // One-shot flashes from the transfer flow (request/cancel).
+        if (!empty($_SESSION['flash_account']))     { $notice = $_SESSION['flash_account'];     unset($_SESSION['flash_account']); }
+        if (!empty($_SESSION['flash_account_err'])) { $error  = $_SESSION['flash_account_err']; unset($_SESSION['flash_account_err']); }
+
+        // Account handover: what I own, and any pending outgoing transfer.
+        require_once __DIR__ . '/transfer.php';
+        require_once __DIR__ . '/../app/transfer.php';
+        $ownSummary      = AccountTransfer::summary($db, (int)$user['id']);
+        $ownSummaryText  = AccountTransfer::summaryText($ownSummary);
+        $pendingTransfer = transfer_controller::pendingOutgoing($db, (int)$user['id']);
 
         $pageTitle = 'My account';
         $noSidebar = true;

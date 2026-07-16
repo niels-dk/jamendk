@@ -80,6 +80,11 @@ global $currentUserId;
             <div class="u-name">
               <?= au_e($u['name'] ?: '(no name)') ?>
               <?php if ($isSelf): ?><span style="opacity:.55;font-weight:400;">(you)</span><?php endif; ?>
+              <?php if (!empty($u['deactivated_at'])): ?>
+                <span class="u-deact-tag" style="margin-left:.3rem;padding:.05rem .45rem;border-radius:999px;
+                      background:rgba(224,106,106,.16);color:#f0a0a0;font-size:.7rem;font-weight:700;">
+                  Deactivated</span>
+              <?php endif; ?>
             </div>
             <div class="u-mail" title="<?= au_e($u['email']) ?>"><?= au_e($u['email']) ?></div>
             <?php if ($extra !== ''): ?>
@@ -122,6 +127,14 @@ global $currentUserId;
             <?php endif; ?>
             <button type="button" class="btn au-pass" title="Set a new password for this account">Reset password</button>
             <?php if (!$isSelf): ?>
+              <button type="button" class="btn au-transfer"
+                      title="Move everything this account owns to another creator">Transfer</button>
+              <?php $isDeact = !empty($u['deactivated_at']); ?>
+              <button type="button" class="btn au-deact" data-on="<?= $isDeact ? '1' : '0' ?>"
+                      title="<?= $isDeact ? 'Allow this account to sign in again' : 'Block this account from signing in' ?>"
+                      style="color:<?= $isDeact ? '#7fc98d' : '#e8c889' ?>;">
+                <?= $isDeact ? 'Reactivate' : 'Deactivate' ?>
+              </button>
               <button type="button" class="btn au-del" style="color:#f08792;">Delete</button>
             <?php endif; ?>
           </td>
@@ -193,6 +206,27 @@ global $currentUserId;
       const pass = prompt('New password (min 6 characters):');
       if (pass === null) return;
       await post(`/admin/users/${id}/password`, { password: pass });
+      return;
+    }
+    if (e.target.closest('.au-transfer')) {
+      const who = row.querySelector('.u-mail')?.textContent?.trim() || 'this account';
+      const toEmail = prompt(`Transfer everything ${who} owns to which creator?\n\nEnter the recipient's account email. This moves all their dreams, visions, moods and teams and cannot be undone.`);
+      if (!toEmail) return;
+      const deact = confirm(`Also block ${who} from signing in?\n\nOK = deactivate their login (they've left).\nCancel = leave their login active.`);
+      const j = await post(`/admin/users/${id}/transfer`, { to_email: toEmail.trim(), deactivate: deact ? 1 : 0 });
+      if (j && j.success) {
+        alert(`Moved ${j.moved} to ${j.to}.` + (j.deactivated ? '\nOld login deactivated.' : ''));
+        location.reload();
+      }
+      return;
+    }
+    if (e.target.closest('.au-deact')) {
+      const btn = e.target.closest('.au-deact');
+      const turningOn = btn.dataset.on !== '1';   // on = deactivated
+      const who = row.querySelector('.u-mail')?.textContent?.trim() || 'this account';
+      if (turningOn && !confirm(`Block ${who} from signing in?\n\nThey keep their data and history — they just can't log in until reactivated.`)) return;
+      const j = await post(`/admin/users/${id}/deactivate`, { on: turningOn ? 1 : 0 });
+      if (j && j.success) location.reload();
       return;
     }
     if (e.target.closest('.au-del')) {

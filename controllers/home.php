@@ -594,9 +594,19 @@ class home_controller
 		} catch (\Throwable $e) { /* table not migrated yet */ }
 
 		// Shadow-pricing badge: their would-be tier + the gift so far.
-		// Free while in beta; this only anchors the value.
+		// Free while getting started; this only anchors the value.
 		require_once __DIR__ . '/../app/pricing.php';
 		$pricing = Pricing::resolveForUser($db, (int)$currentUserId);
+
+		// Someone wants to hand their account to me → accept/decline banner.
+		require_once __DIR__ . '/transfer.php';
+		require_once __DIR__ . '/../app/transfer.php';
+		$incomingTransfers = transfer_controller::pendingIncoming($db, (int)$currentUserId);
+		foreach ($incomingTransfers as &$__it) {
+			$__it['summary_text'] = AccountTransfer::summaryText(
+				AccountTransfer::summary($db, (int)$__it['from_user_id']));
+		}
+		unset($__it);
 
 		// View vars
 		$pageTitle  = 'Dashboard';

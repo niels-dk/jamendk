@@ -21,6 +21,12 @@ function route(string $uri): void
         // Seeds a complete worked example into an empty account
         '/demo/load'              => ['demo', 'load'],
 
+        // Account handover (creator-initiated; recipient must accept)
+        '/account/transfer'          => ['transfer', 'request'],
+        '/account/transfer/cancel'   => ['transfer', 'cancel'],
+        '/transfer/([0-9]+)/accept'  => ['transfer', 'accept'],
+        '/transfer/([0-9]+)/decline' => ['transfer', 'decline'],
+
         // Public info pages — a stranger must be able to read the terms
         // before deciding to sign up.
         '/help'                   => ['page', 'help'],
@@ -211,6 +217,8 @@ function route(string $uri): void
         '/admin/users'                             => ['admin', 'users'],
         '/admin/users/([0-9]+)/role'               => ['admin', 'setRole'],
         '/admin/users/([0-9]+)/verify'             => ['admin', 'verifyUser'],
+        '/admin/users/([0-9]+)/transfer'           => ['admin', 'transferUser'],
+        '/admin/users/([0-9]+)/deactivate'         => ['admin', 'setDeactivated'],
         '/admin/users/([0-9]+)/password'           => ['admin', 'setPassword'],
         '/admin/users/([0-9]+)/delete'             => ['admin', 'deleteUser'],
         '/admin/users/([0-9]+)/impersonate'        => ['admin', 'impersonate'],

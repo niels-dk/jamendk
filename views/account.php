@@ -87,4 +87,47 @@ function ac_e($s){ return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
       <button type="submit" class="btn btn-primary" style="align-self:flex-start;">Change password</button>
     </form>
   </div>
+
+  <!-- Account handover -->
+  <div class="card" style="padding:1.1rem 1.2rem;margin-top:1rem;border-color:rgba(224,106,106,.3);">
+    <h3 style="margin-top:0;">Hand over this account</h3>
+    <?php if (!empty($pendingTransfer)): ?>
+      <p style="color:#e8c889;font-size:.9rem;margin:0 0 .6rem;">
+        ⏳ Waiting for
+        <strong><?= ac_e($pendingTransfer['to_name'] ?: $pendingTransfer['to_email']) ?></strong>
+        to accept. Your <?= ac_e($ownSummaryText) ?> will move to them once they do.
+        Nothing has moved yet.
+      </p>
+      <form method="post" action="/account/transfer/cancel">
+        <input type="hidden" name="csrf_token" value="<?= ac_e(csrf_token()) ?>">
+        <button type="submit" class="btn">Cancel transfer</button>
+      </form>
+    <?php else: ?>
+      <p style="opacity:.7;font-size:.9rem;margin:0 0 .8rem;">
+        Leaving, or handing the work to someone else? Transfer everything you own —
+        your <?= ac_e($ownSummaryText) ?> — to another creator's account. They'll
+        get a request and have to accept; <strong>boards shared with you stay put</strong>,
+        and nothing moves until they say yes. This can't be undone once accepted.
+      </p>
+      <form method="post" action="/account/transfer"
+            onsubmit="return confirm('Send a transfer request? Once they accept, everything you own moves to them and can\'t be moved back by you.');"
+            style="display:flex;flex-direction:column;gap:.6rem;">
+        <input type="hidden" name="csrf_token" value="<?= ac_e(csrf_token()) ?>">
+        <label style="display:flex;flex-direction:column;gap:.3rem;">
+          <span style="font-size:.85rem;opacity:.8;">Recipient's account email</span>
+          <input type="email" name="email" required placeholder="new-owner@example.com"
+                 style="padding:.55rem .8rem;border:1px solid #2b3346;background:#15161A;
+                        color:#ddd;border-radius:8px;">
+        </label>
+        <label style="display:flex;flex-direction:column;gap:.3rem;">
+          <span style="font-size:.85rem;opacity:.8;">Note <span style="opacity:.5;">(optional)</span></span>
+          <input type="text" name="note" maxlength="500" placeholder="A word for them, e.g. why you're handing over"
+                 style="padding:.55rem .8rem;border:1px solid #2b3346;background:#15161A;
+                        color:#ddd;border-radius:8px;">
+        </label>
+        <button type="submit" class="btn" style="align-self:flex-start;
+                background:#7a2e2e;color:#fff;border:0;">Request transfer</button>
+      </form>
+    <?php endif; ?>
+  </div>
 </div>

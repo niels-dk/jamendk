@@ -143,6 +143,79 @@ class admin_controller
         redirect('/admin/mail');
     }
 
+    /**
+     * POST /admin/users/{id}/transfer  body: to_email, deactivate(0|1)
+     * Admin-assisted handover — no acceptance step (the person may be gone).
+     * Optionally blocks the departing login in the same action.
+     */
+    public static function transferUser(string $userId): void
+    {
+        require_admin();
+        header('Content-Type: application/json');
+        require_once __DIR__ . '/../app/transfer.php';
+        global $db;
+
+        $from = self::targetUser($db, $userId);
+        if (!$from) return;
+
+        $toEmail = trim((string)($_POST['to_email'] ?? ''));
+        $ts = $db->prepare("SELECT id, name, email FROM users WHERE email = ? LIMIT 1");
+        $ts->execute([$toEmail]);
+        $to = $ts->fetch(PDO::FETCH_ASSOC);
+        if (!$to) { http_response_code(404); echo json_encode(['error' => 'No account with that email']); return; }
+        if ((int)$to['id'] === (int)$from['id']) {
+            http_response_code(422); echo json_encode(['error' => 'Pick a different recipient']); return;
+        }
+
+        try {
+            $moved = AccountTransfer::perform($db, (int)$from['id'], (int)$to['id']);
+            // Cancel any pending self-serve requests for the emptied account.
+            $db->prepare("UPDATE account_transfers SET status='cancelled', resolved_at=NOW()
+                           WHERE from_user_id=? AND status='pending'")->execute([(int)$from['id']]);
+
+            $deactivated = false;
+            if (!empty($_POST['deactivate'])) {
+                $db->prepare("UPDATE users SET deactivated_at = NOW() WHERE id = ?")
+                   ->execute([(int)$from['id']]);
+                $deactivated = true;
+            }
+            echo json_encode([
+                'success' => true,
+                'moved'   => AccountTransfer::summaryText($moved),
+                'to'      => $to['name'] ?: $to['email'],
+                'deactivated' => $deactivated,
+            ]);
+        } catch (\Throwable $e) {
+            http_response_code(500);
+            echo json_encode(['error' => 'Transfer failed: ' . $e->getMessage()]);
+        }
+    }
+
+    /** POST /admin/users/{id}/deactivate  body: on(0|1) — block/unblock login. */
+    public static function setDeactivated(string $userId): void
+    {
+        require_admin();
+        header('Content-Type: application/json');
+        global $db, $currentUserId;
+
+        if ((int)$userId === (int)$currentUserId) {
+            http_response_code(422);
+            echo json_encode(['error' => 'You can\'t deactivate your own account']);
+            return;
+        }
+        if (!self::targetUser($db, $userId)) return;
+
+        $on = !empty($_POST['on']);
+        try {
+            $db->prepare("UPDATE users SET deactivated_at = ? WHERE id = ?")
+               ->execute([$on ? date('Y-m-d H:i:s') : null, (int)$userId]);
+            echo json_encode(['success' => true, 'deactivated' => $on]);
+        } catch (\Throwable $e) {
+            http_response_code(500);
+            echo json_encode(['error' => 'Run the account-transfer migration first']);
+        }
+    }
+
     /** Resolve target user or emit 404 JSON. */
     private static function targetUser(PDO $db, string $userId): ?array
     {

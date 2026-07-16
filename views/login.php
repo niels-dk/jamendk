@@ -40,15 +40,15 @@ ob_start();
                     color:#ddd;border-radius:8px;font-size:1rem;">
     </label>
 
-    <label style="display:flex;flex-direction:column;gap:.3rem;">
-      <span style="display:flex;justify-content:space-between;align-items:baseline;
-                   font-size:.85rem;opacity:.8;">
-        Password
-        <a href="/forgot" style="color:#8fb1d8;font-size:.8rem;opacity:.9;">Forgot?</a>
-      </span>
+    <!-- Forgot? sits after the input in the DOM (positioned back up into the
+         label row) so Tab goes email → password, not email → Forgot. -->
+    <label style="position:relative;display:flex;flex-direction:column;gap:.3rem;">
+      <span style="font-size:.85rem;opacity:.8;">Password</span>
       <input type="password" name="password" required autocomplete="current-password"
              style="padding:.6rem .8rem;border:1px solid #2b3346;background:#15161A;
                     color:#ddd;border-radius:8px;font-size:1rem;">
+      <a href="/forgot"
+         style="position:absolute;top:0;right:0;color:#8fb1d8;font-size:.8rem;opacity:.9;">Forgot?</a>
     </label>
 
     <button type="submit"

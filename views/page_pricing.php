@@ -21,7 +21,7 @@ $blurbs = [
 ?>
 <div class="doc pricing">
   <div style="text-align:center;">
-    <span class="pr-beta">✨ Free while we're in beta</span>
+    <span class="pr-beta">✨ Free while we're just getting started</span>
     <h1>Pay for people, never for features</h1>
     <p class="doc-lead" style="margin:0 auto 2rem;max-width:34rem;">
       One creator gets everything, free forever. You only move up a band when a
@@ -43,7 +43,7 @@ $blurbs = [
         <div class="pr-price">
           <?php if ($paid): ?>
             <span class="pr-was"><?= $p_e(Pricing::money($mCents)) ?><span class="pr-per">/mo</span></span>
-            <span class="pr-now">Free in beta</span>
+            <span class="pr-now">Free right now</span>
           <?php else: ?>
             <span class="pr-now pr-now-free">Free</span>
             <span class="pr-per">always</span>
@@ -56,14 +56,14 @@ $blurbs = [
 
   <p class="pr-foot">
     Prices are shown so you know where things are headed — but
-    <strong>nothing charges today</strong>. Every plan is free while DreamBoard
-    is in beta.
+    <strong>nothing charges today</strong>. Every plan is free while we're
+    still getting started.
   </p>
 
   <div class="pr-founder">
     <h2>💛 Here first? You stay free.</h2>
     <p>
-      Everyone who joins while we're in beta becomes a <strong>Founding
+      Everyone who joins in these early days becomes a <strong>Founding
       Creator</strong> — free forever at your team's size, even after paid plans
       switch on. You believed in it early; that's the thank-you. Your dashboard
       shows what your plan would cost, so you can watch the gift add up.

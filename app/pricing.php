@@ -33,9 +33,9 @@ class Pricing
     const TIERS = [
         ['solo',       'Solo',        1,  1,    0,     0],
         ['crew',       'Crew',        2,  4,    0,     0],
-        ['studio',     'Studio',      5,  8,    1500,  15000],
-        ['production', 'Production',  9,  20,   3900,  39000],
-        ['network',    'Network',     21, null, 7900,  79000],
+        ['studio',     'Studio',      5,  8,    900,   9000],
+        ['production', 'Production',  9,  20,   1900,  19000],
+        ['network',    'Network',     21, null, 4900,  49000],
     ];
 
     /** Format cents in the configured currency: 1500 → "€15". */

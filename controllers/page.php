@@ -24,8 +24,8 @@ class page_controller
         require_once __DIR__ . '/../app/pricing.php';
         $tiers = Pricing::TIERS;
         self::render('page_pricing', 'Pricing',
-            'DreamBoard is free while in beta. One creator, free forever. You only '
-          . 'pay when a team works with you — and never for features.');
+            'DreamBoard is free while we\'re just getting started. One creator, '
+          . 'free forever. You only pay when a team works with you — never for features.');
     }
 
     /** GET /help */

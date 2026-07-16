@@ -13,7 +13,7 @@ foreach (Pricing::TIERS as [$k, $label, $min, $max, $mc]) {
   <h1 style="font-size:1.7rem;margin:0 0 .3rem;">Shadow revenue</h1>
   <p style="color:#8593a6;font-size:.9rem;margin:0 0 1.4rem;">
     What the base would bill <em>if</em> we charged today. Everything is free
-    while in beta — this is the number that says when payments are worth
+    while we're getting started — this is the number that says when payments are worth
     building. <a href="/admin/users" style="color:#8fb1d8;">Users →</a>
     &nbsp;·&nbsp; <a href="/admin/mail" style="color:#8fb1d8;">Mail log →</a>
   </p>

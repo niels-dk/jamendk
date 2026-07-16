@@ -34,6 +34,7 @@ $loggedIn = (bool)$me;
       <a class="btn btn-ghost" href="/teams" title="My teams">👥 Teams</a>
       <?php if (function_exists('is_admin') && is_admin()): ?>
         <a class="btn btn-ghost" href="/admin/users" title="User management">⚙️ Users</a>
+        <a class="btn btn-ghost" href="/admin/pricing" title="Shadow revenue">📈 Revenue</a>
       <?php endif; ?>
       <a class="btn btn-ghost" href="/logout">Logout</a>
     <?php else: ?>

@@ -27,6 +27,7 @@ function route(string $uri): void
         '/contact'                => ['page', 'contact'],
         '/terms'                  => ['page', 'terms'],
         '/privacy'                => ['page', 'privacy'],
+        '/pricing'                => ['page', 'pricing'],
 
         // Email verification + password reset. Tokens are 64 hex chars
         // (32 random bytes); the stored copy is a SHA-256 of this value.
@@ -205,6 +206,7 @@ function route(string $uri): void
 
         // ── Admin (site administration, require_admin inside) ────────────────
         '/admin/mail'                              => ['admin', 'mailLog'],
+        '/admin/pricing'                           => ['admin', 'pricing'],
         '/admin/mail/test'                         => ['admin', 'mailTest'],
         '/admin/users'                             => ['admin', 'users'],
         '/admin/users/([0-9]+)/role'               => ['admin', 'setRole'],

@@ -17,6 +17,57 @@ $dashEmpty = empty($boardSets['dream']) && empty($boardSets['vision'])
   <?php unset($_SESSION['flash_home']); ?>
 <?php endif; ?>
 
+<?php
+// Founding Creator badge — in-app value anchor, no email (your call).
+// Frames the free plan as a gift with a promise, never a countdown to a bill.
+if (!empty($pricing) && !empty($pricing['is_founder'])):
+  $pl_paid  = $pricing['tier']['is_paid'];
+  $pl_saved = (int)$pricing['saved_cents'];
+  $pl_since = $pricing['founding_at']
+      ? date('M Y', strtotime($pricing['founding_at'])) : '';
+?>
+  <style>
+    .founder-badge {
+      display:flex; flex-wrap:wrap; align-items:center; gap:.6rem 1.1rem;
+      background:linear-gradient(90deg, rgba(232,176,74,.10), rgba(58,118,210,.08));
+      border:1px solid rgba(232,176,74,.28); border-radius:12px;
+      padding:.7rem 1.1rem; margin:0 0 1.4rem; font-size:.9rem;
+    }
+    .founder-badge .fb-star { font-size:1.05rem; }
+    .founder-badge .fb-title { font-weight:700; color:#eaf0f7; }
+    .founder-badge .fb-sep { color:#3a4657; }
+    .founder-badge .fb-plan { color:#9bb0c5; }
+    .founder-badge .fb-plan b { color:#cfdbe8; font-weight:600; }
+    .founder-badge .fb-saved { color:#e8c889; font-weight:600; }
+    .founder-badge .fb-free {
+      margin-left:auto; color:#7fc98d; font-weight:700; font-size:.82rem;
+      white-space:nowrap;
+    }
+    .founder-badge a { color:#8fb1d8; text-decoration:none; }
+    .founder-badge a:hover { text-decoration:underline; }
+    @media (max-width:560px){ .founder-badge .fb-free { margin-left:0; } }
+  </style>
+  <div class="founder-badge">
+    <span class="fb-star">✨</span>
+    <span class="fb-title">Founding Creator</span>
+    <span class="fb-sep">·</span>
+    <span class="fb-plan">
+      <?= t($pricing['tier']['label']) ?> plan —
+      <b><?= (int)$pricing['seats'] ?> <?= $pricing['seats'] === 1 ? 'person' : 'people' ?></b><?php
+      if ($pl_paid): ?>, normally <b><?= t(Pricing::money($pricing['monthly_cents'])) ?>/mo</b><?php endif; ?>
+    </span>
+    <?php if ($pl_paid && $pl_saved > 0): ?>
+      <span class="fb-sep">·</span>
+      <span class="fb-saved">
+        <?= t(Pricing::money($pl_saved)) ?> saved<?= $pl_since ? ' since ' . t($pl_since) : '' ?>
+      </span>
+    <?php endif; ?>
+    <span class="fb-free" title="You joined while it was free. It stays free at your team size — a thank-you for believing in it early.">
+      Free forever for you 💛
+    </span>
+  </div>
+<?php endif; ?>
+
 <?php if ($dashEmpty): ?>
   <style>
     .dash__starter {

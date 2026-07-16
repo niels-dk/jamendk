@@ -18,6 +18,16 @@ class page_controller
         include __DIR__ . '/../views/layout.php';
     }
 
+    /** GET /pricing — public. Shows real tiers, all free during beta. */
+    public static function pricing(): void
+    {
+        require_once __DIR__ . '/../app/pricing.php';
+        $tiers = Pricing::TIERS;
+        self::render('page_pricing', 'Pricing',
+            'DreamBoard is free while in beta. One creator, free forever. You only '
+          . 'pay when a team works with you — and never for features.');
+    }
+
     /** GET /help */
     public static function help(): void
     {

@@ -33,6 +33,28 @@ class admin_controller
     }
 
     /**
+     * GET /admin/pricing — shadow revenue. What the base would bill today,
+     * how teams cluster across the tiers, and which free teams are one
+     * person away from a paid band. The number that says when to build
+     * payments at all.
+     */
+    public static function pricing(): void
+    {
+        require_admin();
+        require_once __DIR__ . '/../app/pricing.php';
+        global $db;
+
+        $stats = Pricing::shadowStats($db);
+
+        $pageTitle = 'Shadow revenue';
+        $noSidebar = true;
+        ob_start();
+        include __DIR__ . '/../views/admin_pricing.php';
+        $content = ob_get_clean();
+        include __DIR__ . '/../views/layout.php';
+    }
+
+    /**
      * GET /admin/mail — what the app has tried to send, and what failed.
      * The one place to look when someone says "I never got the email".
      */

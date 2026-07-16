@@ -593,6 +593,11 @@ class home_controller
 			$notices = $nt->fetchAll(PDO::FETCH_ASSOC) ?: [];
 		} catch (\Throwable $e) { /* table not migrated yet */ }
 
+		// Shadow-pricing badge: their would-be tier + the gift so far.
+		// Free while in beta; this only anchors the value.
+		require_once __DIR__ . '/../app/pricing.php';
+		$pricing = Pricing::resolveForUser($db, (int)$currentUserId);
+
 		// View vars
 		$pageTitle  = 'Dashboard';
 		$boardSets  = $boards;

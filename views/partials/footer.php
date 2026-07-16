@@ -72,6 +72,7 @@ $f_in      = function_exists('is_logged_in') && is_logged_in();
       <h4>Product</h4>
       <ul>
         <li><a href="/">How it works</a></li>
+        <li><a href="/pricing">Pricing</a></li>
         <?php if ($f_in): ?>
           <li><a href="/dashboard">Dashboard</a></li>
           <li><a href="/dreams/new">New Dream</a></li>

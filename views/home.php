@@ -220,6 +220,19 @@ $typeIcon = [
                  color: #f0f4fa; margin: 0 0 .6rem; letter-spacing: -.01em; }
   .lp-close p { color: #9bb0c5; margin: 0 0 1.4rem; }
 
+  /* Example-project offer on the empty dashboard */
+  .lp-example {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 1.2rem;
+    justify-content: space-between;
+    background: rgba(232,176,74,.07);
+    border: 1px solid rgba(232,176,74,.28);
+    border-radius: 14px; padding: 1.2rem 1.4rem; margin: 0 0 1.8rem;
+  }
+  .lp-ex-copy { flex: 1; min-width: 260px; }
+  .lp-example h3 { margin: 0 0 .35rem; font-size: 1.05rem; color: #eaf0f7; }
+  .lp-example p  { margin: 0; color: #9bb0c5; font-size: .92rem; line-height: 1.55; max-width: 48rem; }
+  .lp-example button { flex-shrink: 0; cursor: pointer; font-family: inherit; }
+
   /* ── Logged-in states ────────────────────────────────────────────────── */
 
   .welcome {
@@ -351,6 +364,15 @@ $typeIcon = [
 </style>
 
 <div class="home">
+
+<?php if (!empty($_SESSION['flash_home'])): ?>
+  <div style="background:rgba(208,80,80,.15);border:1px solid rgba(208,80,80,.4);
+              color:#f3b3b3;padding:.7rem 1rem;border-radius:8px;margin:1.4rem 0 0;
+              font-size:.9rem;">
+    <?= h_e($_SESSION['flash_home']) ?>
+  </div>
+  <?php unset($_SESSION['flash_home']); ?>
+<?php endif; ?>
 
 <?php if ($isAnon): ?>
   <!-- ══════════ 1. Anonymous: the landing page ══════════ -->
@@ -542,6 +564,22 @@ $typeIcon = [
     </div>
     <a class="home-btn primary" href="/dreams/new">+ Start your first Dream</a>
   </section>
+
+  <!-- A blank dashboard plus four unfamiliar nouns is a bad first minute.
+       One click gives them a finished project to take apart instead. -->
+  <form method="post" action="/demo/load" class="lp-example">
+    <input type="hidden" name="csrf_token" value="<?= h_e(csrf_token()) ?>">
+    <div class="lp-ex-copy">
+      <h3>🚚 Not sure where to start?</h3>
+      <p>
+        Load a complete example project — a Dream that grew into a real Vision
+        with a shot list, budget, contacts and a published Trip page. It goes
+        into your account, so you can click through it, change it, and delete
+        it when you've got the idea.
+      </p>
+    </div>
+    <button type="submit" class="home-btn primary">Load example project</button>
+  </form>
 
   <div class="lp-steps">
     <div class="lp-step s1">

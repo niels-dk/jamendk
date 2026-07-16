@@ -18,6 +18,9 @@ function route(string $uri): void
         '/register'           => ['user', 'register'],
         '/logout'             => ['user', 'logout'],
 
+        // Seeds a complete worked example into an empty account
+        '/demo/load'              => ['demo', 'load'],
+
         // Email verification + password reset. Tokens are 64 hex chars
         // (32 random bytes); the stored copy is a SHA-256 of this value.
         '/verify-resend'          => ['user', 'resendVerification'],

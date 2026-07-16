@@ -289,9 +289,17 @@
 <script src="/public/js/mood-board-library.js" defer></script>
 
 
+<?php
+// Footer belongs on the reading surfaces (home, dashboard, login, info pages),
+// not on the board editors — a canvas or an overlay-driven editor shouldn't
+// scroll into a sitemap. $noSidebar is what separates the two today.
+if (!empty($noSidebar) && empty($noFooter)) {
+    include __DIR__ . '/partials/footer.php';
+}
+?>
+
 <div id="connectivity-banner"></div>
 <div id="snackbar" class="snackbar"></div>
 
 </body>
-</html>
 </html>

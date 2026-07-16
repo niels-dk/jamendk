@@ -21,6 +21,13 @@ function route(string $uri): void
         // Seeds a complete worked example into an empty account
         '/demo/load'              => ['demo', 'load'],
 
+        // Public info pages — a stranger must be able to read the terms
+        // before deciding to sign up.
+        '/help'                   => ['page', 'help'],
+        '/contact'                => ['page', 'contact'],
+        '/terms'                  => ['page', 'terms'],
+        '/privacy'                => ['page', 'privacy'],
+
         // Email verification + password reset. Tokens are 64 hex chars
         // (32 random bytes); the stored copy is a SHA-256 of this value.
         '/verify-resend'          => ['user', 'resendVerification'],

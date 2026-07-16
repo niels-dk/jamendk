@@ -53,3 +53,18 @@ define('MAIL_SITE_HOST', 'jamen.dk');
  * is set — a half-filled example is worse than none.
  */
 // define('DEMO_TRIP_TOKEN', 'your-published-trip-token');
+
+/* ── Site identity ───────────────────────────────────────────────────────
+ * Used by the footer, the info pages and the email templates. Defined here
+ * so the coming domain/brand change is one edit, not a hunt through
+ * templates. Every one of these has a working default, so the site runs
+ * without them — set them when the new domain lands.
+ */
+// define('SITE_NAME',      'DreamBoard');
+// define('SITE_EMAIL',     'hello@jamen.dk');
+// define('SITE_INSTAGRAM', 'https://www.instagram.com/dreamboardapp/');
+//
+// Named on the Terms and Privacy pages as the party responsible for the
+// service. GDPR expects the controller to be identifiable — put a legal
+// entity here if you register one.
+// define('SITE_LEGAL_ENTITY', 'Niels, Denmark');

@@ -38,11 +38,11 @@ class demo_controller
             redirect('/visions/' . $slug . '/edit');
         } catch (\Throwable $e) {
             if ($db->inTransaction()) $db->rollBack();
-            // Back to the home empty state — the only page that renders this
-            // notice, and the page the button lives on.
+            // Back to the dashboard — where sign-in lands, so where the
+            // button is actually clicked from.
             $_SESSION['flash_home'] = 'Could not build the example project: '
                                     . $e->getMessage();
-            redirect('/');
+            redirect('/dashboard');
         }
     }
 

@@ -671,3 +671,52 @@ line.connector-selected { stroke: #4a90e2; stroke-width: 3; }
 }
 
 
+
+/* ── Information pages (help, contact, terms, privacy) ─────────────────── */
+.doc {
+  max-width: 46rem; margin: 2.5rem auto 0; padding: 0 1.1rem;
+  color: #c3d0de; line-height: 1.7;
+}
+.doc h1 {
+  font-size: clamp(1.9rem, 4vw, 2.6rem); font-weight: 800;
+  color: #f0f4fa; margin: 0 0 .6rem; letter-spacing: -.01em;
+}
+.doc .doc-lead { font-size: 1.08rem; color: #9bb0c5; margin: 0 0 .4rem; }
+.doc .doc-meta { font-size: .82rem; color: #6c7d92; margin: 0 0 2rem; }
+.doc h2 {
+  font-size: 1.3rem; font-weight: 700; color: #eaf0f7;
+  margin: 2.2rem 0 .6rem; letter-spacing: -.01em;
+}
+.doc h3 {
+  font-size: 1.02rem; font-weight: 700; color: #cfdbe8; margin: 1.4rem 0 .4rem;
+}
+.doc p  { margin: 0 0 .9rem; }
+.doc ul { margin: 0 0 1rem; padding-left: 1.2rem; }
+.doc li { margin-bottom: .45rem; }
+.doc a  { color: #8fb1d8; }
+.doc strong { color: #eaf0f7; }
+.doc em { color: #cfdbe8; }
+
+.doc-cards { display: grid; gap: .6rem; grid-template-columns: 1fr; margin: 1.4rem 0 2rem; }
+@media (min-width: 620px) { .doc-cards { grid-template-columns: 1fr 1fr; } }
+.doc-card {
+  display: flex; gap: .8rem; align-items: center;
+  padding: 1rem 1.1rem; border-radius: 12px; text-decoration: none;
+  background: rgba(255,255,255,.04); border: 1px solid #2b3346;
+  transition: background .12s, transform .12s, border-color .12s;
+}
+.doc-card:hover { background: rgba(255,255,255,.08); transform: translateY(-1px); border-color: #3a76d2; }
+.doc-card .dc-ico { font-size: 1.5rem; flex-shrink: 0; }
+.doc-card b { color: #eaf0f7; display: block; font-size: .98rem; }
+.doc-card span span { color: #8593a6; font-size: .85rem; }
+
+.doc-cta {
+  margin: 2.6rem 0 1rem; padding: 1.4rem; border-radius: 12px; text-align: center;
+  background: rgba(58,118,210,.1); border: 1px solid rgba(58,118,210,.3);
+}
+.doc-cta p { margin: 0 0 .8rem; color: #9bb0c5; }
+.doc-btn {
+  display: inline-block; padding: .6rem 1.2rem; border-radius: 10px;
+  background: #3a76d2; color: #fff; font-weight: 600; text-decoration: none;
+}
+.doc-btn:hover { background: #2c5aa0; text-decoration: none; }

@@ -3,8 +3,59 @@
 function t($s){ return htmlspecialchars($s ?? '', ENT_QUOTES, 'UTF-8'); }
 function human($t){ return ucfirst($t).'s'; }
 function dt($s){ return $s ? date('M j, Y', strtotime($s)) : ''; }
+
+// Sign-in lands here, not on the home page — so this is where a brand-new
+// user actually meets the product. Four "No X yet" boxes is a poor first
+// minute; offer them the worked example instead.
+$dashEmpty = empty($boardSets['dream']) && empty($boardSets['vision'])
+          && empty($boardSets['mood'])  && empty($boardSets['trip']);
 ?>
 <div class="dash">
+
+<?php if (!empty($_SESSION['flash_home'])): ?>
+  <div class="dash__flash"><?= t($_SESSION['flash_home']) ?></div>
+  <?php unset($_SESSION['flash_home']); ?>
+<?php endif; ?>
+
+<?php if ($dashEmpty): ?>
+  <style>
+    .dash__starter {
+      display: flex; flex-wrap: wrap; align-items: center; gap: 1.2rem;
+      justify-content: space-between;
+      background: rgba(232,176,74,.07); border: 1px solid rgba(232,176,74,.28);
+      border-radius: 14px; padding: 1.3rem 1.5rem; margin: 0 0 1.6rem;
+    }
+    .dash__starter h2 { margin: 0 0 .35rem; font-size: 1.1rem; color: #eaf0f7; }
+    .dash__starter p  { margin: 0; color: #9bb0c5; font-size: .92rem;
+                        line-height: 1.55; max-width: 46rem; }
+    .dash__starter .ds-copy { flex: 1; min-width: 260px; }
+    .dash__starter button {
+      flex-shrink: 0; cursor: pointer; font-family: inherit;
+      padding: .7rem 1.2rem; border: 0; border-radius: 10px;
+      background: #3a76d2; color: #fff; font-weight: 600; font-size: .95rem;
+    }
+    .dash__starter button:hover { background: #2c5aa0; }
+    .dash__flash {
+      background: rgba(208,80,80,.15); border: 1px solid rgba(208,80,80,.4);
+      color: #f3b3b3; padding: .7rem 1rem; border-radius: 8px;
+      margin: 0 0 1.2rem; font-size: .9rem;
+    }
+  </style>
+  <form method="post" action="/demo/load" class="dash__starter">
+    <input type="hidden" name="csrf_token" value="<?= t(csrf_token()) ?>">
+    <div class="ds-copy">
+      <h2>🚚 New here? Start with a finished project.</h2>
+      <p>
+        Load a complete example — a Dream that grew into a Vision with a shot
+        list, budget, contacts and a published Trip page. It lands in your
+        account, so you can click through it, change it, and delete it once
+        you've got the idea.
+      </p>
+    </div>
+    <button type="submit">Load example project</button>
+  </form>
+<?php endif; ?>
+
 
   <div class="dash__topbar">
     <h1 class="dash__title">Where Dreams Connect</h1>

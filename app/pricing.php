@@ -78,6 +78,67 @@ class Pricing
         }
     }
 
+    /** Index of a headcount's tier within TIERS (0 = cheapest). */
+    public static function tierIndex(int $seats): int
+    {
+        foreach (self::TIERS as $i => [$key, $label, $min, $max]) {
+            if ($seats >= $min && ($max === null || $seats <= $max)) return $i;
+        }
+        return count(self::TIERS) - 1;
+    }
+
+    /**
+     * Is this user already counted toward the owner's seats? (Already in one of
+     * the owner's Teams, or holding a role on another of the owner's boards.)
+     * Used to tell a genuinely new teammate from a re-share of someone already
+     * on the account — only the former can move a tier.
+     */
+    public static function isCountedFor(PDO $db, int $ownerId, int $userId): bool
+    {
+        if ($userId === $ownerId) return true; // the owner is always "counted"
+        try {
+            $sql = "
+                SELECT 1 FROM team_members tm
+                  JOIN teams t ON t.id = tm.team_id
+                 WHERE t.owner_user_id = ? AND tm.user_id = ?
+                UNION
+                SELECT 1 FROM vision_roles vr
+                  JOIN visions v ON v.id = vr.vision_id
+                 WHERE v.user_id = ? AND vr.user_id = ? AND v.deleted_at IS NULL
+                LIMIT 1";
+            $st = $db->prepare($sql);
+            $st->execute([$ownerId, $userId, $ownerId, $userId]);
+            return (bool)$st->fetchColumn();
+        } catch (\Throwable $e) {
+            return false;
+        }
+    }
+
+    /**
+     * If the owner adds $newPeople genuinely-new collaborators, does that cross
+     * into a higher tier? Returns the crossing details (for a heads-up prompt)
+     * or null when it doesn't move a band. All prices are €0 today — this is a
+     * courtesy notice and a bit of pre-education, never a paywall.
+     */
+    public static function crossingIfAdding(PDO $db, int $ownerId, int $newPeople = 1): ?array
+    {
+        if ($newPeople < 1) return null;
+        $current = self::seatCount($db, $ownerId);
+        $fromIdx = self::tierIndex($current);
+        $toIdx   = self::tierIndex($current + $newPeople);
+        if ($toIdx <= $fromIdx) return null;
+
+        $from = self::tierForSeats($current);
+        $to   = self::tierForSeats($current + $newPeople);
+        return [
+            'from'          => $from,
+            'to'            => $to,
+            'seats_now'     => $current,
+            'seats_after'   => $current + $newPeople,
+            'monthly_cents' => $to['monthly_cents'],
+        ];
+    }
+
     /** The tier a given headcount falls into. */
     public static function tierForSeats(int $seats): array
     {
@@ -95,6 +156,28 @@ class Pricing
         [$key, $label, $min, $max, $mCents, $yCents] = self::TIERS[count(self::TIERS) - 1];
         return ['key'=>$key,'label'=>$label,'min'=>$min,'max'=>$max,
                 'monthly_cents'=>$mCents,'yearly_cents'=>$yCents,'is_paid'=>$mCents>0];
+    }
+
+    /** Does this account carry the Founding Creator promise? */
+    public static function isFounder(PDO $db, int $userId): bool
+    {
+        try {
+            $st = $db->prepare("SELECT founding_creator_at FROM users WHERE id = ?");
+            $st->execute([$userId]);
+            return (bool)$st->fetchColumn();
+        } catch (\Throwable $e) { return false; }
+    }
+
+    /** Human heads-up for a tier crossing. Free-now framing, never a paywall. */
+    public static function crossingMessage(array $c, bool $isFounder, string $subject = 'this person'): string
+    {
+        $price = self::money((int)$c['monthly_cents']);
+        $msg = "Adding $subject makes it {$c['seats_after']} people — that moves you "
+             . "to the {$c['to']['label']} plan (normally {$price}/mo). It's free right now";
+        $msg .= $isFounder
+              ? ", and it stays free for you as a Founding Creator. Add them?"
+              : ". Add them?";
+        return $msg;
     }
 
     /** Whole months between a datetime and now (never negative). */

@@ -242,6 +242,28 @@ class team_controller
             http_response_code(422); echo json_encode(['error' => 'That user owns this team — no need to add them']); return;
         }
 
+        // Tier heads-up: a team member is a seat on the team owner's account.
+        // If the owner is adding someone new who crosses a band, confirm once
+        // (free-now framing).
+        $ownerId = (int)$team['owner_user_id'];
+        if ((int)$currentUserId === $ownerId && empty($_POST['ack_tier'])) {
+            require_once __DIR__ . '/../app/pricing.php';
+            if (!Pricing::isCountedFor($db, $ownerId, (int)$user['id'])) {
+                $cross = Pricing::crossingIfAdding($db, $ownerId, 1);
+                if ($cross) {
+                    echo json_encode([
+                        'success' => false,
+                        'needs_tier_ack' => true,
+                        'tier'    => ['label' => $cross['to']['label'],
+                                      'monthly_cents' => (int)$cross['monthly_cents']],
+                        'message' => Pricing::crossingMessage(
+                                        $cross, Pricing::isFounder($db, $ownerId), 'this person'),
+                    ]);
+                    return;
+                }
+            }
+        }
+
         $db->prepare("INSERT INTO team_members (team_id, user_id, default_role)
                       VALUES (?,?,?)
                       ON DUPLICATE KEY UPDATE default_role = VALUES(default_role)")

@@ -281,6 +281,8 @@ $isAdminView = function_exists('is_admin') && is_admin();
       });
       const j = await res.json();
       if (j && j.success) { if (status) status.textContent = ''; return j; }
+      // Tier heads-up isn't an error — hand it back for the caller to confirm.
+      if (j && j.needs_tier_ack) { if (status) status.textContent = ''; return j; }
       alert(j?.error || 'Failed');
       if (status) status.textContent = '';
       return null;
@@ -330,7 +332,12 @@ $isAdminView = function_exists('is_admin') && is_admin();
         const email = card.querySelector('.t-add-email').value.trim();
         const role  = card.querySelector('.t-add-role').value;
         if (!email) return alert('Enter the member\'s account email.');
-        if (await post(`/api/teams/${teamId}/members/add`, { email, role })) location.reload();
+        let j = await post(`/api/teams/${teamId}/members/add`, { email, role });
+        if (j && j.needs_tier_ack) {
+          if (!confirm(j.message)) return;            // free anyway — just informing
+          j = await post(`/api/teams/${teamId}/members/add`, { email, role, ack_tier: 1 });
+        }
+        if (j && j.success) location.reload();
         return;
       }
       const rm = e.target.closest('.m-remove');

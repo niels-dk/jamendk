@@ -130,20 +130,32 @@ $slug = htmlspecialchars($vision['slug'] ?? '', ENT_QUOTES);
     }
   }
 
+  // ack=true resends past the tier heads-up. Everything is free right now, so
+  // the prompt informs and pre-educates — it never blocks.
+  async function postAddRole(em, ack, role) {
+    const p = new URLSearchParams();
+    p.set('email', em);
+    p.set('role', role || roleSel.value);
+    if (ack) p.set('ack_tier', '1');
+    const res = await fetch(`/api/visions/${slug}/roles/add`, {
+      method:'POST',
+      headers:{'Content-Type':'application/x-www-form-urlencoded'},
+      body: p.toString()
+    });
+    return res.json();
+  }
+
   addBtn?.addEventListener('click', async () => {
     const em = email.value.trim();
     if (!em) { status.textContent = 'Enter an email.'; return; }
     status.textContent = 'Adding…';
     try {
-      const p = new URLSearchParams();
-      p.set('email', em);
-      p.set('role', roleSel.value);
-      const res = await fetch(`/api/visions/${slug}/roles/add`, {
-        method:'POST',
-        headers:{'Content-Type':'application/x-www-form-urlencoded'},
-        body: p.toString()
-      });
-      const j = await res.json();
+      let j = await postAddRole(em, false);
+      if (j && j.needs_tier_ack) {
+        if (!confirm(j.message)) { status.textContent = 'Cancelled — nobody added.'; return; }
+        status.textContent = 'Adding…';
+        j = await postAddRole(em, true);
+      }
       if (j && j.success && j.unknown) {
         // Ambiguous on purpose — never confirm whether an account exists
         status.textContent = '⚠ If a creator with that email exists, they\'ll appear in the list above.';
@@ -211,17 +223,28 @@ $slug = htmlspecialchars($vision['slug'] ?? '', ENT_QUOTES);
     teamCard.hidden = false;
   }
 
+  async function postTeamAdd(teamId, ack) {
+    const p = new URLSearchParams(); p.set('team_id', teamId);
+    if (ack) p.set('ack_tier', '1');
+    const res = await fetch(`/api/visions/${slug}/roles/add-team`, {
+      method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:p.toString()
+    });
+    return res.json();
+  }
+
   teamAddBtn?.addEventListener('click', async () => {
     const v = teamPick.value;
     if (!v) return;
     teamStatus.textContent = 'Adding…';
     try {
       if (v.startsWith('team:')) {
-        const p = new URLSearchParams(); p.set('team_id', v.slice(5));
-        const res = await fetch(`/api/visions/${slug}/roles/add-team`, {
-          method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:p.toString()
-        });
-        const j = await res.json();
+        const teamId = v.slice(5);
+        let j = await postTeamAdd(teamId, false);
+        if (j && j.needs_tier_ack) {
+          if (!confirm(j.message)) { teamStatus.textContent = 'Cancelled — nobody added.'; return; }
+          teamStatus.textContent = 'Adding…';
+          j = await postTeamAdd(teamId, true);
+        }
         if (j?.success) {
           teamStatus.textContent = `Added ${j.added}` + (j.skipped ? ` (${j.skipped} already on the board)` : '');
           load();
@@ -230,13 +253,11 @@ $slug = htmlspecialchars($vision['slug'] ?? '', ENT_QUOTES);
         const [, ti, mi] = v.split(':');
         const m = teamsData[+ti]?.members[+mi];
         if (!m) return;
-        const p = new URLSearchParams();
-        p.set('email', m.email);
-        p.set('role', m.default_role);
-        const res = await fetch(`/api/visions/${slug}/roles/add`, {
-          method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:p.toString()
-        });
-        const j = await res.json();
+        let j = await postAddRole(m.email, false, m.default_role);
+        if (j && j.needs_tier_ack) {
+          if (!confirm(j.message)) { teamStatus.textContent = 'Cancelled — nobody added.'; return; }
+          j = await postAddRole(m.email, true, m.default_role);
+        }
         if (j?.success) { teamStatus.textContent = 'Added'; load(); }
         else teamStatus.textContent = '⚠ ' + (j?.error || 'Failed');
       }

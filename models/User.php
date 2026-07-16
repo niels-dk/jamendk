@@ -9,6 +9,16 @@ class User
             $stmt = $db->prepare('INSERT INTO users (name, email, password_hash) VALUES (?, ?, ?)');
             $stmt->execute([$name, $email, password_hash($pass, PASSWORD_DEFAULT)]);
             $id = (int)$db->lastInsertId();
+            // Anyone signing up during the free era is a Founding Creator —
+            // free forever at their team size. Separate, non-fatal statement so
+            // it degrades gracefully if the column isn't migrated yet.
+            if ($id) {
+                try {
+                    $db->prepare('UPDATE users SET founding_creator_at = NOW()
+                                   WHERE id = ? AND founding_creator_at IS NULL')
+                       ->execute([$id]);
+                } catch (\Throwable $e) { /* column not migrated — fine */ }
+            }
             return $id ?: null;
         } catch (\Throwable $e) {
             return null;

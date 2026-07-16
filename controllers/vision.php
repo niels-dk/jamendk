@@ -1720,6 +1720,30 @@ class vision_controller
 			http_response_code(422); echo json_encode(['error'=>'That user is already the owner']); return;
 		}
 
+		// Tier heads-up: if the board owner is adding a genuinely new teammate
+		// that pushes their account into a higher (paid) band, warn once before
+		// committing. Free right now — this is courtesy + pre-education, not a
+		// wall. Only the owner (the billing account) sees it.
+		global $currentUserId;
+		$ownerId = (int)$vision['user_id'];
+		if ((int)$currentUserId === $ownerId && empty($_POST['ack_tier'])) {
+			require_once __DIR__ . '/../app/pricing.php';
+			if (!Pricing::isCountedFor($db, $ownerId, (int)$user['id'])) {
+				$cross = Pricing::crossingIfAdding($db, $ownerId, 1);
+				if ($cross) {
+					echo json_encode([
+						'success' => false,
+						'needs_tier_ack' => true,
+						'tier'    => ['label' => $cross['to']['label'],
+									  'monthly_cents' => (int)$cross['monthly_cents']],
+						'message' => Pricing::crossingMessage(
+										$cross, Pricing::isFounder($db, $ownerId), 'this person'),
+					]);
+					return;
+				}
+			}
+		}
+
 		$ins = $db->prepare("INSERT INTO vision_roles (vision_id, user_id, role)
 							 VALUES (?,?,?)
 							 ON DUPLICATE KEY UPDATE role = VALUES(role)");
@@ -1806,6 +1830,34 @@ class vision_controller
 		$ms->execute([$teamId]);
 		$members = $ms->fetchAll(PDO::FETCH_ASSOC);
 		if (!$members) { echo json_encode(['success' => true, 'added' => 0, 'skipped' => 0]); return; }
+
+		// Tier heads-up: a whole-team add can jump several people at once. Count
+		// only members genuinely new to the owner's account, and if that crosses
+		// a band, confirm once before committing (owner only, free-now framing).
+		$ownerId = (int)$vision['user_id'];
+		if ((int)$currentUserId === $ownerId && empty($_POST['ack_tier'])) {
+			require_once __DIR__ . '/../app/pricing.php';
+			$newPeople = 0;
+			foreach ($members as $m) {
+				$mid = (int)$m['user_id'];
+				if ($mid === $ownerId) continue;
+				if (!Pricing::isCountedFor($db, $ownerId, $mid)) $newPeople++;
+			}
+			if ($newPeople > 0) {
+				$cross = Pricing::crossingIfAdding($db, $ownerId, $newPeople);
+				if ($cross) {
+					echo json_encode([
+						'success' => false,
+						'needs_tier_ack' => true,
+						'tier'    => ['label' => $cross['to']['label'],
+									  'monthly_cents' => (int)$cross['monthly_cents']],
+						'message' => Pricing::crossingMessage(
+										$cross, Pricing::isFounder($db, $ownerId), 'this team'),
+					]);
+					return;
+				}
+			}
+		}
 
 		$ins = $db->prepare("INSERT INTO vision_roles (vision_id, user_id, role)
 							 VALUES (?,?,?)

@@ -1,4 +1,27 @@
+# Root .htaccess — front controller + a hard wall around application internals.
+#
+# The previous version served ANY real file directly, which exposed /.git
+# (full source download), /db/migrations (schema + seeded hashes) and
+# directory listings. Only index.php, /public and /storage/thumbs are meant
+# to be reachable as files.
+
+Options -Indexes
 RewriteEngine On
+
+# The git repository and every other dotfile — except .well-known,
+# which certificate renewal needs.
+RewriteRule (^|/)\.(?!well-known) - [F,L]
+
+# Application internals: no PHP entry point but index.php, no source browsing.
+RewriteRule ^(app|controllers|models|views|db|scripts|_notes|node_modules|bower_components)(/|$) - [F,L]
+
+# Raw encrypted documents — served ONLY decrypted via /documents/{uuid}/download.
+RewriteRule ^storage/private(/|$) - [F,L]
+
+# Stray source / dump / script artifacts, wherever they sit.
+RewriteRule \.(sql|sh|md|bak|log|lock)$ - [F,L]
+
+# Everything that isn't a real allowed file goes through the router.
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^ index.php [QSA,L]

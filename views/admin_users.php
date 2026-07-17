@@ -79,6 +79,10 @@ global $currentUserId;
           <td>
             <div class="u-name">
               <?= au_e($u['name'] ?: '(no name)') ?>
+              <?php if (!empty($u['founding_creator_at'])): ?>
+                <span title="Founding Creator since <?= au_e(date('M j, Y', strtotime($u['founding_creator_at']))) ?> — free forever at their launch-day team size"
+                      style="cursor:default;">✨</span>
+              <?php endif; ?>
               <?php if ($isSelf): ?><span style="opacity:.55;font-weight:400;">(you)</span><?php endif; ?>
               <?php if (!empty($u['deactivated_at'])): ?>
                 <span class="u-deact-tag" style="margin-left:.3rem;padding:.05rem .45rem;border-radius:999px;

@@ -213,6 +213,7 @@ function route(string $uri): void
         // ── Admin (site administration, require_admin inside) ────────────────
         '/admin/mail'                              => ['admin', 'mailLog'],
         '/admin/pricing'                           => ['admin', 'pricing'],
+        '/admin/backups'                           => ['admin', 'backups'],
         '/admin/mail/test'                         => ['admin', 'mailTest'],
         '/admin/users'                             => ['admin', 'users'],
         '/admin/users/([0-9]+)/role'               => ['admin', 'setRole'],

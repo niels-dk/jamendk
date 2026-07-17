@@ -15,6 +15,7 @@ $TYPE_LABEL = [
   <p style="color:#8593a6;font-size:.9rem;margin:0 0 1.2rem;">
     Every send attempt the app has made. Check here first when someone says
     a link never arrived. <a href="/admin/users" style="color:#8fb1d8;">User management →</a>
+    &nbsp;·&nbsp; <a href="/admin/backups" style="color:#8fb1d8;">Backups →</a>
   </p>
 
   <?php if ($flash): ?>

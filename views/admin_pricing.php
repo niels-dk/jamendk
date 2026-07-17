@@ -16,6 +16,7 @@ foreach (Pricing::TIERS as [$k, $label, $min, $max, $mc]) {
     while we're getting started — this is the number that says when payments are worth
     building. <a href="/admin/users" style="color:#8fb1d8;">Users →</a>
     &nbsp;·&nbsp; <a href="/admin/mail" style="color:#8fb1d8;">Mail log →</a>
+    &nbsp;·&nbsp; <a href="/admin/backups" style="color:#8fb1d8;">Backups →</a>
   </p>
 
   <?php if (!empty($stats['error'])): ?>

@@ -55,6 +55,55 @@ class admin_controller
     }
 
     /**
+     * GET /admin/backups — is the safety net actually there?
+     * Backups that silently stop are the classic failure mode; this page
+     * exists so staleness is loud. Reads ~/backups (one level above the
+     * site dir, where scripts/backup.sh writes).
+     */
+    public static function backups(): void
+    {
+        require_admin();
+
+        $base     = dirname(dirname(__DIR__)) . '/backups';
+        $lastRun  = null;
+        $staleHrs = null;
+        $dbFiles  = [];
+        $arFiles  = [];
+
+        $list = function (string $dir, string $ext) : array {
+            $out = [];
+            foreach (glob($dir . '/*' . $ext) ?: [] as $f) {
+                $out[] = ['name'  => basename($f),
+                          'size'  => filesize($f),
+                          'mtime' => filemtime($f)];
+            }
+            usort($out, fn($a, $b) => $b['mtime'] <=> $a['mtime']);
+            return array_slice($out, 0, 20);
+        };
+
+        $configured = is_dir($base);
+        if ($configured) {
+            $dbFiles = $list($base . '/db', '.sql.gz');
+            $arFiles = $list($base . '/files', '.tar.gz');
+            if (is_file($base . '/last_success.txt')) {
+                $lastRun  = trim((string)@file_get_contents($base . '/last_success.txt'));
+                $ts       = strtotime($lastRun);
+                $staleHrs = $ts ? (time() - $ts) / 3600 : null;
+            }
+        }
+        // Stale = no successful run inside ~30h (nightly cron + slack).
+        $isStale = !$configured || $lastRun === null
+                 || ($staleHrs !== null && $staleHrs > 30);
+
+        $pageTitle = 'Backups';
+        $noSidebar = true;
+        ob_start();
+        include __DIR__ . '/../views/admin_backups.php';
+        $content = ob_get_clean();
+        include __DIR__ . '/../views/layout.php';
+    }
+
+    /**
      * GET /admin/mail — what the app has tried to send, and what failed.
      * The one place to look when someone says "I never got the email".
      */

@@ -18,7 +18,8 @@ if (preg_match('#^/(public|storage)/#', $reqPath) && is_file($full)) {
     $types = [
         'jpg'=>'image/jpeg','jpeg'=>'image/jpeg','png'=>'image/png','webp'=>'image/webp',
         'gif'=>'image/gif','bmp'=>'image/bmp','svg'=>'image/svg+xml','pdf'=>'application/pdf',
-        'css'=>'text/css','js'=>'application/javascript'
+        'css'=>'text/css','js'=>'application/javascript',
+        'json'=>'application/manifest+json','ico'=>'image/x-icon'
     ];
     header('Content-Type', $types[$ext] ?? 'application/octet-stream');
     header('Cache-Control: public, max-age=2592000'); // 30 days

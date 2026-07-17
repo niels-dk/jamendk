@@ -244,9 +244,9 @@ class team_controller
 
         // Tier heads-up: a team member is a seat on the team owner's account.
         // If the owner is adding someone new who crosses a band, confirm once
-        // (free-now framing).
+        // (free-now framing). Viewers never count as seats.
         $ownerId = (int)$team['owner_user_id'];
-        if ((int)$currentUserId === $ownerId && empty($_POST['ack_tier'])) {
+        if ($role !== 'viewer' && (int)$currentUserId === $ownerId && empty($_POST['ack_tier'])) {
             require_once __DIR__ . '/../app/pricing.php';
             if (!Pricing::isCountedFor($db, $ownerId, (int)$user['id'])) {
                 $cross = Pricing::crossingIfAdding($db, $ownerId, 1);
@@ -285,6 +285,34 @@ class team_controller
         if (!in_array($role, $allowed, true)) {
             http_response_code(422); echo json_encode(['error' => 'Invalid role']); return;
         }
+
+        // Viewer → working role can add a seat without an "add" — same
+        // tier heads-up as everywhere else.
+        global $currentUserId;
+        $ownerId = (int)$team['owner_user_id'];
+        if ($role !== 'viewer' && (int)$currentUserId === $ownerId && empty($_POST['ack_tier'])) {
+            $ms = $db->prepare("SELECT user_id, default_role FROM team_members
+                                 WHERE id = ? AND team_id = ? LIMIT 1");
+            $ms->execute([(int)$memberId, (int)$team['id']]);
+            $existing = $ms->fetch(PDO::FETCH_ASSOC);
+            if ($existing && $existing['default_role'] === 'viewer') {
+                require_once __DIR__ . '/../app/pricing.php';
+                if (!Pricing::isCountedFor($db, $ownerId, (int)$existing['user_id'])) {
+                    $cross = Pricing::crossingIfAdding($db, $ownerId, 1);
+                    if ($cross) {
+                        echo json_encode([
+                            'success' => false,
+                            'needs_tier_ack' => true,
+                            'message' => Pricing::crossingMessage(
+                                            $cross, Pricing::isFounder($db, $ownerId),
+                                            'this person', 'Giving a working role to'),
+                        ]);
+                        return;
+                    }
+                }
+            }
+        }
+
         $db->prepare("UPDATE team_members SET default_role = ? WHERE id = ? AND team_id = ?")
            ->execute([$role, (int)$memberId, (int)$team['id']]);
         echo json_encode(['success' => true]);

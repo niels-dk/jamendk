@@ -18,6 +18,12 @@ $__url    = $__scheme . '://' . ($_SERVER['HTTP_HOST'] ?? 'jamen.dk')
 <meta name="color-scheme" content="dark light">
 <meta name="theme-color" content="#1a1b1e">
 
+<!-- Installable app: the "catch it on a roadside" promise needs DreamBoard on
+     the home screen, not lost in browser tabs. -->
+<link rel="manifest" href="/public/manifest.json">
+<link rel="icon" type="image/png" sizes="192x192" href="/public/icons/icon-192.png">
+<link rel="apple-touch-icon" href="/public/icons/apple-touch-icon.png">
+
 <!-- Link previews (Slack / WhatsApp / iMessage / socials). Without these a
      shared link renders as a bare URL, which reads like spam. -->
 <meta property="og:type"        content="website">

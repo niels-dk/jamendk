@@ -133,6 +133,12 @@ $SHOT_LIGHT_LABEL = ['sunrise'=>'🌅 sunrise','golden'=>'🌇 golden hour','mid
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title><?= tr_e($title) ?> — Trip</title>
+<?php if (!$export): ?>
+  <!-- Same install identity as the app — crew keep this page on the home screen -->
+  <link rel="manifest" href="/public/manifest.json">
+  <link rel="icon" type="image/png" sizes="192x192" href="/public/icons/icon-192.png">
+  <link rel="apple-touch-icon" href="/public/icons/apple-touch-icon.png">
+<?php endif; ?>
   <style>
     :root {
       --bg:        #f4f5f7;
@@ -887,6 +893,21 @@ $SHOT_LIGHT_LABEL = ['sunrise'=>'🌅 sunrise','golden'=>'🌇 golden hour','mid
   <?php endif; ?>
 
   <footer>
+    <?php
+      // The one place strangers meet the product: every trip page is sent to
+      // clients, brands and crew. A quiet link here is the growth loop.
+      // Absolute URL so it also works from a downloaded offline copy.
+      $brandHost = defined('MAIL_SITE_HOST') && MAIL_SITE_HOST
+          ? MAIL_SITE_HOST : ($_SERVER['HTTP_HOST'] ?? 'jamen.dk');
+      $brandUrl  = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http')
+          . '://' . $brandHost . '/';
+    ?>
+    <div style="margin-bottom:.5rem;">
+      <a href="<?= tr_e($brandUrl) ?>" style="color:#5a6878;font-weight:600;"
+         title="DreamBoard — catch the idea, grow the plan, open the shot list when you're standing there">
+        🎬 Planned with <span style="color:#2c5aa0;">DreamBoard</span> →
+      </a>
+    </div>
     <?php if ($export): ?>
       <?php
         // Point stale copies back at the live version (token from the vision

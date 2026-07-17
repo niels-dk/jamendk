@@ -352,7 +352,13 @@ $isAdminView = function_exists('is_admin') && is_admin();
       const sel = e.target.closest('.m-role');
       if (!sel) return;
       const row = sel.closest('tr');
-      await post(`/api/teams/${teamId}/members/${row.dataset.memberId}/role`, { role: sel.value });
+      let j = await post(`/api/teams/${teamId}/members/${row.dataset.memberId}/role`, { role: sel.value });
+      // Viewer → working role can add a seat → tier heads-up, then retry
+      if (j && j.needs_tier_ack) {
+        if (!confirm(j.message)) { location.reload(); return; }  // reset the select
+        await post(`/api/teams/${teamId}/members/${row.dataset.memberId}/role`,
+                   { role: sel.value, ack_tier: 1 });
+      }
     });
   });
 })();

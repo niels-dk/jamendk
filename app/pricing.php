@@ -50,7 +50,13 @@ class Pricing
     }
 
     /**
-     * Distinct people who work with this owner, counting the owner.
+     * Distinct people who WORK with this owner, counting the owner.
+     *
+     * Read-only viewers never count — the pricing page promises "pay for
+     * collaborators, not for an audience", and a viewer-with-login is
+     * audience. A seat is someone holding a working role (co-owner, editor,
+     * delegate) on a board, or a team membership with a working default role.
+     *
      * Positional params (the app runs EMULATE_PREPARES=false, so a named
      * placeholder can't be reused across the query).
      */
@@ -64,11 +70,13 @@ class Pricing
                       FROM teams t
                       JOIN team_members tm ON tm.team_id = t.id
                      WHERE t.owner_user_id = ? AND tm.user_id <> ?
+                       AND tm.default_role <> 'viewer'
                     UNION
                     SELECT vr.user_id AS uid
                       FROM visions v
                       JOIN vision_roles vr ON vr.vision_id = v.id
                      WHERE v.user_id = ? AND vr.user_id <> ? AND v.deleted_at IS NULL
+                       AND vr.role <> 'viewer'
                 ) AS collaborators";
             $st = $db->prepare($sql);
             $st->execute([$ownerId, $ownerId, $ownerId, $ownerId]);
@@ -88,10 +96,10 @@ class Pricing
     }
 
     /**
-     * Is this user already counted toward the owner's seats? (Already in one of
-     * the owner's Teams, or holding a role on another of the owner's boards.)
-     * Used to tell a genuinely new teammate from a re-share of someone already
-     * on the account — only the former can move a tier.
+     * Is this user already counted toward the owner's seats — i.e. already
+     * holding a WORKING (non-viewer) role somewhere on the account? Must use
+     * the same definition as seatCount, or the tier heads-up would fire for
+     * people who don't move the meter (and stay silent for ones who do).
      */
     public static function isCountedFor(PDO $db, int $ownerId, int $userId): bool
     {
@@ -101,10 +109,12 @@ class Pricing
                 SELECT 1 FROM team_members tm
                   JOIN teams t ON t.id = tm.team_id
                  WHERE t.owner_user_id = ? AND tm.user_id = ?
+                   AND tm.default_role <> 'viewer'
                 UNION
                 SELECT 1 FROM vision_roles vr
                   JOIN visions v ON v.id = vr.vision_id
                  WHERE v.user_id = ? AND vr.user_id = ? AND v.deleted_at IS NULL
+                   AND vr.role <> 'viewer'
                 LIMIT 1";
             $st = $db->prepare($sql);
             $st->execute([$ownerId, $userId, $ownerId, $userId]);
@@ -169,14 +179,16 @@ class Pricing
     }
 
     /** Human heads-up for a tier crossing. Free-now framing, never a paywall. */
-    public static function crossingMessage(array $c, bool $isFounder, string $subject = 'this person'): string
+    public static function crossingMessage(array $c, bool $isFounder,
+                                           string $subject = 'this person',
+                                           string $verb = 'Adding'): string
     {
         $price = self::money((int)$c['monthly_cents']);
-        $msg = "Adding $subject makes it {$c['seats_after']} people — that moves you "
+        $msg = "$verb $subject makes it {$c['seats_after']} people — that moves you "
              . "to the {$c['to']['label']} plan (normally {$price}/mo). It's free right now";
         $msg .= $isFounder
-              ? ", and it stays free for you as a Founding Creator. Add them?"
-              : ". Add them?";
+              ? ", and it stays free for you as a Founding Creator. Continue?"
+              : ". Continue?";
         return $msg;
     }
 

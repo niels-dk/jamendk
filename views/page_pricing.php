@@ -16,7 +16,7 @@ $blurbs = [
     'crew'       => 'You and a couple of collaborators — a director, an editor, an AC.',
     'studio'     => 'A small production working a real shoot together.',
     'production' => 'A production company running several projects at once.',
-    'network'    => 'Studios, agencies and networks. Let\'s talk.',
+    'network'    => 'Studios, agencies and networks running many crews at once.',
 ];
 ?>
 <div class="doc pricing">
@@ -57,16 +57,20 @@ $blurbs = [
   <p class="pr-foot">
     Prices are shown so you know where things are headed — but
     <strong>nothing charges today</strong>. Every plan is free while we're
-    still getting started.
+    still getting started. When paid plans arrive, paying yearly will get
+    you two months free.
   </p>
 
   <div class="pr-founder">
     <h2>💛 Here first? You stay free.</h2>
     <p>
-      Everyone who joins in these early days becomes a <strong>Founding
-      Creator</strong> — free forever at your team's size, even after paid plans
-      switch on. You believed in it early; that's the thank-you. Your dashboard
-      shows what your plan would cost, so you can watch the gift add up.
+      Everyone who signs up <strong>before paid plans launch</strong> is a
+      <strong>Founding Creator</strong>. The promise, precisely: whatever size
+      your team is <em>on the day paid plans switch on</em>, that stays free for
+      you — forever. Grow before that day and the bigger team is what's locked
+      in; grow beyond it afterwards and only the extra band is ever billed.
+      You believed in it early; that's the thank-you. Your dashboard shows what
+      your plan would cost, so you can watch the gift add up.
     </p>
   </div>
 
@@ -74,10 +78,12 @@ $blurbs = [
 
   <h3>What counts as a “person”?</h3>
   <p>
-    Anyone who signs in and works on your boards with you — a member of your
-    Teams, or someone you've given an editing role. People you simply
-    <em>share</em> a published Trip page with never count: that link is public
-    and unlimited. Pay for collaborators, not for an audience.
+    Someone who <em>works</em> on your boards with you — a co-owner, editor or
+    delegate, or a team member with one of those roles. Two kinds of people
+    never count: anyone you share a published Trip page with (that link is
+    public and unlimited), and <strong>read-only viewers</strong> — someone who
+    signs in only to look is audience, not crew. Pay for collaborators, not
+    for an audience.
   </p>
 
   <h3>Are any features locked behind a paid plan?</h3>

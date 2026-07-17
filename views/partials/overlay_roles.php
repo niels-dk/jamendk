@@ -175,13 +175,22 @@ $slug = htmlspecialchars($vision['slug'] ?? '', ENT_QUOTES);
   list.addEventListener('change', async e => {
     const sel = e.target.closest('.role-set');
     if (!sel) return;
-    const p = new URLSearchParams(); p.set('role', sel.value);
-    const res = await fetch(`/api/visions/${slug}/roles/${sel.dataset.id}`, {
-      method:'POST',
-      headers:{'Content-Type':'application/x-www-form-urlencoded'},
-      body: p.toString()
-    });
-    const j = await res.json();
+    async function setRole(ack) {
+      const p = new URLSearchParams(); p.set('role', sel.value);
+      if (ack) p.set('ack_tier', '1');
+      const res = await fetch(`/api/visions/${slug}/roles/${sel.dataset.id}`, {
+        method:'POST',
+        headers:{'Content-Type':'application/x-www-form-urlencoded'},
+        body: p.toString()
+      });
+      return res.json();
+    }
+    let j = await setRole(false);
+    // Upgrading a viewer to a working role can add a seat → confirm the tier
+    if (j && j.needs_tier_ack) {
+      if (!confirm(j.message)) { load(); return; }  // reload resets the select
+      j = await setRole(true);
+    }
     if (!j?.success) alert(j?.error || 'Update failed');
   });
 

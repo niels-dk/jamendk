@@ -1723,10 +1723,11 @@ class vision_controller
 		// Tier heads-up: if the board owner is adding a genuinely new teammate
 		// that pushes their account into a higher (paid) band, warn once before
 		// committing. Free right now — this is courtesy + pre-education, not a
-		// wall. Only the owner (the billing account) sees it.
+		// wall. Only the owner (the billing account) sees it, and only for
+		// working roles — read-only viewers never count as seats.
 		global $currentUserId;
 		$ownerId = (int)$vision['user_id'];
-		if ((int)$currentUserId === $ownerId && empty($_POST['ack_tier'])) {
+		if ($role !== 'viewer' && (int)$currentUserId === $ownerId && empty($_POST['ack_tier'])) {
 			require_once __DIR__ . '/../app/pricing.php';
 			if (!Pricing::isCountedFor($db, $ownerId, (int)$user['id'])) {
 				$cross = Pricing::crossingIfAdding($db, $ownerId, 1);
@@ -1766,6 +1767,33 @@ class vision_controller
 		if (!in_array($role, $allowed, true)) {
 			http_response_code(422); echo json_encode(['error'=>'Invalid role']); return;
 		}
+
+		// Upgrading a viewer to a working role is where a seat can appear
+		// without anyone being "added" — run the same tier heads-up here.
+		global $currentUserId;
+		$ownerId = (int)$vision['user_id'];
+		if ($role !== 'viewer' && (int)$currentUserId === $ownerId && empty($_POST['ack_tier'])) {
+			$rs = $db->prepare("SELECT user_id, role FROM vision_roles WHERE id=? AND vision_id=? LIMIT 1");
+			$rs->execute([(int)$roleId, (int)$vision['id']]);
+			$existing = $rs->fetch(PDO::FETCH_ASSOC);
+			if ($existing && $existing['role'] === 'viewer') {
+				require_once __DIR__ . '/../app/pricing.php';
+				if (!Pricing::isCountedFor($db, $ownerId, (int)$existing['user_id'])) {
+					$cross = Pricing::crossingIfAdding($db, $ownerId, 1);
+					if ($cross) {
+						echo json_encode([
+							'success' => false,
+							'needs_tier_ack' => true,
+							'message' => Pricing::crossingMessage(
+											$cross, Pricing::isFounder($db, $ownerId),
+											'this person', 'Giving a working role to'),
+						]);
+						return;
+					}
+				}
+			}
+		}
+
 		$st = $db->prepare("UPDATE vision_roles SET role=? WHERE id=? AND vision_id=?");
 		$st->execute([$role, (int)$roleId, (int)$vision['id']]);
 		echo json_encode(['success'=>true]);
@@ -1832,8 +1860,8 @@ class vision_controller
 		if (!$members) { echo json_encode(['success' => true, 'added' => 0, 'skipped' => 0]); return; }
 
 		// Tier heads-up: a whole-team add can jump several people at once. Count
-		// only members genuinely new to the owner's account, and if that crosses
-		// a band, confirm once before committing (owner only, free-now framing).
+		// only members genuinely new to the owner's account — and only working
+		// roles; a member whose default role is viewer never moves the meter.
 		$ownerId = (int)$vision['user_id'];
 		if ((int)$currentUserId === $ownerId && empty($_POST['ack_tier'])) {
 			require_once __DIR__ . '/../app/pricing.php';
@@ -1841,6 +1869,7 @@ class vision_controller
 			foreach ($members as $m) {
 				$mid = (int)$m['user_id'];
 				if ($mid === $ownerId) continue;
+				if ($m['default_role'] === 'viewer') continue;
 				if (!Pricing::isCountedFor($db, $ownerId, $mid)) $newPeople++;
 			}
 			if ($newPeople > 0) {

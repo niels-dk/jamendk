@@ -38,6 +38,7 @@ $loggedIn = (bool)$me;
       <?php endif; ?>
       <a class="btn btn-ghost" href="/logout">Logout</a>
     <?php else: ?>
+      <a class="btn btn-ghost" href="/pricing">Pricing</a>
       <a class="btn btn-ghost" href="/login">Sign in</a>
       <a class="btn btn-primary" href="/register">Create account</a>
     <?php endif; ?>

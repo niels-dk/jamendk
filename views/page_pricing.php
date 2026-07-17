@@ -86,6 +86,16 @@ $blurbs = [
     for an audience.
   </p>
 
+  <h3>What happens when my team grows or shrinks?</h3>
+  <p>
+    Your plan follows your team — crews grow for a shoot and shrink for the
+    edit, and that's how it should work. When paid plans arrive, the rule will
+    be simple and the same for everyone: <strong>a month is billed at the
+    biggest team you ran at any point in that month.</strong> Growing takes
+    effect right away; shrinking takes effect from the next month. No lock-ins,
+    no downgrade forms — drop back down and the price follows automatically.
+  </p>
+
   <h3>Are any features locked behind a paid plan?</h3>
   <p>
     No. Every feature is available on every plan, including free. The only thing

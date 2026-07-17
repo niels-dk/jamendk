@@ -18,6 +18,10 @@ function route(string $uri): void
         '/register'           => ['user', 'register'],
         '/logout'             => ['user', 'logout'],
 
+        // Capture-first: what the installed app opens to
+        '/capture'                => ['dream', 'capture'],
+        '/api/capture'            => ['dream', 'captureStore'],
+
         // Seeds a complete worked example into an empty account
         '/demo/load'              => ['demo', 'load'],
 

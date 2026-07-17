@@ -1,6 +1,6 @@
 // sw.js
 
-const CACHE = 'shell-v10';
+const CACHE = 'shell-v11';
 const SHELL_URLS = [
   '/', 
   '/dashboard', 
@@ -44,7 +44,11 @@ self.addEventListener('fetch', e => {
     e.respondWith((async () => {
       try {
         const netRes = await fetch(req);
-        if (url.pathname.startsWith('/t/') || url.pathname.startsWith('/trips/')) {
+        // Trip pages + the capture screen: cached on each successful visit so
+        // they open in the field with no signal. Capture is cached here (not
+        // pre-cached at install) so we never cache its logged-out redirect.
+        if (url.pathname.startsWith('/t/') || url.pathname.startsWith('/trips/')
+            || url.pathname === '/capture') {
           const cache = await caches.open(CACHE);
           cache.put(req, netRes.clone());
         }

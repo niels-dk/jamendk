@@ -123,6 +123,36 @@ class dream_controller
     /**
      * GET /dreams/new
      */
+	/** GET /capture — the capture-first screen; what the installed app opens to.
+	 *  Standalone page (no layout) so it appears instantly and caches cleanly
+	 *  for offline use. */
+	public static function capture(): void
+	{
+		require_login();
+		include __DIR__ . '/../views/capture.php';
+	}
+
+	/** POST /api/capture — one thought in, one dream out.
+	 *  Body: title, description. Returns {ok, slug}. */
+	public static function captureStore(): void
+	{
+		header('Content-Type: application/json');
+		// Soft auth signal instead of a 401: the page JS redirects to login
+		// with next=/capture, so a stale session costs one tap, not the idea.
+		if (!is_logged_in()) { echo json_encode(['ok' => false, 'error' => 'auth']); return; }
+		global $db, $currentUserId;
+
+		$title = trim((string)($_POST['title'] ?? ''));
+		$desc  = trim((string)($_POST['description'] ?? ''));
+		if ($title === '' && $desc !== '') {          // pasted text starting with a blank line
+			$title = mb_substr($desc, 0, 80);
+		}
+		if ($title === '') { http_response_code(422); echo json_encode(['ok' => false, 'error' => 'Empty']); return; }
+
+		$slug = dream_model::create($db, (int)$currentUserId, mb_substr($title, 0, 255), $desc);
+		echo json_encode(['ok' => true, 'slug' => $slug]);
+	}
+
    public static function create(): void
 	{
 		require_login();

@@ -95,6 +95,11 @@ $blurbs = [
     effect right away; shrinking takes effect from the next month. No lock-ins,
     no downgrade forms — drop back down and the price follows automatically.
   </p>
+  <p>
+    And because slips happen: we measure your team <strong>once a day</strong>,
+    not the instant you click. Gave the wrong person an editing role? Fix it
+    the same day and it never counted.
+  </p>
 
   <h3>Are any features locked behind a paid plan?</h3>
   <p>

@@ -15,7 +15,7 @@
  *   define('MAIL_PASS',      'your-mailbox-password');
  *   define('MAIL_FROM',      'dream@jamen.dk');    // must be a real mailbox on
  *                                                  // this domain, or DKIM/SPF fail
- *   define('MAIL_FROM_NAME', 'DreamBoard');
+ *   define('MAIL_FROM_NAME', 'Niels at Merely a Dream');
  *
  * With no config at all it falls back to PHP mail(), and 'log' writes to
  * mail_log without sending — handy for testing.
@@ -156,7 +156,7 @@ class Mailer
     private static function headerLines(string $boundary): array
     {
         $from     = self::fromAddress();
-        $fromName = self::cfg('MAIL_FROM_NAME', 'DreamBoard');
+        $fromName = self::cfg('MAIL_FROM_NAME', 'Merely a Dream');
         $domain   = substr(strrchr($from, '@') ?: '@localhost', 1);
 
         return [
@@ -357,7 +357,7 @@ class Mailer
                             color:#2a3548;line-height:1.55;">
                 <tr><td>
                   <div style="font-size:18px;font-weight:800;color:#0b1727;
-                              margin-bottom:22px;">DreamBoard</div>
+                              margin-bottom:22px;">Merely a Dream</div>
                   <h1 style="font-size:21px;color:#0b1727;margin:0 0 14px;">'
                     . $e($heading) . '</h1>'
                   . $bodyHtml
@@ -381,13 +381,13 @@ class Mailer
         $html = self::layout(
             'Confirm your email',
             '<p style="margin:0 0 14px;">Hi ' . htmlspecialchars($name, ENT_QUOTES) . ',</p>
-             <p style="margin:0;">Welcome to DreamBoard. Confirm this address and your
+             <p style="margin:0;">Welcome to Merely a Dream. Confirm this address and your
              account is ready — then you can start capturing dreams.</p>
              <p style="margin:14px 0 0;font-size:13px;color:#5a6878;">
              This link works once and expires in 24 hours.</p>',
             'Confirm my email', $url
         );
-        return self::send($to, 'Confirm your DreamBoard email', $html, 'verify');
+        return self::send($to, 'Confirm your Merely a Dream email', $html, 'verify');
     }
 
     public static function sendPasswordReset(string $to, string $name, string $rawToken): bool
@@ -402,7 +402,7 @@ class Mailer
              stays valid until you set a new one.</p>',
             'Choose a new password', $url
         );
-        return self::send($to, 'Reset your DreamBoard password', $html, 'reset');
+        return self::send($to, 'Reset your Merely a Dream password', $html, 'reset');
     }
 
     /**
@@ -417,7 +417,7 @@ class Mailer
         $html = self::layout(
             'You already have an account',
             '<p style="margin:0 0 14px;">Hi ' . htmlspecialchars($name, ENT_QUOTES) . ',</p>
-             <p style="margin:0;">Someone just tried to create a DreamBoard account with
+             <p style="margin:0;">Someone just tried to create a Merely a Dream account with
              this address — but you already have one, so we didn\'t make a second.</p>
              <p style="margin:14px 0 0;">If that was you and you\'ve forgotten your
              password, you can set a new one below. Otherwise just ignore this.</p>
@@ -425,6 +425,6 @@ class Mailer
              This link works once and expires in 1 hour.</p>',
             'Set a new password', $url
         );
-        return self::send($to, 'You already have a DreamBoard account', $html, 'reset_notice');
+        return self::send($to, 'You already have a Merely a Dream account', $html, 'reset_notice');
     }
 }

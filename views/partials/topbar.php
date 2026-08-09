@@ -1,13 +1,17 @@
 <?php
 $me = function_exists('current_user') ? current_user() : null;
 $loggedIn = (bool)$me;
+// One place decides the product name everywhere (see SITE_NAME in config).
+$brandName = defined('SITE_NAME') ? SITE_NAME : 'Merely a Dream';
 ?>
 <header class="home-header">
   <div class="home-brand">
-    <a href="/"><div class="logo-mark">
-     <?php for ($i = 0; $i < 9; $i++) echo '<span></span>'; ?>
-    </div></a>
-    <strong class="brand-title">DreamBoard</strong>
+    <a href="/" class="brand-link" title="<?= htmlspecialchars($brandName, ENT_QUOTES) ?>">
+      <div class="logo-mark">
+       <?php for ($i = 0; $i < 9; $i++) echo '<span></span>'; ?>
+      </div>
+      <strong class="brand-title"><?= htmlspecialchars($brandName, ENT_QUOTES) ?></strong>
+    </a>
   </div>
 
   <nav class="home-actions">

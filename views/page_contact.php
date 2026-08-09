@@ -2,7 +2,7 @@
 // views/page_contact.php (fragment; layout wraps it)
 $p_e = fn($s) => htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8');
 $siteEmail = defined('SITE_EMAIL')     ? SITE_EMAIL     : 'hello@jamen.dk';
-$siteInsta = defined('SITE_INSTAGRAM') ? SITE_INSTAGRAM : 'https://www.instagram.com/dreamboardapp/';
+$siteInsta = defined('SITE_INSTAGRAM') ? SITE_INSTAGRAM : 'https://www.instagram.com/merely.a.dream/';
 ?>
 <div class="doc">
   <h1>Contact</h1>
@@ -23,7 +23,7 @@ $siteInsta = defined('SITE_INSTAGRAM') ? SITE_INSTAGRAM : 'https://www.instagram
       <span class="dc-ico">📷</span>
       <span>
         <b>Instagram</b>
-        <span>@dreamboardapp — work in progress, in public</span>
+        <span>@merely.a.dream — work in progress, in public</span>
       </span>
     </a>
   </div>

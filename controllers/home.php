@@ -30,7 +30,7 @@ class home_controller
             // Anonymous: skip the queries entirely
             $recentBoards = [];
             $hasActivity  = false;
-            $title = 'DreamBoard — plan the shoot, remember the shot';
+            $title = 'Merely a Dream — plan the shoot, remember the shot';
             ob_start();
             include __DIR__ . '/../views/home.php';
             $content = ob_get_clean();

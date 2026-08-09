@@ -1,7 +1,7 @@
 <?php
 // views/page_terms.php (fragment; layout wraps it)
 $p_e = fn($s) => htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8');
-$siteName  = defined('SITE_NAME')  ? SITE_NAME  : 'DreamBoard';
+$siteName  = defined('SITE_NAME')  ? SITE_NAME  : 'Merely a Dream';
 $siteEmail = defined('SITE_EMAIL') ? SITE_EMAIL : 'hello@jamen.dk';
 $siteOwner = defined('SITE_LEGAL_ENTITY') ? SITE_LEGAL_ENTITY : 'Niels, Denmark';
 $updated   = '15 July 2026';

@@ -6,7 +6,7 @@ $siteEmail = defined('SITE_EMAIL') ? SITE_EMAIL : 'hello@jamen.dk';
 <div class="doc">
   <h1>Help</h1>
   <p class="doc-lead">
-    DreamBoard has four pieces. They're really one idea at four stages of
+    Merely a Dream has four pieces. They're really one idea at four stages of
     growing up.
   </p>
 
@@ -72,7 +72,7 @@ $siteEmail = defined('SITE_EMAIL') ? SITE_EMAIL : 'hello@jamen.dk';
   <h2>Common questions</h2>
 
   <h3>Is it free?</h3>
-  <p>Yes — DreamBoard is free to use while it's being built.</p>
+  <p>Yes — Merely a Dream is free to use while it's being built.</p>
 
   <h3>Who can see my boards?</h3>
   <p>

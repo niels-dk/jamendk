@@ -1,6 +1,6 @@
 #!/bin/bash
 # =============================================================================
-# DreamBoard backup — database nightly, uploaded files weekly.
+# Merely a Dream backup — database nightly, uploaded files weekly.
 #
 # Designed for DreamHost shared hosting. Run by cron (see SETUP below) and
 # safe to run by hand any time — e.g. right BEFORE executing a migration:
@@ -34,7 +34,7 @@
 #          so any email you get from it is a real alarm.
 #   3. Offsite (recommended) — panel → Billing & Account → Backups user gives
 #      you a free 50GB space on backup.dreamhost.com. Then:
-#          echo 'b1234567@backup.dreamhost.com:dreamboard/' > ~/.backup_remote
+#          echo 'b1234567@backup.dreamhost.com:merelyadream/' > ~/.backup_remote
 #      (set up an SSH key for it so rsync runs unattended)
 #
 # Restore (database):

@@ -9,7 +9,7 @@ function cp_e($s){ return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Catch it — DreamBoard</title>
+  <title>Catch it — Merely a Dream</title>
   <meta name="theme-color" content="#1a1b1e">
   <link rel="manifest" href="/public/manifest.json">
   <link rel="icon" type="image/png" sizes="192x192" href="/public/icons/icon-192.png">
@@ -75,7 +75,7 @@ function cp_e($s){ return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
 </head>
 <body>
   <header>
-    <a class="brand" href="/dashboard">DreamBoard<span class="dot">.</span></a>
+    <a class="brand" href="/dashboard">Merely a Dream<span class="dot">.</span></a>
     <span class="offline-pill">offline — still catching</span>
     <span class="count" id="count"></span>
   </header>

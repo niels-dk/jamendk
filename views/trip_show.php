@@ -904,8 +904,8 @@ $SHOT_LIGHT_LABEL = ['sunrise'=>'🌅 sunrise','golden'=>'🌇 golden hour','mid
     ?>
     <div style="margin-bottom:.5rem;">
       <a href="<?= tr_e($brandUrl) ?>" style="color:#5a6878;font-weight:600;"
-         title="DreamBoard — catch the idea, grow the plan, open the shot list when you're standing there">
-        🎬 Planned with <span style="color:#2c5aa0;">DreamBoard</span> →
+         title="Merely a Dream — catch the idea, grow the plan, open the shot list when you're standing there">
+        🎬 Planned with <span style="color:#2c5aa0;">Merely a Dream</span> →
       </a>
     </div>
     <?php if ($export): ?>

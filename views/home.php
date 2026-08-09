@@ -383,7 +383,7 @@ $typeIcon = [
       <h1>You'll forget the shot<br><span class="accent">by the time you get there.</span></h1>
       <p class="lp-sub">
         New place, new light, a hundred things happening at once — and the idea you
-        had three weeks ago is gone. DreamBoard catches it in seconds, grows it into
+        had three weeks ago is gone. Merely a Dream catches it in seconds, grows it into
         a real plan, and puts the shot list in your hand when you're standing in
         the right place.
       </p>
@@ -459,12 +459,12 @@ $typeIcon = [
       the detail later when you're sitting still, and open the plan when you
       arrive.”
     </p>
-    <p class="who">— Niels, who built DreamBoard after that trip</p>
+    <p class="who">— Niels, who built Merely a Dream after that trip</p>
   </section>
 
   <h2 class="lp-h2">Three steps, from spark to standing there</h2>
   <p class="lp-lead">
-    Ideas arrive fast and messy. Plans take time. DreamBoard is built around that gap.
+    Ideas arrive fast and messy. Plans take time. Merely a Dream is built around that gap.
   </p>
 
   <div class="lp-steps">
@@ -736,7 +736,7 @@ $typeIcon = [
 <?php endif; ?>
 
   <div class="home-footer">
-    DreamBoard &middot; Dream &middot; Visualise &middot; Plan &middot; Create
+    Merely a Dream &middot; Catch it &middot; Grow it &middot; Take it with you
   </div>
 
 </div>

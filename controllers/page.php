@@ -24,7 +24,7 @@ class page_controller
         require_once __DIR__ . '/../app/pricing.php';
         $tiers = Pricing::TIERS;
         self::render('page_pricing', 'Pricing',
-            'DreamBoard is free while we\'re just getting started. One creator, '
+            'Merely a Dream is free while we\'re just getting started. One creator, '
           . 'free forever. You only pay when a team works with you — never for features.');
     }
 
@@ -32,7 +32,7 @@ class page_controller
     public static function help(): void
     {
         self::render('page_help', 'Help',
-            'How DreamBoard works: catch a Dream, grow it into a Vision, publish '
+            'How Merely a Dream works: catch a Dream, grow it into a Vision, publish '
           . 'a Trip page you can use offline in the field.');
     }
 
@@ -40,20 +40,20 @@ class page_controller
     public static function contact(): void
     {
         self::render('page_contact', 'Contact',
-            'Get in touch with DreamBoard — email or Instagram.');
+            'Get in touch with Merely a Dream — email or Instagram.');
     }
 
     /** GET /terms */
     public static function terms(): void
     {
         self::render('page_terms', 'Terms of use',
-            'The terms you agree to when using DreamBoard.');
+            'The terms you agree to when using Merely a Dream.');
     }
 
     /** GET /privacy */
     public static function privacy(): void
     {
         self::render('page_privacy', 'Privacy policy',
-            'What data DreamBoard stores, why, and how to get it deleted.');
+            'What data Merely a Dream stores, why, and how to get it deleted.');
     }
 }

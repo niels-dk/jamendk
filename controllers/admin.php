@@ -179,12 +179,12 @@ class admin_controller
 
         $html = Mailer::layout(
             'Mail is working',
-            '<p style="margin:0;">If you are reading this, DreamBoard can send email:
+            '<p style="margin:0;">If you are reading this, Merely a Dream can send email:
              SMTP authenticated, and this message reached a real inbox.</p>
              <p style="margin:14px 0 0;font-size:13px;color:#5a6878;">
              Sent from the admin mail log at ' . htmlspecialchars(date('M j, Y · H:i')) . '.</p>'
         );
-        $ok = Mailer::send($to, 'DreamBoard test email', $html, 'test');
+        $ok = Mailer::send($to, 'Merely a Dream test email', $html, 'test');
 
         $_SESSION['flash_admin'] = $ok
             ? '✓ Test email sent to ' . $to . ' — check the inbox (and the spam folder).'

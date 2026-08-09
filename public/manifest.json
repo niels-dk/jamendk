@@ -1,6 +1,6 @@
 {
-  "name": "DreamBoard",
-  "short_name": "DreamBoard",
+  "name": "Merely a Dream",
+  "short_name": "Merely",
   "description": "Catch the idea, grow it into a plan, open the shot list when you're standing there.",
   "id": "/",
   "start_url": "/capture",

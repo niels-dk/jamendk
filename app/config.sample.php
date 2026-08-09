@@ -30,7 +30,7 @@ define('MAIL_DRIVER',    'mail');
 
 // MUST be a real mailbox on this domain. This is the important line.
 define('MAIL_FROM',      'dream@jamen.dk');
-define('MAIL_FROM_NAME', 'DreamBoard');
+define('MAIL_FROM_NAME', 'Niels at Merely a Dream');
 
 /* ── SMTP (only needed when MAIL_DRIVER is 'smtp') ──────────────────────── */
 // define('MAIL_HOST', 'smtp.dreamhost.com');
@@ -60,9 +60,9 @@ define('MAIL_SITE_HOST', 'jamen.dk');
  * templates. Every one of these has a working default, so the site runs
  * without them — set them when the new domain lands.
  */
-// define('SITE_NAME',      'DreamBoard');
+// define('SITE_NAME',      'Merely a Dream');
 // define('SITE_EMAIL',     'hello@jamen.dk');
-// define('SITE_INSTAGRAM', 'https://www.instagram.com/dreamboardapp/');
+// define('SITE_INSTAGRAM', 'https://www.instagram.com/merely.a.dream/');
 //
 // Named on the Terms and Privacy pages as the party responsible for the
 // service. GDPR expects the controller to be identifiable — put a legal

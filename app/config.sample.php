@@ -8,7 +8,7 @@
  */
 
 /* ── Database (your existing setup — shown for shape only) ────────────── */
-// $db = new PDO('mysql:host=...;dbname=jamen_dk;charset=utf8mb4', 'user', 'pass', [
+// $db = new PDO('mysql:host=...;dbname=YOUR_DB;charset=utf8mb4', 'user', 'pass', [
 //     PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
 // ]);
 
@@ -16,7 +16,7 @@
  *
  * MAIL_FROM is the setting that decides inbox vs spam. It must be a real
  * mailbox on this domain: it becomes both the From: header AND the envelope
- * sender, so SPF is checked against jamen.dk (which authorises DreamHost's
+ * sender, so SPF is checked against merelyadream.com (which must authorise DreamHost's
  * IPs) and aligns with From:. That alignment is what DMARC wants.
  *
  * Driver options:
@@ -29,13 +29,13 @@
 define('MAIL_DRIVER',    'mail');
 
 // MUST be a real mailbox on this domain. This is the important line.
-define('MAIL_FROM',      'dream@jamen.dk');
+define('MAIL_FROM',      'hello@merelyadream.com');
 define('MAIL_FROM_NAME', 'Niels at Merely a Dream');
 
 /* ── SMTP (only needed when MAIL_DRIVER is 'smtp') ──────────────────────── */
 // define('MAIL_HOST', 'smtp.dreamhost.com');
 // define('MAIL_PORT', 465);                  // 465 = implicit SSL; 587 = STARTTLS
-// define('MAIL_USER', 'dream@jamen.dk');     // full address is the username
+// define('MAIL_USER', 'hello@merelyadream.com');     // full address is the username
 //
 // Single quotes: the password may contain " # $ etc., and single-quoted PHP
 // strings don't interpret them. If it contains a literal ' escape it as \'.
@@ -45,7 +45,7 @@ define('MAIL_FROM_NAME', 'Niels at Merely a Dream');
 
 // Host used to build links inside emails. Pin it so a link never points at
 // a staging host — email is read long after the request that generated it.
-define('MAIL_SITE_HOST', 'jamen.dk');
+define('MAIL_SITE_HOST', 'merelyadream.com');
 
 /* ── Landing page ────────────────────────────────────────────────────────
  * Token of a published Trip to show strangers as a live example. The
@@ -61,7 +61,7 @@ define('MAIL_SITE_HOST', 'jamen.dk');
  * without them — set them when the new domain lands.
  */
 // define('SITE_NAME',      'Merely a Dream');
-// define('SITE_EMAIL',     'hello@jamen.dk');
+// define('SITE_EMAIL',     'hello@merelyadream.com');
 // define('SITE_INSTAGRAM', 'https://www.instagram.com/merely.a.dream/');
 //
 // Named on the Terms and Privacy pages as the party responsible for the

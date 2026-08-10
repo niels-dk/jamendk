@@ -898,7 +898,7 @@ $SHOT_LIGHT_LABEL = ['sunrise'=>'🌅 sunrise','golden'=>'🌇 golden hour','mid
       // clients, brands and crew. A quiet link here is the growth loop.
       // Absolute URL so it also works from a downloaded offline copy.
       $brandHost = defined('MAIL_SITE_HOST') && MAIL_SITE_HOST
-          ? MAIL_SITE_HOST : ($_SERVER['HTTP_HOST'] ?? 'jamen.dk');
+          ? MAIL_SITE_HOST : ($_SERVER['HTTP_HOST'] ?? 'merelyadream.com');
       $brandUrl  = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http')
           . '://' . $brandHost . '/';
     ?>

@@ -63,6 +63,13 @@ class admin_controller
     public static function backups(): void
     {
         require_admin();
+        global $db;
+
+        // Ask the live connection which database it's on, so the restore
+        // command shown is always the right one (survives renames/moves).
+        $dbName = 'your_db';
+        try { $dbName = (string)$db->query('SELECT DATABASE()')->fetchColumn() ?: 'your_db'; }
+        catch (\Throwable $e) { /* keep the placeholder */ }
 
         $base     = dirname(dirname(__DIR__)) . '/backups';
         $lastRun  = null;

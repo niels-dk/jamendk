@@ -5,13 +5,13 @@
 # Designed for DreamHost shared hosting. Run by cron (see SETUP below) and
 # safe to run by hand any time — e.g. right BEFORE executing a migration:
 #
-#     ~/jamen.dk/scripts/backup.sh
+#     ~/merelyadream.com/scripts/backup.sh
 #
 # What it does
-#   * mysqldump of the app database → gzip → ~/backups/db/jamen_dk-YYYY-MM-DD.sql.gz
+#   * mysqldump of the app database → gzip → ~/backups/db/DBNAME-YYYY-MM-DD.sql.gz
 #     (one per day; re-running the same day overwrites — that's the point when
 #     you run it manually before a migration)
-#   * on Sundays (or FORCE_FILES=1): tar of ~/jamen.dk/storage (uploaded media,
+#   * on Sundays (or FORCE_FILES=1): tar of the site's storage/ (uploaded media,
 #     encrypted documents, thumbnails) → ~/backups/files/
 #   * verifies the dump is a valid gzip and not suspiciously tiny before
 #     declaring success
@@ -25,10 +25,10 @@
 # SETUP (once, over SSH):
 #   1. Database credentials — create ~/.my.cnf so no password lives in this
 #      script or in crontab:
-#          printf '[client]\nuser=DBUSER\npassword="DBPASS"\nhost=mysql.jamen.dk\n' > ~/.my.cnf
+#          printf '[client]\nuser=DBUSER\npassword="DBPASS"\nhost=mysql.merelyadream.com\n' > ~/.my.cnf
 #          chmod 600 ~/.my.cnf
 #   2. Cron — DreamHost panel → Advanced → Cron Jobs → Add:
-#          command:  /home/YOURUSER/jamen.dk/scripts/backup.sh
+#          command:  /home/YOURUSER/merelyadream.com/scripts/backup.sh
 #          schedule: daily, some quiet hour (e.g. 04:12)
 #          leave "email output" on — cron only produces output on FAILURE,
 #          so any email you get from it is a real alarm.
@@ -38,14 +38,16 @@
 #      (set up an SSH key for it so rsync runs unattended)
 #
 # Restore (database):
-#     gunzip < ~/backups/db/jamen_dk-YYYY-MM-DD.sql.gz | mysql jamen_dk
+#     gunzip < ~/backups/db/DBNAME-YYYY-MM-DD.sql.gz | mysql YOUR_DB
 # Restore (files):
-#     tar -xzf ~/backups/files/storage-YYYY-MM-DD.tar.gz -C ~/jamen.dk
+#     tar -xzf ~/backups/files/storage-YYYY-MM-DD.tar.gz -C ~/merelyadream.com
 # =============================================================================
 set -u
 
-DB_NAME="jamen_dk"
-SITE_DIR="$HOME/jamen.dk"
+# Derived, not hardcoded, so a domain/folder rename can never silently break
+# backups: the site dir is wherever this script lives, and the database name is
+# read from the app's own config. The two can't drift apart.
+SITE_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 BASE="$HOME/backups"
 DB_DIR="$BASE/db"
 FILES_DIR="$BASE/files"
@@ -58,6 +60,9 @@ fail() {
     echo "BACKUP FAILED: $1" >&2
     exit 1
 }
+
+DB_NAME="$(sed -n "s/.*dbname=\([A-Za-z0-9_]*\).*/\1/p" "$SITE_DIR/app/config.php" 2>/dev/null | head -1)"
+[ -n "$DB_NAME" ] || fail "could not read dbname from $SITE_DIR/app/config.php"
 
 # ── 1. Database ──────────────────────────────────────────────────────────────
 DB_OUT="$DB_DIR/${DB_NAME}-${STAMP}.sql.gz"

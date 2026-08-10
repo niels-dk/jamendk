@@ -41,7 +41,7 @@ $TYPE_LABEL = [
       With neither <code>MAIL_FROM</code> nor <code>MAIL_USER</code> defined, mail
       goes out from <code>noreply@</code> your site host, which isn't a real mailbox.
       Set <code>MAIL_FROM</code> to a mailbox that exists (e.g.
-      <code>dream@jamen.dk</code>) in <code>app/config.php</code>. This alone
+      <code>hello@merelyadream.com</code>) in <code>app/config.php</code>. This alone
       fixes the From address and is required for DMARC to align.
     </div>
   <?php elseif (!defined('MAIL_DRIVER') || MAIL_DRIVER !== 'smtp'): ?>

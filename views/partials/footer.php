@@ -5,7 +5,7 @@
 $f_e = fn($s) => htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8');
 
 $siteName  = defined('SITE_NAME')      ? SITE_NAME      : 'Merely a Dream';
-$siteEmail = defined('SITE_EMAIL')     ? SITE_EMAIL     : 'hello@jamen.dk';
+$siteEmail = defined('SITE_EMAIL')     ? SITE_EMAIL     : 'hello@merelyadream.com';
 $siteInsta = defined('SITE_INSTAGRAM') ? SITE_INSTAGRAM : 'https://www.instagram.com/merely.a.dream/';
 $f_in      = function_exists('is_logged_in') && is_logged_in();
 ?>

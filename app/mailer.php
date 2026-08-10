@@ -11,9 +11,9 @@
  *   define('MAIL_DRIVER',    'smtp');              // 'smtp' | 'mail' | 'log'
  *   define('MAIL_HOST',      'smtp.dreamhost.com');
  *   define('MAIL_PORT',      465);                 // 465 = SSL, 587 = STARTTLS
- *   define('MAIL_USER',      'dream@jamen.dk');
+ *   define('MAIL_USER',      'hello@merelyadream.com');
  *   define('MAIL_PASS',      'your-mailbox-password');
- *   define('MAIL_FROM',      'dream@jamen.dk');    // must be a real mailbox on
+ *   define('MAIL_FROM',      'hello@merelyadream.com'); // must be a real mailbox on
  *                                                  // this domain, or DKIM/SPF fail
  *   define('MAIL_FROM_NAME', 'Niels at Merely a Dream');
  *
@@ -44,7 +44,7 @@ class Mailer
     {
         if ($path === '' || $path[0] !== '/') $path = '/' . $path;
         $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-        $host   = self::cfg('MAIL_SITE_HOST') ?: ($_SERVER['HTTP_HOST'] ?? 'jamen.dk');
+        $host   = self::cfg('MAIL_SITE_HOST') ?: ($_SERVER['HTTP_HOST'] ?? 'merelyadream.com');
         return $scheme . '://' . $host . $path;
     }
 
@@ -179,11 +179,11 @@ class Mailer
      * the shell user as the envelope sender (Return-Path:
      * dh_xxxx@iad1-shared-b7-42.dreamhost.com). Receivers check SPF against
      * THAT domain, not the From: header — so SPF passes for dreamhost.com
-     * while the From: says jamen.dk. The two don't align, DMARC fails, and
+     * while the From: says your domain. The two don't align, DMARC fails, and
      * Gmail bins it.
      *
      * Passing -f sets the envelope sender to our own domain, so SPF is
-     * evaluated against jamen.dk's record (which authorises DreamHost's IPs
+     * evaluated against your domain's record (which authorises DreamHost's IPs
      * via include:netblocks.dreamhost.com) and aligns with From:. DMARC only
      * needs SPF *or* DKIM to align, so this can pass without SMTP auth.
      */
@@ -365,7 +365,7 @@ class Mailer
                   '<hr style="border:0;border-top:1px solid #e4e7ec;margin:28px 0 14px;">
                   <p style="font-size:12px;color:#8593a6;margin:0;">
                     You received this because someone used this address on '
-                    . $e(self::cfg('MAIL_SITE_HOST') ?: ($_SERVER['HTTP_HOST'] ?? 'jamen.dk'))
+                    . $e(self::cfg('MAIL_SITE_HOST') ?: ($_SERVER['HTTP_HOST'] ?? 'merelyadream.com'))
                     . '. If that wasn\'t you, you can safely ignore this email.
                   </p>
                 </td></tr>

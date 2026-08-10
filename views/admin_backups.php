@@ -29,7 +29,7 @@ $fmtSize = function (int $b): string {
           <li>Create <code>~/.my.cnf</code> with the database credentials
               (template in the header of <code>scripts/backup.sh</code>), then
               <code>chmod 600 ~/.my.cnf</code></li>
-          <li>Test it once by hand: <code>~/jamen.dk/scripts/backup.sh</code>
+          <li>Test it once by hand: <code>~/merelyadream.com/scripts/backup.sh</code>
               — silence means success, then reload this page</li>
           <li>Add it as a daily cron job in the DreamHost panel
               (Advanced → Cron Jobs), with email-on-output left ON</li>
@@ -81,8 +81,8 @@ $fmtSize = function (int $b): string {
 
   <p style="color:#6c7d92;font-size:.82rem;margin-top:1.8rem;line-height:1.6;">
     Before running a migration in phpMyAdmin, take a fresh dump first:
-    SSH in and run <code>~/jamen.dk/scripts/backup.sh</code> — it overwrites
+    SSH in and run <code>~/merelyadream.com/scripts/backup.sh</code> — it overwrites
     today's file, so you always restore to the moment before the change.
-    Restore: <code>gunzip &lt; dump.sql.gz | mysql jamen_dk</code>.
+    Restore: <code>gunzip &lt; dump.sql.gz | mysql <?= $b_e($dbName) ?></code>.
   </p>
 </div>

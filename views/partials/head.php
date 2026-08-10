@@ -9,7 +9,7 @@ $__desc = $metaDescription
      . 'the shot list when you are standing there. A planning tool for filmmakers '
      . 'and creators — works offline in the field.';
 $__scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-$__url    = $__scheme . '://' . ($_SERVER['HTTP_HOST'] ?? 'jamen.dk')
+$__url    = $__scheme . '://' . ($_SERVER['HTTP_HOST'] ?? 'merelyadream.com')
           . ($_SERVER['REQUEST_URI'] ?? '/');
 ?>
 <meta charset="utf-8">

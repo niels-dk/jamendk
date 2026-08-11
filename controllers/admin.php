@@ -55,6 +55,29 @@ class admin_controller
     }
 
     /**
+     * GET /admin/analytics — is anyone arriving, and is anyone actually
+     * using it? Traffic comes from analytics_visits; the product funnel is
+     * derived live from the real tables, so it covers all history.
+     */
+    public static function analytics(): void
+    {
+        require_admin();
+        require_once __DIR__ . '/../app/analytics.php';
+        global $db;
+
+        $days    = isset($_GET['days']) ? max(1, min(365, (int)$_GET['days'])) : 30;
+        $traffic = Analytics::traffic($db, $days);
+        $product = Analytics::product($db, $days);
+
+        $pageTitle = 'Analytics';
+        $noSidebar = true;
+        ob_start();
+        include __DIR__ . '/../views/admin_analytics.php';
+        $content = ob_get_clean();
+        include __DIR__ . '/../views/layout.php';
+    }
+
+    /**
      * GET /admin/backups — is the safety net actually there?
      * Backups that silently stop are the classic failure mode; this page
      * exists so staleness is loud. Reads ~/backups (one level above the

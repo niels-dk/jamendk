@@ -7,7 +7,7 @@ $p_e = fn($s) => htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8');
 $siteName  = defined('SITE_NAME')     ? SITE_NAME     : 'Merely a Dream';
 $siteEmail = defined('SITE_EMAIL')    ? SITE_EMAIL    : 'hello@merelyadream.com';
 $siteOwner = defined('SITE_LEGAL_ENTITY') ? SITE_LEGAL_ENTITY : 'Niels, Denmark';
-$updated   = '15 July 2026';
+$updated   = '18 July 2026';
 ?>
 <div class="doc">
   <h1>Privacy policy</h1>
@@ -58,15 +58,34 @@ $updated   = '15 July 2026';
     send mail to strangers.
   </p>
 
+  <h3>Visit statistics</h3>
+  <p>
+    We count visits so we can tell whether anyone is finding the site and which
+    pages are useful. We built this ourselves rather than using Google
+    Analytics, and it is deliberately as thin as we could make it. For each page
+    view we record: the date, the page address, the domain that linked you here
+    (never the full referring address), any campaign tag in the link, whether
+    you were signed in, and whether the device is a phone, tablet or computer.
+  </p>
+  <p>
+    <strong>Your IP address is never stored.</strong> To count a person once per
+    day without identifying them, your IP and browser are combined with a secret
+    value <em>and the current date</em> into a one-way fingerprint. It cannot be
+    turned back into your IP, and because the date is part of it, the same
+    visitor produces an unrelated fingerprint tomorrow — so nobody can be
+    followed from one day to the next. Raw rows are deleted after about a year.
+  </p>
+
   <h3>Cookies</h3>
   <p>
     One cookie: a session cookie that keeps you signed in. It's strictly
     necessary for the site to work and it disappears when you sign out.
   </p>
   <p>
-    <strong>There is no analytics, no advertising, and no third-party
-    tracking on this site.</strong> Nothing follows you anywhere. That's also
-    why you aren't being nagged by a cookie banner.
+    <strong>There is no advertising, no third-party tracking, and no analytics
+    cookie.</strong> Our visit statistics set nothing on your device and send
+    nothing to anyone else — the data stays in our own database. Nothing follows
+    you off this site. That's also why you aren't being nagged by a cookie banner.
   </p>
   <p>
     The app also stores a little data in your browser's own storage — offline
@@ -102,8 +121,9 @@ $updated   = '15 July 2026';
   <p>
     On servers operated by <strong>DreamHost</strong>, our hosting provider,
     located in the United States. Using the service means your data is
-    transferred to and stored there. We use no other processors — no analytics
-    service, no email marketing platform, no CDN.
+    transferred to and stored there. They are our only processor: no analytics
+    service, no email marketing platform, no CDN. Our visit statistics are
+    calculated on our own server, not by anyone else.
   </p>
 
   <h2>How long we keep it</h2>

@@ -218,6 +218,7 @@ function route(string $uri): void
         '/admin/mail'                              => ['admin', 'mailLog'],
         '/admin/pricing'                           => ['admin', 'pricing'],
         '/admin/backups'                           => ['admin', 'backups'],
+        '/admin/analytics'                         => ['admin', 'analytics'],
         '/admin/mail/test'                         => ['admin', 'mailTest'],
         '/admin/users'                             => ['admin', 'users'],
         '/admin/users/([0-9]+)/role'               => ['admin', 'setRole'],

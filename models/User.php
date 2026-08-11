@@ -18,6 +18,17 @@ class User
                                    WHERE id = ? AND founding_creator_at IS NULL')
                        ->execute([$id]);
                 } catch (\Throwable $e) { /* column not migrated — fine */ }
+
+                // If they arrived through a tracked link, stamp it. This is what
+                // turns "the campaign got clicks" into "the campaign got users".
+                try {
+                    require_once __DIR__ . '/../app/links.php';
+                    $linkId = LinkTokens::currentId();
+                    if ($linkId) {
+                        $db->prepare('UPDATE users SET signup_link_token_id = ? WHERE id = ?')
+                           ->execute([$linkId, $id]);
+                    }
+                } catch (\Throwable $e) { /* column not migrated — fine */ }
             }
             return $id ?: null;
         } catch (\Throwable $e) {

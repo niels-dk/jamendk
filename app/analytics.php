@@ -18,8 +18,13 @@
  */
 class Analytics
 {
-    /** Paths that are never page views (assets, APIs, machine endpoints). */
-    private const SKIP_PREFIXES = ['/api/', '/public/', '/storage/', '/admin/'];
+    /**
+     * Paths that are never page views (assets, APIs, machine endpoints).
+     * '/l/' is excluded because link_controller logs that click itself — it
+     * has to, since attribution is only known after the token is resolved.
+     * Without this the redirect would be counted twice.
+     */
+    private const SKIP_PREFIXES = ['/api/', '/public/', '/storage/', '/admin/', '/l/'];
 
     /** Crawlers, uptime checks, previewers — noise, not visitors. */
     private static function isBot(string $ua): bool
@@ -125,11 +130,16 @@ class Analytics
             $clean = fn(?string $v) => ($v === null || $v === '')
                 ? null : mb_substr(preg_replace('~[^\w \-\.]~u', '', $v), 0, 80);
 
+            // Carry tracked-link attribution across the whole visit, so a
+            // campaign gets credit for the journey, not just the landing hit.
+            $linkId = null;
+            if (class_exists('LinkTokens')) $linkId = LinkTokens::currentId();
+
             $st = $db->prepare(
                 "INSERT INTO analytics_visits
                  (day, path, ref_host, utm_source, utm_medium, utm_campaign,
-                  visitor_hash, is_auth, device)
-                 VALUES (?,?,?,?,?,?,?,?,?)"
+                  visitor_hash, is_auth, device, link_token_id)
+                 VALUES (?,?,?,?,?,?,?,?,?,?)"
             );
             $st->execute([
                 $day,
@@ -141,6 +151,7 @@ class Analytics
                 $hash,
                 !empty($currentUserId) ? 1 : 0,
                 self::device($ua),
+                $linkId,
             ]);
 
             // Keep the table bounded without needing another cron job.

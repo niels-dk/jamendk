@@ -18,6 +18,9 @@ function route(string $uri): void
         '/register'           => ['user', 'register'],
         '/logout'             => ['user', 'logout'],
 
+        // Tracked marketing links → /l/{token}
+        '/l/([A-Za-z0-9_-]{1,48})' => ['link', 'go'],
+
         // Capture-first: what the installed app opens to
         '/capture'                => ['dream', 'capture'],
         '/api/capture'            => ['dream', 'captureStore'],
@@ -219,6 +222,9 @@ function route(string $uri): void
         '/admin/pricing'                           => ['admin', 'pricing'],
         '/admin/backups'                           => ['admin', 'backups'],
         '/admin/analytics'                         => ['admin', 'analytics'],
+        '/admin/links'                             => ['admin', 'links'],
+        '/admin/links/create'                      => ['admin', 'linkCreate'],
+        '/admin/links/([0-9]+)/(toggle|delete)'    => ['admin', 'linkAction'],
         '/admin/mail/test'                         => ['admin', 'mailTest'],
         '/admin/users'                             => ['admin', 'users'],
         '/admin/users/([0-9]+)/role'               => ['admin', 'setRole'],

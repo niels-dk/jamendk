@@ -77,6 +77,67 @@ class admin_controller
         include __DIR__ . '/../views/layout.php';
     }
 
+    /** GET /admin/links — create and measure tracked marketing links. */
+    public static function links(): void
+    {
+        require_admin();
+        require_once __DIR__ . '/../app/links.php';
+        global $db;
+
+        $days  = isset($_GET['days']) ? max(1, min(3650, (int)$_GET['days'])) : 30;
+        $links = LinkTokens::stats($db, $days);
+        $byDim = [];
+        foreach (array_keys(LinkTokens::DIMENSIONS) as $d) {
+            $rows = LinkTokens::byDimension($db, $d, $days);
+            if ($rows) $byDim[$d] = $rows;
+        }
+        $flash = $_SESSION['flash_admin'] ?? null;
+        unset($_SESSION['flash_admin']);
+
+        $pageTitle = 'Tracked links';
+        $noSidebar = true;
+        ob_start();
+        include __DIR__ . '/../views/admin_links.php';
+        $content = ob_get_clean();
+        include __DIR__ . '/../views/layout.php';
+    }
+
+    /** POST /admin/links/create */
+    public static function linkCreate(): void
+    {
+        require_admin();
+        require_once __DIR__ . '/../app/links.php';
+        global $db;
+
+        if (!csrf_check($_POST['csrf_token'] ?? null)) {
+            $_SESSION['flash_admin'] = '⚠ Session expired — try again.';
+            redirect('/admin/links');
+        }
+        [$ok, $msg] = LinkTokens::create($db, $_POST);
+        $_SESSION['flash_admin'] = $ok
+            ? '✓ Link created: /l/' . $msg
+            : '⚠ ' . $msg;
+        redirect('/admin/links');
+    }
+
+    /** POST /admin/links/{id}/toggle|delete */
+    public static function linkAction(string $id, string $action): void
+    {
+        require_admin();
+        require_once __DIR__ . '/../app/links.php';
+        global $db;
+
+        if (!csrf_check($_POST['csrf_token'] ?? null)) redirect('/admin/links');
+        if ($action === 'delete') {
+            LinkTokens::delete($db, (int)$id);
+            $_SESSION['flash_admin'] = 'Link deleted — its past visits are kept, just unlabelled.';
+        } else {
+            LinkTokens::setActive($db, (int)$id, !empty($_POST['on']));
+            $_SESSION['flash_admin'] = 'Link updated.';
+        }
+        redirect('/admin/links');
+    }
+
     /**
      * GET /admin/backups — is the safety net actually there?
      * Backups that silently stop are the classic failure mode; this page

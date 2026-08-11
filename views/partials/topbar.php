@@ -40,6 +40,7 @@ $brandName = defined('SITE_NAME') ? SITE_NAME : 'Merely a Dream';
       <?php if (function_exists('is_admin') && is_admin()): ?>
         <a class="btn btn-ghost" href="/admin/users" title="User management">⚙️ Users</a>
         <a class="btn btn-ghost" href="/admin/analytics" title="Traffic & usage">📊 Analytics</a>
+        <a class="btn btn-ghost" href="/admin/links" title="Tracked links">🔗 Links</a>
         <a class="btn btn-ghost" href="/admin/pricing" title="Shadow revenue">📈 Revenue</a>
       <?php endif; ?>
       <a class="btn btn-ghost" href="/logout">Logout</a>

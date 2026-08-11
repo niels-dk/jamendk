@@ -61,6 +61,7 @@ $table = function (string $title, array $rows, string $labelKey, string $valueKe
     <a href="/admin/users" style="color:#8fb1d8;">Users →</a> ·
     <a href="/admin/pricing" style="color:#8fb1d8;">Revenue →</a> ·
     <a href="/admin/mail" style="color:#8fb1d8;">Mail →</a> ·
+    <a href="/admin/links" style="color:#8fb1d8;">Links →</a> ·
     <a href="/admin/backups" style="color:#8fb1d8;">Backups →</a>
   </p>
 

@@ -78,6 +78,9 @@ return [
     'dash.welcome'        => 'Velkommen',
     'dash.welcome_back'   => 'Velkommen tilbage',
     'dash.no_items'       => 'Ingen :type endnu.',
+    'dash.no_trips'      => 'Ingen trips klar endnu.',
+    'dash.no_trips_help' => 'Et Trip er en delbar visning, der laves ud fra en Vision plus dens moodboard. Åbn en Vision, tilknyt et moodboard under Relationer, så dukker visionen op her. Brug "Vis på Trip-laget" inde i visionen til at vælge, hvad der offentliggøres.',
+    'dash.create'        => 'Opret :type',
 
     /* ── Auth: sign in ───────────────────────────────────────────── */
     'auth.welcome_back'      => 'Velkommen tilbage',

@@ -55,7 +55,7 @@ $brandName = defined('SITE_NAME') ? SITE_NAME : 'Merely a Dream';
         <button type="button" class="btn btn-ghost lang-toggle"
                 aria-haspopup="true" aria-expanded="false"
                 title="<?= te('nav.language') ?>">
-          <span class="lang-flag"><?= $curMeta['flag'] ?></span>
+          <?= I18n::flag($curMeta['cc'], 18) ?>
           <span class="lang-code"><?= htmlspecialchars(strtoupper(explode('-', $curLang)[0])) ?></span>
         </button>
         <div class="lang-menu" hidden>
@@ -66,7 +66,7 @@ $brandName = defined('SITE_NAME') ? SITE_NAME : 'Merely a Dream';
               <input type="hidden" name="lang" value="<?= htmlspecialchars($code, ENT_QUOTES) ?>">
               <input type="hidden" name="next" value="<?= $backHere ?>">
               <button type="submit" class="lang-item <?= $code === $curLang ? 'is-current' : '' ?>">
-                <span class="lang-flag"><?= $meta['flag'] ?></span>
+                <?= I18n::flag($meta['cc'], 20) ?>
                 <span class="lang-native"><?= htmlspecialchars($meta['native']) ?></span>
                 <span class="lang-label"><?= htmlspecialchars($meta['label']) ?></span>
                 <?php if ($code === $curLang): ?><span class="lang-check">✓</span><?php endif; ?>
@@ -87,7 +87,7 @@ $brandName = defined('SITE_NAME') ? SITE_NAME : 'Merely a Dream';
 <style>
   .lang-picker { position:relative; display:inline-block; }
   .lang-toggle { display:inline-flex; align-items:center; gap:.35rem; }
-  .lang-flag { font-size:1.05rem; line-height:1; }
+  .lang-flag { display:block; flex-shrink:0; border-radius:50%; }
   .lang-code { font-size:.82rem; font-weight:700; letter-spacing:.03em; }
   .lang-menu {
     position:absolute; right:0; top:calc(100% + .4rem); z-index:200;

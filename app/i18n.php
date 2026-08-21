@@ -26,16 +26,64 @@ class I18n
 
     /**
      * Languages offered in the picker. Order is the order shown.
-     * 'flag' is decorative — a language isn't a country, but a flag is what
-     * people scan for.
+     * 'cc' is the flag drawn by flag() — decorative only; a language isn't a
+     * country, but a flag is what people scan for.
      */
     public const LANGUAGES = [
-        'en' => ['label' => 'English',   'native' => 'English',    'flag' => '🇬🇧'],
-        'da' => ['label' => 'Danish',    'native' => 'Dansk',      'flag' => '🇩🇰'],
+        'en' => ['label' => 'English', 'native' => 'English', 'cc' => 'gb'],
+        'da' => ['label' => 'Danish',  'native' => 'Dansk',   'cc' => 'dk'],
         // Ready to switch on once translated and reviewed:
-        // 'pt-BR' => ['label' => 'Portuguese', 'native' => 'Português (Brasil)', 'flag' => '🇧🇷'],
-        // 'es'    => ['label' => 'Spanish',    'native' => 'Español',            'flag' => '🇪🇸'],
+        // 'pt-BR' => ['label' => 'Portuguese', 'native' => 'Português (Brasil)', 'cc' => 'br'],
+        // 'es'    => ['label' => 'Spanish',    'native' => 'Español',            'cc' => 'es'],
     ];
+
+    /**
+     * Inline SVG flag — NOT emoji.
+     *
+     * Windows ships no glyphs for regional-indicator flag emoji, so 🇩🇰
+     * renders as the bare letters "DK" in every browser on Windows. Since
+     * that's a large share of any audience, the flags are drawn as SVG:
+     * identical everywhere, no font dependency, no external request.
+     */
+    public static function flag(string $cc, int $size = 20): string
+    {
+        $id = 'fc' . $cc;   // clip id, unique per country in a page
+        $clip = '<defs><clipPath id="' . $id . '"><circle cx="12" cy="12" r="12"/></clipPath></defs>';
+        $g = '<g clip-path="url(#' . $id . ')">';
+
+        switch ($cc) {
+            case 'dk': // Dannebrog: white cross, offset to the hoist
+                $body = '<rect width="24" height="24" fill="#C8102E"/>'
+                      . '<rect y="10" width="24" height="4" fill="#fff"/>'
+                      . '<rect x="7" width="4" height="24" fill="#fff"/>';
+                break;
+            case 'gb': // Union Jack, simplified
+                $body = '<rect width="24" height="24" fill="#012169"/>'
+                      . '<path d="M0 0 24 24M24 0 0 24" stroke="#fff" stroke-width="5"/>'
+                      . '<path d="M0 0 24 24M24 0 0 24" stroke="#C8102E" stroke-width="2"/>'
+                      . '<path d="M12 0v24M0 12h24" stroke="#fff" stroke-width="8"/>'
+                      . '<path d="M12 0v24M0 12h24" stroke="#C8102E" stroke-width="4"/>';
+                break;
+            case 'br': // Brazil: green field, yellow lozenge, blue globe
+                $body = '<rect width="24" height="24" fill="#009C3B"/>'
+                      . '<path d="M12 3 22 12 12 21 2 12Z" fill="#FEDF00"/>'
+                      . '<circle cx="12" cy="12" r="4.2" fill="#002776"/>'
+                      . '<path d="M8 11.2q4 -1.4 8 .6" stroke="#fff" stroke-width="1.1" fill="none"/>';
+                break;
+            case 'es': // Spain: red-yellow-red bands
+                $body = '<rect width="24" height="24" fill="#AA151B"/>'
+                      . '<rect y="6" width="24" height="12" fill="#F1BF00"/>';
+                break;
+            default:
+                $body = '<rect width="24" height="24" fill="#2b3346"/>';
+        }
+
+        return '<svg class="lang-flag" width="' . $size . '" height="' . $size . '"'
+             . ' viewBox="0 0 24 24" aria-hidden="true" focusable="false">'
+             . $clip . $g . $body . '</g>'
+             . '<circle cx="12" cy="12" r="11.5" fill="none" stroke="rgba(255,255,255,.25)"/>'
+             . '</svg>';
+    }
 
     private static ?string $lang = null;
     private static array $strings = [];

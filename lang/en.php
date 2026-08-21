@@ -67,6 +67,9 @@ return [
     'dash.welcome'        => 'Welcome',
     'dash.welcome_back'   => 'Welcome back',
     'dash.no_items'       => 'No :type yet.',
+    'dash.no_trips'      => 'No trips ready yet.',
+    'dash.no_trips_help' => 'A Trip is a shareable view generated from a Vision plus its Mood board. Open any Vision, link a Mood board in Relations, and the Vision will appear here. Use the Show on Trip layer toggles inside the Vision to choose which items publish.',
+    'dash.create'        => 'Create :type',
 
     /* ── Auth: sign in ───────────────────────────────────────────── */
     'auth.welcome_back'      => 'Welcome back',

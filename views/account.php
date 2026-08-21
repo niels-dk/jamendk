@@ -78,7 +78,7 @@ function ac_e($s){ return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
                          <?= $code === $cur
                              ? 'background:rgba(58,118,210,.2);border:1px solid #3a76d2;color:#eaf0f7;font-weight:600;'
                              : 'background:transparent;border:1px solid #2b3346;color:#cfdbe8;' ?>">
-            <span style="font-size:1.05rem;"><?= $meta['flag'] ?></span>
+            <?= I18n::flag($meta['cc'], 18) ?>
             <?= ac_e($meta['native']) ?>
             <?php if ($code === $cur): ?><span style="color:#7fc98d;">✓</span><?php endif; ?>
           </button>

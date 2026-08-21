@@ -1,6 +1,6 @@
 <?php // views/reset.php — choose a new password (fragment; layout wraps it) ?>
 <div style="max-width:420px;margin:3rem auto;padding:0 1rem;">
-  <h1 style="font-size:1.8rem;margin:0 0 .6rem;">Choose a new password</h1>
+  <h1 style="font-size:1.8rem;margin:0 0 .6rem;"><?= te('auth.reset_title') ?></h1>
   <p style="color:#8593a6;font-size:.9rem;margin:0 0 1.2rem;">
     For <strong style="color:#ddd;"><?= htmlspecialchars($user['email'] ?? '') ?></strong>
   </p>
@@ -17,7 +17,7 @@
     <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
 
     <label style="display:flex;flex-direction:column;gap:.3rem;">
-      <span style="font-size:.85rem;opacity:.8;">New password</span>
+      <span style="font-size:.85rem;opacity:.8;"><?= te('auth.new_password') ?></span>
       <input type="password" name="new_password" required autofocus minlength="6"
              autocomplete="new-password"
              style="padding:.6rem .8rem;border:1px solid #2b3346;background:#15161A;
@@ -25,7 +25,7 @@
     </label>
 
     <label style="display:flex;flex-direction:column;gap:.3rem;">
-      <span style="font-size:.85rem;opacity:.8;">Confirm new password</span>
+      <span style="font-size:.85rem;opacity:.8;"><?= te('auth.confirm_password') ?></span>
       <input type="password" name="confirm_password" required minlength="6"
              autocomplete="new-password"
              style="padding:.6rem .8rem;border:1px solid #2b3346;background:#15161A;
@@ -36,7 +36,7 @@
             style="margin-top:.4rem;padding:.7rem 1rem;border:0;border-radius:8px;
                    background:#3a76d2;color:#fff;font-size:1rem;font-weight:600;
                    cursor:pointer;">
-      Save new password
+      <?= te('auth.reset_button') ?>
     </button>
   </form>
 </div>

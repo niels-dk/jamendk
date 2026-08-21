@@ -1,7 +1,9 @@
 <?php
 // expects: $boardSets (dream|vision|mood|trip arrays), $sortValue, $limitValue
 function dash_e($s){ return htmlspecialchars($s ?? '', ENT_QUOTES, 'UTF-8'); }
-function human($t){ return ucfirst($t).'s'; }
+// Board-type names come from the language file: 'dream' → Dreams / Drømme.
+function human($t){ return t('board.' . $t . 's'); }
+function human1($t){ return t('board.' . $t); }
 function dt($s){ return $s ? date('M j, Y', strtotime($s)) : ''; }
 
 // Sign-in lands here, not on the home page — so this is where a brand-new
@@ -137,17 +139,17 @@ if (!empty($pricing) && !empty($pricing['is_founder'])):
 
 
   <div class="dash__topbar">
-    <h1 class="dash__title">Where Dreams Connect</h1>
+    <h1 class="dash__title"><?= dash_e(t('dash.title')) ?></h1>
 
     <form method="get" class="dash__sort">
-	  <label for="sort" class="dash__sort-label">Sort</label>
+	  <label for="sort" class="dash__sort-label"><?= dash_e(t('dash.sort')) ?></label>
 	  <select id="sort" name="sort" class="dash__select" onchange="this.form.submit()">
-		<option value="latest"    <?= $sortValue==='latest'?'selected':''; ?>>Latest edit</option>
-		<option value="newest"    <?= $sortValue==='newest'?'selected':''; ?>>Newest</option>
-		<option value="favorites" <?= $sortValue==='favorites'?'selected':''; ?>>Favorites</option>
+		<option value="latest"    <?= $sortValue==='latest'?'selected':''; ?>><?= dash_e(t('dash.sort_latest')) ?></option>
+		<option value="newest"    <?= $sortValue==='newest'?'selected':''; ?>><?= dash_e(t('dash.sort_newest')) ?></option>
+		<option value="favorites" <?= $sortValue==='favorites'?'selected':''; ?>><?= dash_e(t('dash.sort_favorites')) ?></option>
 	  </select>
 
-	  <label for="limit_each" class="dash__sort-label" style="margin-left:10px;">Show</label>
+	  <label for="limit_each" class="dash__sort-label" style="margin-left:10px;"><?= dash_e(t('dash.show')) ?></label>
 	  <select id="limit_each" name="limit_each" class="dash__select" onchange="this.form.submit()">
 		<option value="0" <?= (int)$limitValue===0 ? 'selected':''; ?>>All</option>
 		<option value="2" <?= (int)$limitValue===2 ? 'selected':''; ?>>2</option>
@@ -164,24 +166,21 @@ if (!empty($pricing) && !empty($pricing['is_founder'])):
 
       <div class="dash__section-head">
         <h2 class="dash__section-title"><?= human($type) ?></h2>
-        <a class="dash__seeall" href="/dashboard/<?= $type ?>">See all</a>
+        <a class="dash__seeall" href="/dashboard/<?= $type ?>"><?= dash_e(t('action.see_all')) ?></a>
       </div>
 
       <?php if (!$items): ?>
         <?php if ($type === 'trip'): ?>
           <div class="dash__empty">
-            <p>No trips ready yet.</p>
+            <p><?= dash_e(t('dash.no_trips')) ?></p>
             <p style="opacity:.7;font-size:.9em;max-width:36rem;">
-              A Trip is a shareable view generated from a Vision plus its Mood board.
-              Open any Vision, link a Mood board in <strong>Relations</strong>, and the
-              Vision will appear here. Use the <strong>Show on Trip layer</strong>
-              toggles inside the Vision to choose which items publish.
+              <?= dash_e(t('dash.no_trips_help')) ?>
             </p>
           </div>
         <?php else: ?>
           <div class="dash__empty">
-            <p>No <?= strtolower(human($type)) ?> yet.</p>
-            <a class="dash__btn" href="/<?= $type ?>s/new">Create <?= rtrim(human($type),'s') ?></a>
+            <p><?= dash_e(t('dash.no_items', ['type' => mb_strtolower(human($type))])) ?></p>
+            <a class="dash__btn" href="/<?= $type ?>s/new"><?= dash_e(t('dash.create', ['type' => human1($type)])) ?></a>
           </div>
         <?php endif; ?>
       <?php else: ?>

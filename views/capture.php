@@ -9,7 +9,7 @@ function cp_e($s){ return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Catch it — Merely a Dream</title>
+  <title><?= te('capture.title') ?> — Merely a Dream</title>
   <meta name="theme-color" content="#1a1b1e">
   <link rel="manifest" href="/public/manifest.json">
   <link rel="icon" type="image/png" sizes="192x192" href="/public/icons/icon-192.png">
@@ -76,20 +76,20 @@ function cp_e($s){ return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
 <body>
   <header>
     <a class="brand" href="/dashboard">Merely a Dream<span class="dot">.</span></a>
-    <span class="offline-pill">offline — still catching</span>
+    <span class="offline-pill"><?= te('capture.offline_pill') ?></span>
     <span class="count" id="count"></span>
   </header>
 
   <main>
     <textarea id="idea" autofocus autocomplete="off" autocapitalize="sentences"
-      placeholder="What's the idea?&#10;&#10;“Sunrise drone over the red dunes, truck tiny in frame”"></textarea>
-    <div class="hint">First line becomes the title. Enter catches it — Shift+Enter for a new line.</div>
+      placeholder="<?= te('capture.placeholder') ?>"></textarea>
+    <div class="hint"><?= te('capture.hint') ?></div>
     <div class="bar">
-      <button class="catch" id="btnCatch" type="button">⚡ Catch it</button>
+      <button class="catch" id="btnCatch" type="button">⚡ <?= te('capture.button') ?></button>
     </div>
     <div class="links">
-      <a href="/dashboard">Dashboard</a>
-      <a href="/dashboard/dream">My dreams</a>
+      <a href="/dashboard"><?= te('nav.dashboard') ?></a>
+      <a href="/dashboard/dream"><?= te('capture.my_dreams') ?></a>
     </div>
   </main>
 
@@ -102,6 +102,12 @@ function cp_e($s){ return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
   var snack = document.getElementById('snack');
   var count = document.getElementById('count');
   var QKEY  = 'dreamQueue';          // same queue offline-ui.js already syncs
+  var T = {
+    caught:      <?= json_encode(t('capture.caught')) ?>,
+    caughtOpen:  <?= json_encode(t('capture.caught_open')) ?>,
+    offline:     <?= json_encode(t('capture.offline')) ?>,
+    counter:     <?= json_encode(t('capture.counter')) ?>
+  };
   var caught = 0;
   var snackTimer;
 
@@ -123,7 +129,7 @@ function cp_e($s){ return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
 
   function bump() {
     caught++;
-    count.textContent = caught + ' caught';
+    count.textContent = T.counter.replace(':n', caught);
   }
 
   function split(text) {
@@ -170,13 +176,13 @@ function cp_e($s){ return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
       if (j && j.ok) {
         ta.value = ''; bump();
         showSnack(j.slug
-          ? '⚡ Caught — <a href="/dreams/' + j.slug + '">open it</a> or keep going'
-          : '⚡ Caught');
+          ? '⚡ <a href="/dreams/' + j.slug + '">' + T.caughtOpen + '</a>'
+          : '⚡ ' + T.caught);
       } else if (j && j.error === 'auth') {
         location.href = '/login?next=' + encodeURIComponent('/capture');
       } else {
         queueLocal(p); ta.value = ''; bump();
-        showSnack('⚡ Caught — will sync shortly');
+        showSnack('⚡ ' + T.caught);
       }
       ta.focus();
     }).catch(function () {

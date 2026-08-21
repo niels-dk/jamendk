@@ -17,7 +17,8 @@
     const dashSwitch  = overlay.querySelector('#budgetDash');
     const tripSwitch  = overlay.querySelector('#budgetTrip');
 
-    const COMMON = ['DKK','EUR','USD','GBP','SEK'];
+    // Pinned to the top of the picker before the rest of the catalog.
+    const COMMON = ['DKK','EUR','USD','GBP','BRL','SEK'];
     let catalog = [];
 	
 		

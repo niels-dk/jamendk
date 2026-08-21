@@ -725,17 +725,34 @@ class vision_controller
 	{
 		header('Content-Type: application/json');
 		// Lightweight static list; you can later read from a table or service.
+		// Ordered roughly by how likely a shoot is to be budgeted in them.
 		$all = [
 			['code'=>'DKK','name'=>'Danish Krone'],
 			['code'=>'EUR','name'=>'Euro'],
 			['code'=>'USD','name'=>'US Dollar'],
 			['code'=>'GBP','name'=>'British Pound'],
+			['code'=>'BRL','name'=>'Brazilian Real'],
 			['code'=>'SEK','name'=>'Swedish Krona'],
 			['code'=>'NOK','name'=>'Norwegian Krone'],
 			['code'=>'CHF','name'=>'Swiss Franc'],
 			['code'=>'JPY','name'=>'Japanese Yen'],
 			['code'=>'CAD','name'=>'Canadian Dollar'],
 			['code'=>'AUD','name'=>'Australian Dollar'],
+			['code'=>'MXN','name'=>'Mexican Peso'],
+			['code'=>'ZAR','name'=>'South African Rand'],
+			['code'=>'INR','name'=>'Indian Rupee'],
+			['code'=>'THB','name'=>'Thai Baht'],
+			['code'=>'ISK','name'=>'Icelandic Króna'],
+			['code'=>'PLN','name'=>'Polish Złoty'],
+			['code'=>'CZK','name'=>'Czech Koruna'],
+			['code'=>'NZD','name'=>'New Zealand Dollar'],
+			['code'=>'MAD','name'=>'Moroccan Dirham'],
+			['code'=>'AED','name'=>'UAE Dirham'],
+			['code'=>'TRY','name'=>'Turkish Lira'],
+			['code'=>'ARS','name'=>'Argentine Peso'],
+			['code'=>'COP','name'=>'Colombian Peso'],
+			['code'=>'CLP','name'=>'Chilean Peso'],
+			['code'=>'PEN','name'=>'Peruvian Sol'],
 		];
 		$q = strtoupper(trim((string)($_GET['q'] ?? '')));
 		if ($q === '') { echo json_encode($all); return; }

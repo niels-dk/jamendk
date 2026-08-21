@@ -342,19 +342,26 @@ $SHOT_LIGHT_LABEL = ['sunrise'=>'🌅 sunrise','golden'=>'🌇 golden hour','mid
       padding: 2.4rem 1rem; text-align: center; color: var(--muted); font-size: .9rem;
     }
 
-    /* Hero action pills (offline copy / print) */
+    /* Hero action pills (offline copy / print).
+       These sit in normal flow ABOVE the title rather than floating over it —
+       absolutely positioned, they covered any title long enough to wrap, which
+       on a phone is most of them. */
     .hero-actions {
-      position: absolute; top: .9rem; right: .9rem; z-index: 2;
-      display: flex; gap: .4rem;
+      display: flex; gap: .4rem; flex-wrap: wrap; justify-content: flex-end;
+      padding: .8rem .9rem .2rem; position: relative; z-index: 2;
     }
     .hero-pill {
       padding: .4rem .8rem; border-radius: 999px; border: 0; cursor: pointer;
-      background: rgba(11,23,39,.72); color: #fff; font-size: .8rem; font-weight: 600;
-      backdrop-filter: blur(4px); font-family: inherit;
+      background: var(--accent); color: #fff; font-size: .8rem; font-weight: 600;
+      font-family: inherit; text-decoration: none; white-space: nowrap;
     }
-    .hero-pill:hover { background: rgba(11,23,39,.9); text-decoration: none; }
-    .hero.no-cover .hero-pill { background: var(--accent); }
+    .hero-pill:hover { background: #1d4789; text-decoration: none; }
     @media print { .hero-actions { display: none; } }
+    @media (max-width: 400px) {
+      /* Very narrow: let them share the row full-width rather than stacking odd */
+      .hero-actions { justify-content: stretch; }
+      .hero-pill { flex: 1; text-align: center; }
+    }
 
     /* Itinerary */
     .itin-day-head {

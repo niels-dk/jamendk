@@ -264,7 +264,11 @@ class trip_controller
                            priority, status
                       FROM vision_shots
                      WHERE vision_id = ? AND show_on_trip = 1 AND status != 'dropped'
-                     ORDER BY (day_date IS NULL) ASC, day_date ASC, sort_order ASC, id ASC
+                     -- Still-to-get first, captured sink to the bottom of their
+                     -- day. In the field you want the remaining work at the top,
+                     -- not to scroll past everything you've already ticked off.
+                     ORDER BY (day_date IS NULL) ASC, day_date ASC,
+                              (status = 'captured') ASC, sort_order ASC, id ASC
                 ");
                 $sq->execute([$visionId]);
                 $shots = $sq->fetchAll(PDO::FETCH_ASSOC);

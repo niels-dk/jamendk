@@ -50,19 +50,27 @@ global $currentUserId;
     display:inline-block; padding:.3rem .6rem; font-size:.82em;
     margin-right:.25rem; text-decoration:none;
   }
+  /* Sortable headers */
+  #adminUsers th.au-sort { cursor:pointer; user-select:none; }
+  #adminUsers th.au-sort:hover { opacity:1; color:#fff; }
+  #adminUsers th.au-sort::after {
+    content:'⇅'; font-size:.85em; opacity:.25; margin-left:.35rem;
+  }
+  #adminUsers th.au-sort.sorted-asc::after  { content:'▲'; opacity:.9; color:#8fb1d8; }
+  #adminUsers th.au-sort.sorted-desc::after { content:'▼'; opacity:.9; color:#8fb1d8; }
 </style>
 
 <div class="card" style="padding:0;overflow-x:auto;">
   <table id="adminUsers">
     <thead>
       <tr>
-        <th>#</th>
-        <th>User</th>
-        <th>Boards</th>
-        <th>Email</th>
-        <th>Role</th>
-        <th>Joined</th>
-        <th>Last login</th>
+        <th class="au-sort" data-col="0" data-type="num">#</th>
+        <th class="au-sort" data-col="1" data-type="text">User</th>
+        <th class="au-sort" data-col="2" data-type="num">Boards</th>
+        <th class="au-sort" data-col="3" data-type="num">Email</th>
+        <th class="au-sort" data-col="4" data-type="text">Role</th>
+        <th class="au-sort" data-col="5" data-type="text">Joined</th>
+        <th class="au-sort" data-col="6" data-type="text">Last login</th>
         <th>Actions</th>
       </tr>
     </thead>
@@ -75,8 +83,9 @@ global $currentUserId;
           ])));
         ?>
         <tr data-id="<?= (int)$u['id'] ?>">
-          <td style="opacity:.6;font-family:monospace;"><?= (int)$u['id'] ?></td>
-          <td>
+          <td style="opacity:.6;font-family:monospace;"
+              data-sort="<?= (int)$u['id'] ?>"><?= (int)$u['id'] ?></td>
+          <td data-sort="<?= au_e(mb_strtolower($u['name'] ?: ($u['email'] ?? ''))) ?>">
             <div class="u-name">
               <?= au_e($u['name'] ?: '(no name)') ?>
               <?php if (!empty($u['founding_creator_at'])): ?>
@@ -95,10 +104,13 @@ global $currentUserId;
               <div class="u-extra"><?= au_e($extra) ?></div>
             <?php endif; ?>
           </td>
-          <td class="u-boards" title="Dreams · Visions · Moods">
+          <td class="u-boards" title="Dreams · Visions · Moods"
+              data-sort="<?= (int)$u['dreams'] + (int)$u['visions'] + (int)$u['moods'] ?>">
             🔮 <?= (int)$u['dreams'] ?> &nbsp; 👁️ <?= (int)$u['visions'] ?> &nbsp; 🎭 <?= (int)$u['moods'] ?>
           </td>
-          <td class="u-verified">
+          <td class="u-verified" data-sort="<?=
+                !array_key_exists('email_verified_at', $u) ? 2
+                  : (!empty($u['email_verified_at']) ? 1 : 0) ?>">
             <?php if (!array_key_exists('email_verified_at', $u)): ?>
               <span style="opacity:.4;font-size:.82em;">n/a</span>
             <?php elseif (!empty($u['email_verified_at'])): ?>
@@ -116,14 +128,14 @@ global $currentUserId;
               </button>
             <?php endif; ?>
           </td>
-          <td>
+          <td data-sort="<?= au_e($u['role'] ?? 'user') ?>">
             <select class="au-role" <?= $isSelf ? 'disabled title="You can\'t change your own role"' : '' ?>>
               <option value="user"  <?= $u['role']==='user'  ? 'selected':''; ?>>User</option>
               <option value="admin" <?= $u['role']==='admin' ? 'selected':''; ?>>Admin</option>
             </select>
           </td>
-          <td class="u-date"><?= $u['created_at'] ? date('Y-m-d', strtotime($u['created_at'])) : '' ?></td>
-          <td class="u-date"><?= !empty($u['last_login_at']) ? date('Y-m-d H:i', strtotime($u['last_login_at'])) : '—' ?></td>
+          <td class="u-date" data-sort="<?= $u['created_at'] ? date('Y-m-d H:i:s', strtotime($u['created_at'])) : '' ?>"><?= $u['created_at'] ? date('Y-m-d', strtotime($u['created_at'])) : '' ?></td>
+          <td class="u-date" data-sort="<?= !empty($u['last_login_at']) ? date('Y-m-d H:i:s', strtotime($u['last_login_at'])) : '' ?>"><?= !empty($u['last_login_at']) ? date('Y-m-d H:i', strtotime($u['last_login_at'])) : '—' ?></td>
           <td class="u-actions">
             <?php if (!$isSelf): ?>
               <a class="btn" href="/admin/users/<?= (int)$u['id'] ?>/impersonate"
@@ -154,6 +166,43 @@ global $currentUserId;
   const table  = document.getElementById('adminUsers');
   const status = document.getElementById('auStatus');
   if (!table) return;
+
+  // ── Column sorting ────────────────────────────────────────────────
+  // Sorts on each cell's data-sort value rather than its rendered text, so
+  // badges, selects and "—" placeholders order by their real meaning:
+  // Email → Pending first (who needs attention), dates → true chronology,
+  // never-logged-in → always last regardless of direction.
+  const tbody = table.querySelector('tbody');
+  function sortBy(th) {
+    const col  = +th.dataset.col;
+    const type = th.dataset.type;
+    const asc  = !th.classList.contains('sorted-asc');
+
+    table.querySelectorAll('th.au-sort')
+         .forEach(h => h.classList.remove('sorted-asc', 'sorted-desc'));
+    th.classList.add(asc ? 'sorted-asc' : 'sorted-desc');
+
+    const val = tr => {
+      const cell = tr.children[col];
+      const raw  = cell ? (cell.dataset.sort ?? cell.textContent.trim()) : '';
+      return type === 'num' ? parseFloat(raw || '0') || 0 : raw.toLowerCase();
+    };
+
+    [...tbody.querySelectorAll('tr')]
+      .sort((a, b) => {
+        const A = val(a), B = val(b);
+        // Empty (never logged in / no date) always sinks to the bottom
+        const aEmpty = A === '' , bEmpty = B === '';
+        if (aEmpty !== bEmpty) return aEmpty ? 1 : -1;
+        if (A === B) return 0;
+        return (A < B ? -1 : 1) * (asc ? 1 : -1);
+      })
+      .forEach(tr => tbody.appendChild(tr));  // re-append = reorder, keeps listeners
+  }
+  table.querySelectorAll('th.au-sort').forEach(th => {
+    th.title = 'Sort by ' + th.textContent.trim();
+    th.addEventListener('click', () => sortBy(th));
+  });
 
   // Client-side filter by name/email
   const search = document.getElementById('auSearch');

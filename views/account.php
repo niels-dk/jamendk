@@ -61,8 +61,34 @@ function ac_e($s){ return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
     </form>
   </div>
 
+  <div class="card" style="padding:1.1rem 1.2rem;margin-bottom:1rem;">
+    <h3 style="margin-top:0;"><?= te('account.language') ?></h3>
+    <p style="opacity:.65;font-size:.88rem;margin:0 0 .7rem;">
+      <?= te('account.language_hint') ?>
+    </p>
+    <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
+      <?php $cur = I18n::lang(); foreach (I18n::LANGUAGES as $code => $meta): ?>
+        <form method="post" action="/account/language" style="margin:0;">
+          <input type="hidden" name="csrf_token" value="<?= ac_e(csrf_token()) ?>">
+          <input type="hidden" name="lang" value="<?= ac_e($code) ?>">
+          <input type="hidden" name="next" value="/account">
+          <button type="submit"
+                  style="display:inline-flex;align-items:center;gap:.45rem;cursor:pointer;
+                         padding:.5rem .9rem;border-radius:10px;font:inherit;font-size:.9rem;
+                         <?= $code === $cur
+                             ? 'background:rgba(58,118,210,.2);border:1px solid #3a76d2;color:#eaf0f7;font-weight:600;'
+                             : 'background:transparent;border:1px solid #2b3346;color:#cfdbe8;' ?>">
+            <span style="font-size:1.05rem;"><?= $meta['flag'] ?></span>
+            <?= ac_e($meta['native']) ?>
+            <?php if ($code === $cur): ?><span style="color:#7fc98d;">✓</span><?php endif; ?>
+          </button>
+        </form>
+      <?php endforeach; ?>
+    </div>
+  </div>
+
   <div class="card" style="padding:1.1rem 1.2rem;">
-    <h3 style="margin-top:0;">Change password</h3>
+    <h3 style="margin-top:0;"><?= te('account.change_pass') ?></h3>
     <form method="post" style="display:flex;flex-direction:column;gap:.7rem;">
       <input type="hidden" name="csrf_token" value="<?= ac_e(csrf_token()) ?>">
       <input type="hidden" name="action" value="password">

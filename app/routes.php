@@ -28,6 +28,8 @@ function route(string $uri): void
         // Seeds a complete worked example into an empty account
         '/demo/load'              => ['demo', 'load'],
 
+        '/account/language'          => ['user', 'setLanguage'],
+
         // Account handover (creator-initiated; recipient must accept)
         '/account/transfer'          => ['transfer', 'request'],
         '/account/transfer/cancel'   => ['transfer', 'cancel'],

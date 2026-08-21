@@ -23,6 +23,8 @@
  * No PHPMailer / composer dependency: this speaks SMTP directly, which keeps
  * the shared-hosting deploy to a plain `git pull`.
  */
+require_once __DIR__ . '/i18n.php';
+
 class Mailer
 {
     private static function cfg(string $key, $default = null)
@@ -375,34 +377,56 @@ class Mailer
         </body></html>';
     }
 
+    /**
+     * Switch to the recipient's language for the rest of this send, and
+     * remember the current one so the page that triggered it isn't affected.
+     * Mail must follow the person receiving it, not the person who caused it:
+     * a Danish account inviting a Brazilian must not send Danish.
+     */
+    private static function inRecipientLanguage(string $to): string
+    {
+        global $db;
+        $was = I18n::lang();
+        if (isset($db) && $db instanceof PDO) {
+            I18n::use(I18n::forEmail($db, $to));
+        }
+        return $was;
+    }
+
     public static function sendVerification(string $to, string $name, string $rawToken): bool
     {
+        $was  = self::inRecipientLanguage($to);
         $url  = self::url('/verify/' . $rawToken);
+        $e    = fn($x) => htmlspecialchars((string)$x, ENT_QUOTES, 'UTF-8');
         $html = self::layout(
-            'Confirm your email',
-            '<p style="margin:0 0 14px;">Hi ' . htmlspecialchars($name, ENT_QUOTES) . ',</p>
-             <p style="margin:0;">Welcome to Merely a Dream. Confirm this address and your
-             account is ready — then you can start capturing dreams.</p>
-             <p style="margin:14px 0 0;font-size:13px;color:#5a6878;">
-             This link works once and expires in 24 hours.</p>',
-            'Confirm my email', $url
+            t('email.verify.heading'),
+            '<p style="margin:0 0 14px;">' . $e(t('email.hi', ['name' => $name])) . '</p>
+             <p style="margin:0;">' . $e(t('email.verify.body')) . '</p>
+             <p style="margin:14px 0 0;font-size:13px;color:#5a6878;">'
+             . $e(t('email.verify.expiry')) . '</p>',
+            t('email.verify.cta'), $url
         );
-        return self::send($to, 'Confirm your Merely a Dream email', $html, 'verify');
+        $ok = self::send($to, t('email.verify.subject'), $html, 'verify');
+        I18n::use($was);
+        return $ok;
     }
 
     public static function sendPasswordReset(string $to, string $name, string $rawToken): bool
     {
+        $was  = self::inRecipientLanguage($to);
         $url  = self::url('/reset/' . $rawToken);
+        $e    = fn($x) => htmlspecialchars((string)$x, ENT_QUOTES, 'UTF-8');
         $html = self::layout(
-            'Reset your password',
-            '<p style="margin:0 0 14px;">Hi ' . htmlspecialchars($name, ENT_QUOTES) . ',</p>
-             <p style="margin:0;">Use the button below to choose a new password.</p>
-             <p style="margin:14px 0 0;font-size:13px;color:#5a6878;">
-             This link works once and expires in 1 hour. Your current password
-             stays valid until you set a new one.</p>',
-            'Choose a new password', $url
+            t('email.reset.heading'),
+            '<p style="margin:0 0 14px;">' . $e(t('email.hi', ['name' => $name])) . '</p>
+             <p style="margin:0;">' . $e(t('email.reset.body')) . '</p>
+             <p style="margin:14px 0 0;font-size:13px;color:#5a6878;">'
+             . $e(t('email.reset.expiry')) . '</p>',
+            t('email.reset.cta'), $url
         );
-        return self::send($to, 'Reset your Merely a Dream password', $html, 'reset');
+        $ok = self::send($to, t('email.reset.subject'), $html, 'reset');
+        I18n::use($was);
+        return $ok;
     }
 
     /**

@@ -3,7 +3,7 @@ $title = 'Sign in';
 ob_start();
 ?>
 <div style="max-width:420px;margin:3rem auto;padding:0 1rem;">
-  <h1 style="font-size:1.8rem;margin:0 0 1.2rem;">Welcome back</h1>
+  <h1 style="font-size:1.8rem;margin:0 0 1.2rem;"><?= te('auth.welcome_back') ?></h1>
 
   <?php if (!empty($notice)): ?>
     <div style="background:rgba(58,118,210,.15);border:1px solid rgba(58,118,210,.4);
@@ -21,7 +21,7 @@ ob_start();
       <?php if (!empty($unverifiedEmail)): ?>
         <div style="margin-top:.4rem;">
           <a href="/verify-resend?email=<?= urlencode($unverifiedEmail) ?>"
-             style="color:#f3d3b3;">Resend the confirmation link</a>
+             style="color:#f3d3b3;"><?= te('auth.resend_link') ?></a>
         </div>
       <?php endif; ?>
     </div>
@@ -34,7 +34,7 @@ ob_start();
     <?php endif; ?>
 
     <label style="display:flex;flex-direction:column;gap:.3rem;">
-      <span style="font-size:.85rem;opacity:.8;">Email or username</span>
+      <span style="font-size:.85rem;opacity:.8;"><?= te('auth.email_or_username') ?></span>
       <input type="text" name="email" required autofocus autocomplete="username"
              style="padding:.6rem .8rem;border:1px solid #2b3346;background:#15161A;
                     color:#ddd;border-radius:8px;font-size:1rem;">
@@ -43,26 +43,26 @@ ob_start();
     <!-- Forgot? sits after the input in the DOM (positioned back up into the
          label row) so Tab goes email → password, not email → Forgot. -->
     <label style="position:relative;display:flex;flex-direction:column;gap:.3rem;">
-      <span style="font-size:.85rem;opacity:.8;">Password</span>
+      <span style="font-size:.85rem;opacity:.8;"><?= te('auth.password') ?></span>
       <input type="password" name="password" required autocomplete="current-password"
              style="padding:.6rem .8rem;border:1px solid #2b3346;background:#15161A;
                     color:#ddd;border-radius:8px;font-size:1rem;">
       <a href="/forgot"
-         style="position:absolute;top:0;right:0;color:#8fb1d8;font-size:.8rem;opacity:.9;">Forgot?</a>
+         style="position:absolute;top:0;right:0;color:#8fb1d8;font-size:.8rem;opacity:.9;"><?= te('auth.forgot') ?></a>
     </label>
 
     <button type="submit"
             style="margin-top:.4rem;padding:.7rem 1rem;border:0;border-radius:8px;
                    background:#3a76d2;color:#fff;font-size:1rem;font-weight:600;
                    cursor:pointer;">
-      Sign in
+      <?= te('auth.signin') ?>
     </button>
   </form>
 
   <p style="margin-top:1.4rem;color:#8593a6;font-size:.9rem;text-align:center;">
-    New here?
+    <?= te('auth.new_here') ?>
     <a href="/register<?= !empty($next) ? '?next=' . urlencode($next) : '' ?>"
-       style="color:#8fb1d8;">Create a Creator account</a>
+       style="color:#8fb1d8;"><?= te('auth.create_creator') ?></a>
   </p>
 </div>
 <?php

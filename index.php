@@ -31,6 +31,7 @@ require_once __DIR__.'/app/config.php';
 require_once __DIR__.'/app/helpers.php';
 require_once __DIR__.'/app/auth.php';
 require_once __DIR__.'/app/permissions.php';
+require_once __DIR__.'/app/i18n.php';   // after auth: language depends on the user
 require_once __DIR__.'/app/analytics.php';
 require_once __DIR__.'/app/routes.php';
 

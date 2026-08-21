@@ -23,12 +23,12 @@ class user_controller
         $next = self::safeNext($_REQUEST['next'] ?? '');
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!csrf_check($_POST['csrf_token'] ?? null)) {
-                $error = 'Your session expired. Please try again.';
+                $error = t('auth.err_expired');
             } else {
                 $email = trim($_POST['email'] ?? '');
                 $pass  = $_POST['password'] ?? '';
                 if (!$email || !$pass) {
-                    $error = 'Please enter both email and password.';
+                    $error = t('auth.err_both');
                 } else if ($user = User::authenticate($email, $pass)) {
                     // Account blocked (e.g. the person left and an admin
                     // deactivated it during a handover).
@@ -39,13 +39,13 @@ class user_controller
                     // Refuse the session — this is what makes bot signups inert.
                     elseif (User::needsVerification($user)) {
                         $unverifiedEmail = $user['email'] ?? $email;
-                        $error = 'Please confirm your email address before signing in.';
+                        $error = t('auth.err_unverified');
                     } else {
                         self::loginUser($user);
                         redirect($next ?: 'dashboard');
                     }
                 } else {
-                    $error = 'Invalid email or password.';
+                    $error = t('auth.err_invalid');
                 }
             }
         }
@@ -61,7 +61,7 @@ class user_controller
         $next  = self::safeNext($_REQUEST['next'] ?? '');
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!csrf_check($_POST['csrf_token'] ?? null)) {
-                $error = 'Your session expired. Please try again.';
+                $error = t('auth.err_expired');
             } elseif (trim($_POST['website'] ?? '') !== '') {
                 // Honeypot: real users never see or fill this field.
                 // Pretend success so bots don't learn they were caught.
@@ -71,11 +71,11 @@ class user_controller
                 $email = trim($_POST['email'] ?? '');
                 $pass  = $_POST['password'] ?? '';
                 if (!$name) {
-                    $error = 'Please tell us your name.';
+                    $error = t('auth.err_name');
                 } else if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
                     $error = 'That email address doesn\'t look right.';
                 } else if (strlen($pass) < 6) {
-                    $error = 'Password must be at least 6 characters.';
+                    $error = t('auth.err_short_pass');
                 } else if (User::emailExists($email)) {
                     // Never confirm that an address is taken — that turns this
                     // form into an account-existence oracle. The real owner
@@ -110,8 +110,7 @@ class user_controller
     /** Identical outcome whether the address was new or already taken. */
     private static function flashToLogin(string $next = ''): void
     {
-        $_SESSION['flash'] = 'Check your inbox — we sent you a link to confirm '
-                           . 'your email address. It may take a minute to arrive.';
+        $_SESSION['flash'] = t('auth.check_inbox');
         redirect('login' . ($next ? '?next=' . urlencode($next) : ''));
     }
 
@@ -146,7 +145,7 @@ class user_controller
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!csrf_check($_POST['csrf_token'] ?? null)) {
-                $error = 'Your session expired. Please try again.';
+                $error = t('auth.err_expired');
             } else {
                 $email = trim($_POST['email'] ?? '');
                 if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
@@ -182,9 +181,9 @@ class user_controller
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!csrf_check($_POST['csrf_token'] ?? null)) {
-                $error = 'Your session expired. Please try again.';
+                $error = t('auth.err_expired');
             } elseif (trim($_POST['website'] ?? '') !== '') {
-                $notice = 'If an account exists for that address, a reset link is on its way.';
+                $notice = t('auth.forgot_sent');
             } else {
                 $email = trim($_POST['email'] ?? '');
                 if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
@@ -198,7 +197,7 @@ class user_controller
                         }
                     }
                     // Same answer whether or not the account exists.
-                    $notice = 'If an account exists for that address, a reset link is on its way.';
+                    $notice = t('auth.forgot_sent');
                 }
             }
         }
@@ -230,19 +229,19 @@ class user_controller
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!csrf_check($_POST['csrf_token'] ?? null)) {
-                $error = 'Your session expired. Please try again.';
+                $error = t('auth.err_expired');
             } else {
                 $new     = (string)($_POST['new_password'] ?? '');
                 $confirm = (string)($_POST['confirm_password'] ?? '');
                 if (strlen($new) < 6) {
-                    $error = 'Password must be at least 6 characters.';
+                    $error = t('auth.err_short_pass');
                 } elseif ($new !== $confirm) {
                     $error = 'Passwords don\'t match.';
                 } else {
                     User::resetPassword((int)$user['id'], $new);
                     // Force a fresh sign-in with the new password rather than
                     // handing out a session from an emailed link.
-                    $_SESSION['flash'] = 'Password updated — you can sign in now.';
+                    $_SESSION['flash'] = t('auth.reset_done');
                     redirect('login');
                 }
             }
@@ -269,7 +268,7 @@ class user_controller
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!csrf_check($_POST['csrf_token'] ?? null)) {
-                $error = 'Your session expired. Please try again.';
+                $error = t('auth.err_expired');
             } else {
                 $action = $_POST['action'] ?? '';
 
@@ -361,6 +360,19 @@ class user_controller
             http_response_code(500);
             echo json_encode(['error' => 'shares_seen_at column missing — run the migration']);
         }
+    }
+
+    /** POST /account/language  body: lang — set interface + email language. */
+    public static function setLanguage(): void
+    {
+        require_login();
+        require_once __DIR__ . '/../app/i18n.php';
+
+        $back = self::safeNext($_POST['next'] ?? '') ?: '/dashboard';
+        if (csrf_check($_POST['csrf_token'] ?? null)) {
+            I18n::setForCurrentUser((string)($_POST['lang'] ?? ''));
+        }
+        redirect($back);
     }
 
     public static function logout(): void

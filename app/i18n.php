@@ -156,7 +156,15 @@ class I18n
     }
 }
 
-/** Shorthand used throughout the views. */
+/**
+ * Shorthand used throughout the views.
+ *
+ * NOTE: t() and te() are now RESERVED global names. Views that need a local
+ * HTML-escape helper must use the *_e convention the rest of the codebase
+ * follows (au_e, p_e, dash_e, …) — dashboard_overview.php previously declared
+ * its own t() escaper and that collision took the dashboard down with a
+ * "Cannot redeclare t()" fatal.
+ */
 function t(string $key, array $vars = []): string
 {
     return I18n::t($key, $vars);

@@ -1,6 +1,6 @@
 <?php
 // expects: $boardSets (dream|vision|mood|trip arrays), $sortValue, $limitValue
-function t($s){ return htmlspecialchars($s ?? '', ENT_QUOTES, 'UTF-8'); }
+function dash_e($s){ return htmlspecialchars($s ?? '', ENT_QUOTES, 'UTF-8'); }
 function human($t){ return ucfirst($t).'s'; }
 function dt($s){ return $s ? date('M j, Y', strtotime($s)) : ''; }
 
@@ -13,7 +13,7 @@ $dashEmpty = empty($boardSets['dream']) && empty($boardSets['vision'])
 <div class="dash">
 
 <?php if (!empty($_SESSION['flash_home'])): ?>
-  <div class="dash__flash"><?= t($_SESSION['flash_home']) ?></div>
+  <div class="dash__flash"><?= dash_e($_SESSION['flash_home']) ?></div>
   <?php unset($_SESSION['flash_home']); ?>
 <?php endif; ?>
 
@@ -21,23 +21,23 @@ $dashEmpty = empty($boardSets['dream']) && empty($boardSets['vision'])
   <div style="background:rgba(58,118,210,.12);border:1px solid rgba(58,118,210,.4);
               border-radius:12px;padding:1rem 1.2rem;margin:0 0 1.2rem;">
     <div style="font-weight:700;color:#eaf0f7;margin-bottom:.25rem;">
-      🤝 <?= t($it['from_name'] ?: $it['from_email']) ?> wants to hand you their account
+      🤝 <?= dash_e($it['from_name'] ?: $it['from_email']) ?> wants to hand you their account
     </div>
     <p style="color:#9bb0c5;font-size:.9rem;margin:.2rem 0 .8rem;">
-      Accepting makes you the owner of their <?= t($it['summary_text']) ?>.
+      Accepting makes you the owner of their <?= dash_e($it['summary_text']) ?>.
       <?php if (!empty($it['note'])): ?>
-        <br><span style="color:#cfdbe8;">“<?= t($it['note']) ?>”</span>
+        <br><span style="color:#cfdbe8;">“<?= dash_e($it['note']) ?>”</span>
       <?php endif; ?>
     </p>
     <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
       <form method="post" action="/transfer/<?= (int)$it['id'] ?>/accept"
-            onsubmit="return confirm('Accept and take ownership of <?= t(addslashes($it['summary_text'])) ?>? This can\'t be undone.');">
-        <input type="hidden" name="csrf_token" value="<?= t(csrf_token()) ?>">
+            onsubmit="return confirm('Accept and take ownership of <?= dash_e(addslashes($it['summary_text'])) ?>? This can\'t be undone.');">
+        <input type="hidden" name="csrf_token" value="<?= dash_e(csrf_token()) ?>">
         <button type="submit" style="padding:.5rem 1rem;border:0;border-radius:8px;
                 background:#3a76d2;color:#fff;font-weight:600;cursor:pointer;">Accept</button>
       </form>
       <form method="post" action="/transfer/<?= (int)$it['id'] ?>/decline">
-        <input type="hidden" name="csrf_token" value="<?= t(csrf_token()) ?>">
+        <input type="hidden" name="csrf_token" value="<?= dash_e(csrf_token()) ?>">
         <button type="submit" style="padding:.5rem 1rem;border:1px solid #2b3346;border-radius:8px;
                 background:transparent;color:#cfdbe8;cursor:pointer;">Decline</button>
       </form>
@@ -80,14 +80,14 @@ if (!empty($pricing) && !empty($pricing['is_founder'])):
     <span class="fb-title">Founding Creator</span>
     <span class="fb-sep">·</span>
     <span class="fb-plan">
-      <?= t($pricing['tier']['label']) ?> plan —
+      <?= dash_e($pricing['tier']['label']) ?> plan —
       <b><?= (int)$pricing['seats'] ?> <?= $pricing['seats'] === 1 ? 'person' : 'people' ?></b><?php
-      if ($pl_paid): ?>, normally <b><?= t(Pricing::money($pricing['monthly_cents'])) ?>/mo</b><?php endif; ?>
+      if ($pl_paid): ?>, normally <b><?= dash_e(Pricing::money($pricing['monthly_cents'])) ?>/mo</b><?php endif; ?>
     </span>
     <?php if ($pl_paid && $pl_saved > 0): ?>
       <span class="fb-sep">·</span>
       <span class="fb-saved">
-        <?= t(Pricing::money($pl_saved)) ?> saved<?= $pl_since ? ' since ' . t($pl_since) : '' ?>
+        <?= dash_e(Pricing::money($pl_saved)) ?> saved<?= $pl_since ? ' since ' . dash_e($pl_since) : '' ?>
       </span>
     <?php endif; ?>
     <span class="fb-free" title="You joined while it was free. It stays free at your team size — a thank-you for believing in it early.">
@@ -121,7 +121,7 @@ if (!empty($pricing) && !empty($pricing['is_founder'])):
     }
   </style>
   <form method="post" action="/demo/load" class="dash__starter">
-    <input type="hidden" name="csrf_token" value="<?= t(csrf_token()) ?>">
+    <input type="hidden" name="csrf_token" value="<?= dash_e(csrf_token()) ?>">
     <div class="ds-copy">
       <h2>🚚 New here? Start with a finished project.</h2>
       <p>
@@ -189,8 +189,8 @@ if (!empty($pricing) && !empty($pricing['is_founder'])):
           <?php foreach ($items as $row): ?>
             <li class="dash-card">
               <h3 class="dash-card__title">
-                <a href="/<?= $type ?>s/<?= t($row['slug'] ?? '') ?>">
-                  <?= t($row['title'] ?? 'Untitled') ?>
+                <a href="/<?= $type ?>s/<?= dash_e($row['slug'] ?? '') ?>">
+                  <?= dash_e($row['title'] ?? 'Untitled') ?>
                 </a>
                 <?php if ($type === 'dream' && !empty($row['is_promoted'])): ?>
                   <span title="Promoted to a Vision"
@@ -210,15 +210,15 @@ if (!empty($pricing) && !empty($pricing['is_founder'])):
                                border-radius:999px;background:rgba(126,217,154,.14);
                                border:1px solid rgba(126,217,154,.4);color:#7ed99a;
                                font-size:.7rem;vertical-align:middle;font-weight:600;">
-                    🤝 Shared<?= t($roleLbl) ?>
+                    🤝 Shared<?= dash_e($roleLbl) ?>
                   </span>
                 <?php elseif (!empty($row['shared_with_names'])): ?>
-                  <span title="You shared this board with: <?= t($row['shared_with_names']) ?>"
+                  <span title="You shared this board with: <?= dash_e($row['shared_with_names']) ?>"
                         style="display:inline-block;margin-left:.4rem;padding:.05rem .4rem;
                                border-radius:999px;background:rgba(58,118,210,.14);
                                border:1px solid rgba(58,118,210,.4);color:#8fb1d8;
                                font-size:.7rem;vertical-align:middle;font-weight:600;">
-                    📤 Shared with <?= t($row['shared_with_names']) ?>
+                    📤 Shared with <?= dash_e($row['shared_with_names']) ?>
                   </span>
                 <?php endif; ?>
               </h3>
@@ -226,7 +226,7 @@ if (!empty($pricing) && !empty($pricing['is_founder'])):
               <?php if ($type === 'trip'): ?>
                 <?php
                   $bits = [];
-                  if (!empty($row['mood_title'])) $bits[] = '🎨 ' . t($row['mood_title']);
+                  if (!empty($row['mood_title'])) $bits[] = '🎨 ' . dash_e($row['mood_title']);
                   $cn = (int)($row['contact_count'] ?? 0);
                   if ($cn > 0) $bits[] = '👥 ' . $cn . ' contact' . ($cn === 1 ? '' : 's');
                   if (!empty($row['has_budget'])) $bits[] = '💰 Budget';
@@ -242,7 +242,7 @@ if (!empty($pricing) && !empty($pricing['is_founder'])):
                   if ($desc) $desc = mb_strimwidth(strip_tags($desc), 0, 130, '…', 'UTF-8');
                 ?>
                 <?php if ($desc): ?>
-                  <p class="dash-card__snippet"><?= t($desc) ?></p>
+                  <p class="dash-card__snippet"><?= dash_e($desc) ?></p>
                 <?php endif; ?>
               <?php endif; ?>
 
@@ -311,16 +311,16 @@ if (!empty($pricing) && !empty($pricing['is_founder'])):
             <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:.6rem;">
               <span style="min-width:0;">
                 <span style="display:block;font-size:.95em;color:#eaeaea;">
-                  <?= $icon ?> <strong><?= t($n['from_name'] ?: 'Someone') ?></strong>
-                  <?= t($verb) ?>:
-                  <strong><?= t($n['goal_title'] ?: 'a goal') ?></strong>
+                  <?= $icon ?> <strong><?= dash_e($n['from_name'] ?: 'Someone') ?></strong>
+                  <?= dash_e($verb) ?>:
+                  <strong><?= dash_e($n['goal_title'] ?: 'a goal') ?></strong>
                 </span>
                 <span style="display:block;font-size:.8em;opacity:.6;margin-top:.15rem;">
                   <?php if (!empty($n['vision_slug'])): ?>
-                    on <a href="/visions/<?= t($n['vision_slug']) ?>"
-                          style="color:#8fb1d8;"><?= t($n['vision_title'] ?: 'Untitled') ?></a> ·
+                    on <a href="/visions/<?= dash_e($n['vision_slug']) ?>"
+                          style="color:#8fb1d8;"><?= dash_e($n['vision_title'] ?: 'Untitled') ?></a> ·
                   <?php endif; ?>
-                  <?= t(date('M j, H:i', strtotime($n['created_at']))) ?>
+                  <?= dash_e(date('M j, H:i', strtotime($n['created_at']))) ?>
                 </span>
               </span>
               <button type="button" class="notice-ack"
@@ -332,7 +332,7 @@ if (!empty($pricing) && !empty($pricing['is_founder'])):
             </div>
             <?php if (!empty($n['note'])): ?>
               <div style="margin-top:.45rem;padding:.5rem .6rem;background:#0f1014;
-                          border-radius:6px;font-size:.88em;color:#c7d2df;white-space:pre-wrap;"><?= t($n['note']) ?></div>
+                          border-radius:6px;font-size:.88em;color:#c7d2df;white-space:pre-wrap;"><?= dash_e($n['note']) ?></div>
             <?php endif; ?>
           </div>
         <?php endforeach; ?>
@@ -352,14 +352,14 @@ if (!empty($pricing) && !empty($pricing['is_founder'])):
                       border:1px solid #2b3346;border-radius:8px;">
             <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:.6rem;">
               <span style="min-width:0;">
-                <a href="/visions/<?= t($h['slug']) ?>"
+                <a href="/visions/<?= dash_e($h['slug']) ?>"
                    style="display:block;font-weight:600;color:#8fb1d8;text-decoration:none;
                           white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-                  <?= t($h['title'] ?: 'Untitled') ?>
+                  <?= dash_e($h['title'] ?: 'Untitled') ?>
                 </a>
                 <span style="display:block;font-size:.8em;opacity:.6;">
-                  from <?= t($h['from_name'] ?: 'a collaborator') ?>
-                  · <?= t(date('M j, H:i', strtotime($h['created_at']))) ?>
+                  from <?= dash_e($h['from_name'] ?: 'a collaborator') ?>
+                  · <?= dash_e(date('M j, H:i', strtotime($h['created_at']))) ?>
                 </span>
               </span>
               <button type="button" class="handoff-ack"
@@ -371,7 +371,7 @@ if (!empty($pricing) && !empty($pricing['is_founder'])):
             </div>
             <?php if (!empty($h['note'])): ?>
               <div style="margin-top:.45rem;padding:.5rem .6rem;background:#0f1014;
-                          border-radius:6px;font-size:.88em;color:#c7d2df;white-space:pre-wrap;"><?= t($h['note']) ?></div>
+                          border-radius:6px;font-size:.88em;color:#c7d2df;white-space:pre-wrap;"><?= dash_e($h['note']) ?></div>
             <?php endif; ?>
           </div>
         <?php endforeach; ?>
@@ -385,7 +385,7 @@ if (!empty($pricing) && !empty($pricing['is_founder'])):
       </p>
       <div style="display:flex;flex-direction:column;gap:.45rem;max-height:280px;overflow-y:auto;">
         <?php foreach ($newShares as $ns): ?>
-          <a href="/visions/<?= t($ns['slug']) ?>"
+          <a href="/visions/<?= dash_e($ns['slug']) ?>"
              style="display:flex;align-items:center;justify-content:space-between;gap:.6rem;
                     padding:.55rem .7rem;background:rgba(255,255,255,.04);
                     border:1px solid #2b3346;border-radius:8px;
@@ -393,15 +393,15 @@ if (!empty($pricing) && !empty($pricing['is_founder'])):
             <span style="min-width:0;">
               <span style="display:block;font-weight:600;color:#eaeaea;
                            white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-                <?= t($ns['title'] ?: 'Untitled') ?>
+                <?= dash_e($ns['title'] ?: 'Untitled') ?>
               </span>
               <span style="display:block;font-size:.8em;opacity:.6;">
-                from <?= t($ns['owner_name'] ?: 'someone') ?>
+                from <?= dash_e($ns['owner_name'] ?: 'someone') ?>
               </span>
             </span>
             <span style="flex-shrink:0;padding:.1rem .55rem;border-radius:999px;
                          background:#1f3a66;color:#8fb1d8;font-size:.75rem;font-weight:700;">
-              <?= t(ucfirst(str_replace('_', '-', $ns['role']))) ?>
+              <?= dash_e(ucfirst(str_replace('_', '-', $ns['role']))) ?>
             </span>
           </a>
         <?php endforeach; ?>

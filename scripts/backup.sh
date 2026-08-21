@@ -61,8 +61,22 @@ fail() {
     exit 1
 }
 
-DB_NAME="$(sed -n "s/.*dbname=\([A-Za-z0-9_]*\).*/\1/p" "$SITE_DIR/app/config.php" 2>/dev/null | head -1)"
+# Read the dbname out of the app's own DSN. Ignore commented-out lines so an
+# old config left in place can't win — that silently backs up the wrong (or an
+# empty) database, which is exactly the sort of failure a backup must not have.
+DB_NAME="$(grep -v '^[[:space:]]*//' "$SITE_DIR/app/config.php" 2>/dev/null \
+           | grep -v '^[[:space:]]*#' \
+           | sed -n "s/.*dbname=\([A-Za-z0-9_]*\).*/\1/p" | head -1)"
 [ -n "$DB_NAME" ] || fail "could not read dbname from $SITE_DIR/app/config.php"
+
+# Confirm it actually contains tables BEFORE dumping. Catches a valid-but-empty
+# database immediately, and names it, instead of leaving you to infer it from a
+# filename in a failure message.
+TABLE_COUNT="$(mysql -N -B -e \
+  "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='$DB_NAME';" \
+  2>/dev/null || echo 0)"
+[ "${TABLE_COUNT:-0}" -gt 0 ] \
+  || fail "database '$DB_NAME' has no tables (read from app/config.php). Backing up the wrong database?"
 
 # ── 1. Database ──────────────────────────────────────────────────────────────
 DB_OUT="$DB_DIR/${DB_NAME}-${STAMP}.sql.gz"
@@ -75,7 +89,8 @@ rm -f /tmp/backup_err.$$
 # Verify: readable gzip, and big enough to plausibly be the real database.
 gzip -t "$DB_OUT" 2>/dev/null || fail "dump is not a valid gzip: $DB_OUT"
 SIZE=$(stat -c %s "$DB_OUT" 2>/dev/null || stat -f %z "$DB_OUT")
-[ "$SIZE" -ge 10240 ] || fail "dump suspiciously small (${SIZE} bytes): $DB_OUT"
+[ "$SIZE" -ge 10240 ] \
+  || fail "dump of database '$DB_NAME' suspiciously small (${SIZE} bytes, $TABLE_COUNT tables): $DB_OUT"
 
 # ── 2. Uploaded files (weekly — they're big and change slower) ───────────────
 if [ "$(date +%u)" = "7" ] || [ "${FORCE_FILES:-0}" = "1" ]; then

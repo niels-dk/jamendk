@@ -4,9 +4,9 @@ function ac_e($s){ return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
 ?>
 
 <div style="max-width:560px;margin:0 auto;">
-  <h1 style="margin-bottom:.2rem;">My account</h1>
+  <h1 style="margin-bottom:.2rem;"><?= te('account.title') ?></h1>
   <p style="opacity:.6;margin-top:0;font-size:.9em;">
-    Signed in as <?= ac_e($user['email']) ?>
+    <?= te('account.signed_in_as', ['email' => $user['email']]) ?>
     <?php if (($user['role'] ?? '') === 'admin'): ?>
       <span style="display:inline-block;margin-left:.3rem;padding:.05rem .5rem;border-radius:999px;
                    background:#1f3a66;color:#8fb1d8;font-size:.75rem;font-weight:700;">Admin</span>
@@ -27,18 +27,18 @@ function ac_e($s){ return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
   <?php endif; ?>
 
   <div class="card" style="padding:1.1rem 1.2rem;margin-bottom:1rem;">
-    <h3 style="margin-top:0;">Profile</h3>
+    <h3 style="margin-top:0;"><?= te('account.profile') ?></h3>
     <form method="post" style="display:flex;flex-direction:column;gap:.7rem;">
       <input type="hidden" name="csrf_token" value="<?= ac_e(csrf_token()) ?>">
       <input type="hidden" name="action" value="profile">
       <label style="display:flex;flex-direction:column;gap:.3rem;">
-        <span style="font-size:.85rem;opacity:.8;">Name</span>
+        <span style="font-size:.85rem;opacity:.8;"><?= te('auth.name') ?></span>
         <input type="text" name="name" required value="<?= ac_e($user['name']) ?>"
                style="padding:.55rem .8rem;border:1px solid #2b3346;background:#15161A;
                       color:#ddd;border-radius:8px;">
       </label>
       <label style="display:flex;flex-direction:column;gap:.3rem;">
-        <span style="font-size:.85rem;opacity:.8;">Email</span>
+        <span style="font-size:.85rem;opacity:.8;"><?= te('auth.email') ?></span>
         <input type="text" value="<?= ac_e($user['email']) ?>" disabled
                title="Email changes will be possible once verification emails are in place"
                style="padding:.55rem .8rem;border:1px solid #232838;background:#101116;
@@ -46,18 +46,18 @@ function ac_e($s){ return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
         <span style="font-size:.75rem;opacity:.5;">Email can't be changed yet — verification mail is coming later.</span>
       </label>
       <label style="display:flex;flex-direction:column;gap:.3rem;">
-        <span style="font-size:.85rem;opacity:.8;">Company <span style="opacity:.5;">(optional)</span></span>
+        <span style="font-size:.85rem;opacity:.8;"><?= te('account.company') ?> <span style="opacity:.5;">(<?= te('account.optional') ?>)</span></span>
         <input type="text" name="company" value="<?= ac_e($user['company'] ?? '') ?>"
                style="padding:.55rem .8rem;border:1px solid #2b3346;background:#15161A;
                       color:#ddd;border-radius:8px;">
       </label>
       <label style="display:flex;flex-direction:column;gap:.3rem;">
-        <span style="font-size:.85rem;opacity:.8;">Organisation <span style="opacity:.5;">(optional)</span></span>
+        <span style="font-size:.85rem;opacity:.8;"><?= te('account.organisation') ?> <span style="opacity:.5;">(<?= te('account.optional') ?>)</span></span>
         <input type="text" name="organisation" value="<?= ac_e($user['organisation'] ?? '') ?>"
                style="padding:.55rem .8rem;border:1px solid #2b3346;background:#15161A;
                       color:#ddd;border-radius:8px;">
       </label>
-      <button type="submit" class="btn btn-primary" style="align-self:flex-start;">Save profile</button>
+      <button type="submit" class="btn btn-primary" style="align-self:flex-start;"><?= te('account.save_profile') ?></button>
     </form>
   </div>
 
@@ -93,7 +93,7 @@ function ac_e($s){ return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
       <input type="hidden" name="csrf_token" value="<?= ac_e(csrf_token()) ?>">
       <input type="hidden" name="action" value="password">
       <label style="display:flex;flex-direction:column;gap:.3rem;">
-        <span style="font-size:.85rem;opacity:.8;">Current password</span>
+        <span style="font-size:.85rem;opacity:.8;"><?= te('account.current_pass') ?></span>
         <input type="password" name="current_password" required autocomplete="current-password"
                style="padding:.55rem .8rem;border:1px solid #2b3346;background:#15161A;
                       color:#ddd;border-radius:8px;">
@@ -105,12 +105,12 @@ function ac_e($s){ return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
                       color:#ddd;border-radius:8px;">
       </label>
       <label style="display:flex;flex-direction:column;gap:.3rem;">
-        <span style="font-size:.85rem;opacity:.8;">Repeat new password</span>
+        <span style="font-size:.85rem;opacity:.8;"><?= te('account.repeat_pass') ?></span>
         <input type="password" name="confirm_password" required autocomplete="new-password"
                style="padding:.55rem .8rem;border:1px solid #2b3346;background:#15161A;
                       color:#ddd;border-radius:8px;">
       </label>
-      <button type="submit" class="btn btn-primary" style="align-self:flex-start;">Change password</button>
+      <button type="submit" class="btn btn-primary" style="align-self:flex-start;"><?= te('account.change_pass') ?></button>
     </form>
   </div>
 

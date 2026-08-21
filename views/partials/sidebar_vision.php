@@ -26,14 +26,14 @@ $dot = function (string $key) use ($badges): string {
   }
 </style>
 <nav class="board-nav">
-  <a href="#basics"    data-overlay="basics"><span>Basics</span></a>
-  <a href="#relations" data-overlay="relations"><span>Relations</span><?= $dot('relations') ?></a>
-  <a href="#itinerary" data-overlay="itinerary"><span>Itinerary</span><?= $badge('itinerary') ?></a>
-  <a href="#shots"     data-overlay="shots"><span>Shots</span><?= $badge('shots') ?></a>
-  <a href="#goals"     data-overlay="goals"><span>Goals &amp; Milestones</span><?= $badge('goals') ?></a>
-  <a href="#budget"    data-overlay="budget"><span>Budget</span><?= $dot('budget') ?></a>
-  <a href="#roles"     data-overlay="roles"><span>Roles &amp; Permissions</span></a>
-  <a href="#contacts"  data-overlay="contacts"><span>Contacts</span><?= $badge('contacts') ?></a>
-  <a href="#documents" data-overlay="documents"><span>Documents</span><?= $badge('documents') ?></a>
-  <a href="#workflow"  data-overlay="workflow"><span>Workflow</span><?= $dot('workflow') ?></a>
+  <a href="#basics"    data-overlay="basics"><span><?= te('sec.basics') ?></span></a>
+  <a href="#relations" data-overlay="relations"><span><?= te('sec.relations') ?></span><?= $dot('relations') ?></a>
+  <a href="#itinerary" data-overlay="itinerary"><span><?= te('sec.itinerary') ?></span><?= $badge('itinerary') ?></a>
+  <a href="#shots"     data-overlay="shots"><span><?= te('sec.shots') ?></span><?= $badge('shots') ?></a>
+  <a href="#goals"     data-overlay="goals"><span><?= te('sec.goals') ?></span><?= $badge('goals') ?></a>
+  <a href="#budget"    data-overlay="budget"><span><?= te('sec.budget') ?></span><?= $dot('budget') ?></a>
+  <a href="#roles"     data-overlay="roles"><span><?= te('sec.roles') ?></span></a>
+  <a href="#contacts"  data-overlay="contacts"><span><?= te('sec.contacts') ?></span><?= $badge('contacts') ?></a>
+  <a href="#documents" data-overlay="documents"><span><?= te('sec.documents') ?></span><?= $badge('documents') ?></a>
+  <a href="#workflow"  data-overlay="workflow"><span><?= te('sec.workflow') ?></span><?= $dot('workflow') ?></a>
 </nav>

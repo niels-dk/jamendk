@@ -4,19 +4,18 @@ $slug = htmlspecialchars($vision['slug'] ?? '', ENT_QUOTES);
 ?>
 
 <div class="overlay-header">
-  <h2>Itinerary</h2>
+  <h2><?= te('sec.itinerary') ?></h2>
 </div>
 
 <div id="itinWrap" data-slug="<?= $slug ?>">
   <p style="opacity:.6;font-size:.85em;margin:0 0 .7rem;">
-    The day-by-day plan. Entries marked "Show on Trip layer" appear at the top
-    of the published trip page.
+    <?= te('itin.lead') ?>
   </p>
 
   <div id="itinList" style="display:flex;flex-direction:column;gap:.45rem;margin-bottom:.6rem;">
-    <div style="opacity:.5;font-size:.9em;">Loading…</div>
+    <div style="opacity:.5;font-size:.9em;"><?= te('action.loading') ?></div>
   </div>
-  <button type="button" id="btnAddItin" class="btn btn-primary">+ Add entry</button>
+  <button type="button" id="btnAddItin" class="btn btn-primary">+ <?= te('itin.add_entry') ?></button>
 
   <div id="itinFormCard" class="card" hidden style="margin-top:1rem;">
     <form id="itinForm">
@@ -24,33 +23,33 @@ $slug = htmlspecialchars($vision['slug'] ?? '', ENT_QUOTES);
 
       <div class="itin-meta-row">
         <div>
-          <label for="itinDate">Date</label>
+          <label for="itinDate"><?= te('itin.date') ?></label>
           <input id="itinDate" name="day_date" type="date">
         </div>
         <div>
-          <label for="itinTime">Time <span style="opacity:.5;">(optional)</span></label>
+          <label for="itinTime"><?= te('itin.time') ?> <span style="opacity:.5;">(<?= te('account.optional') ?>)</span></label>
           <input id="itinTime" name="start_time" type="time">
         </div>
       </div>
 
-      <label for="itinTitle">What</label>
-      <input id="itinTitle" name="title" type="text" placeholder="e.g. Drive to the dunes, sunrise shoot…">
+      <label for="itinTitle"><?= te('itin.what') ?></label>
+      <input id="itinTitle" name="title" type="text" placeholder="<?= te('itin.what_placeholder') ?>">
 
-      <label for="itinLocation">Location <span style="opacity:.5;">(optional — becomes a map link)</span></label>
-      <input id="itinLocation" name="location" type="text" placeholder="Address or place name">
+      <label for="itinLocation"><?= te('shots.location') ?> <span style="opacity:.5;">(<?= te('itin.location_hint') ?>)</span></label>
+      <input id="itinLocation" name="location" type="text" placeholder="<?= te('itin.location_placeholder') ?>">
 
-      <label for="itinNotes">Notes <span style="opacity:.5;">(optional)</span></label>
-      <textarea id="itinNotes" name="notes" rows="2" placeholder="Gear to bring, who to call, backup plan…"></textarea>
+      <label for="itinNotes"><?= te('itin.notes') ?> <span style="opacity:.5;">(<?= te('account.optional') ?>)</span></label>
+      <textarea id="itinNotes" name="notes" rows="2" placeholder="<?= te('itin.notes_placeholder') ?>"></textarea>
 
       <label class="switch switch-row" style="margin-top:.4rem;">
-        <span class="switch-label">Show on Trip layer</span>
+        <span class="switch-label"><?= te('sec.show_on_trip') ?></span>
         <input class="switch-input" type="checkbox" name="show_on_trip" checked>
         <span class="knob" aria-hidden="true"></span>
       </label>
 
       <div style="margin-top:1rem; display:flex; align-items:center; gap:.6rem;">
-        <button type="button" class="btn" id="btnCloseItin">Close</button>
-        <button type="button" class="btn btn-danger" id="btnDeleteItin" hidden>Delete entry</button>
+        <button type="button" class="btn" id="btnCloseItin"><?= te('action.close') ?></button>
+        <button type="button" class="btn btn-danger" id="btnDeleteItin" hidden><?= te('itin.delete_entry') ?></button>
         <span id="itinStatus" style="margin-left:auto;opacity:.6;font-size:.85em;"></span>
       </div>
     </form>
@@ -101,6 +100,13 @@ $slug = htmlspecialchars($vision['slug'] ?? '', ENT_QUOTES);
   const closeBtn = wrap.querySelector('#btnCloseItin');
   const delBtn   = wrap.querySelector('#btnDeleteItin');
 
+  const T = <?= json_encode([
+      'none_yet'=>t('itin.none_yet'),'hidden_on_trip'=>t('sec.hidden_on_trip'),
+      'saving'=>t('status.saving'),'saved'=>t('status.saved'),
+      'save_failed'=>t('status.save_failed'),'net_error'=>t('status.net_error'),
+      'load_failed'=>t('itin.load_failed'),'confirm_delete'=>t('itin.confirm_delete'),
+      'delete_failed'=>t('status.delete_failed'),'migration'=>t('itin.migration'),
+  ], JSON_UNESCAPED_UNICODE) ?>;
   let entries = [];
 
   function esc(s) {
@@ -116,7 +122,7 @@ $slug = htmlspecialchars($vision['slug'] ?? '', ENT_QUOTES);
 
   function renderList() {
     if (!entries.length) {
-      list.innerHTML = '<div style="opacity:.6;font-size:.9em;">No entries yet — build the day-by-day plan.</div>';
+      list.innerHTML = '<div style="opacity:.6;font-size:.9em;">' + T.none_yet + '</div>';
       return;
     }
     let html = '', lastDay = null;
@@ -128,7 +134,7 @@ $slug = htmlspecialchars($vision['slug'] ?? '', ENT_QUOTES);
       const time = en.start_time ? en.start_time.slice(0, 5) : '·';
       const sub = [
         en.location ? '📍 ' + en.location : '',
-        !+en.show_on_trip ? 'hidden on trip' : '',
+        !+en.show_on_trip ? T.hidden_on_trip : '',
       ].filter(Boolean).join(' · ');
       html += `
         <div class="itin-row ${!+en.show_on_trip ? 'is-hidden-on-trip' : ''}" data-id="${en.id}">
@@ -148,11 +154,11 @@ $slug = htmlspecialchars($vision['slug'] ?? '', ENT_QUOTES);
       const j = await res.json();
       entries = j?.entries || [];
       if (j?.migration_missing) {
-        list.innerHTML = '<div style="color:#e8c267;font-size:.85em;">Run db/migrations/2026-07-13_itinerary_budget_items.sql first.</div>';
+        list.innerHTML = '<div style="color:#e8c267;font-size:.85em;">' + T.migration + '</div>';
         return;
       }
       renderList();
-    } catch { list.innerHTML = '<div class="error">Failed to load itinerary.</div>'; }
+    } catch { list.innerHTML = '<div class="error">' + T.load_failed + '</div>'; }
   }
 
   function clearForm() {
@@ -183,7 +189,7 @@ $slug = htmlspecialchars($vision['slug'] ?? '', ENT_QUOTES);
     const url = eid
       ? `/api/visions/${slug}/itinerary/${eid}`
       : `/api/visions/${slug}/itinerary/create`;
-    status.textContent = 'Saving…';
+    status.textContent = T.saving;
     try {
       const res = await fetch(url, {
         method:'POST',
@@ -196,10 +202,10 @@ $slug = htmlspecialchars($vision['slug'] ?? '', ENT_QUOTES);
           form.querySelector('[name="entry_id"]').value = j.entry_id;
           delBtn.hidden = false;
         }
-        status.textContent = 'Saved';
+        status.textContent = T.saved;
         loadList();
-      } else status.textContent = '⚠ ' + (j?.error || 'Save failed');
-    } catch { status.textContent = '⚠ Network error'; }
+      } else status.textContent = '⚠ ' + (j?.error || T.save_failed);
+    } catch { status.textContent = '⚠ ' + T.net_error; }
   }
   function autoSave() {
     clearTimeout(saveTimer);
@@ -222,13 +228,13 @@ $slug = htmlspecialchars($vision['slug'] ?? '', ENT_QUOTES);
   delBtn.addEventListener('click', async () => {
     const eid = form.querySelector('[name="entry_id"]').value.trim();
     if (!eid) return;
-    if (!confirm('Delete this itinerary entry?')) return;
+    if (!confirm(T.confirm_delete)) return;
     try {
       const res = await fetch(`/api/visions/${slug}/itinerary/${eid}/delete`, { method:'POST' });
       const j = await res.json();
       if (j?.success) { hideForm(); loadList(); }
-      else alert(j?.error || 'Delete failed');
-    } catch { alert('Delete failed'); }
+      else alert(j?.error || T.delete_failed);
+    } catch { alert(T.delete_failed); }
   });
 
   list.addEventListener('click', e => {

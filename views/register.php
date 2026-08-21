@@ -3,7 +3,7 @@ $title = 'Create a Creator account';
 ob_start();
 ?>
 <div style="max-width:440px;margin:3rem auto;padding:0 1rem;">
-  <h1 style="font-size:1.8rem;margin:0 0 .4rem;">Create your Creator account</h1>
+  <h1 style="font-size:1.8rem;margin:0 0 .4rem;"><?= te('auth.register_title') ?></h1>
   <p style="color:#8593a6;margin:0 0 1.2rem;font-size:.95rem;">
     Start dreaming, planning, and publishing trips in a few seconds.
   </p>
@@ -27,7 +27,7 @@ ob_start();
     </div>
 
     <label style="display:flex;flex-direction:column;gap:.3rem;">
-      <span style="font-size:.85rem;opacity:.8;">Name</span>
+      <span style="font-size:.85rem;opacity:.8;"><?= te('auth.name') ?></span>
       <input type="text" name="name" required autofocus autocomplete="name"
              value="<?= htmlspecialchars($name ?? '') ?>"
              style="padding:.6rem .8rem;border:1px solid #2b3346;background:#15161A;
@@ -35,7 +35,7 @@ ob_start();
     </label>
 
     <label style="display:flex;flex-direction:column;gap:.3rem;">
-      <span style="font-size:.85rem;opacity:.8;">Email</span>
+      <span style="font-size:.85rem;opacity:.8;"><?= te('auth.email') ?></span>
       <input type="email" name="email" required autocomplete="email"
              value="<?= htmlspecialchars($email ?? '') ?>"
              style="padding:.6rem .8rem;border:1px solid #2b3346;background:#15161A;
@@ -43,25 +43,25 @@ ob_start();
     </label>
 
     <label style="display:flex;flex-direction:column;gap:.3rem;">
-      <span style="font-size:.85rem;opacity:.8;">Password</span>
+      <span style="font-size:.85rem;opacity:.8;"><?= te('auth.password') ?></span>
       <input type="password" name="password" required minlength="6" autocomplete="new-password"
              style="padding:.6rem .8rem;border:1px solid #2b3346;background:#15161A;
                     color:#ddd;border-radius:8px;font-size:1rem;">
-      <span style="font-size:.75rem;opacity:.6;">Minimum 6 characters.</span>
+      <span style="font-size:.75rem;opacity:.6;"><?= te('auth.min_chars') ?></span>
     </label>
 
     <button type="submit"
             style="margin-top:.4rem;padding:.7rem 1rem;border:0;border-radius:8px;
                    background:#3a76d2;color:#fff;font-size:1rem;font-weight:600;
                    cursor:pointer;">
-      Create account
+      <?= te('nav.create_account') ?>
     </button>
   </form>
 
   <p style="margin-top:1.4rem;color:#8593a6;font-size:.9rem;text-align:center;">
-    Already have an account?
+    <?= te('auth.have_account') ?>
     <a href="/login<?= !empty($next) ? '?next=' . urlencode($next) : '' ?>"
-       style="color:#8fb1d8;">Sign in</a>
+       style="color:#8fb1d8;"><?= te('auth.signin') ?></a>
   </p>
 </div>
 <?php

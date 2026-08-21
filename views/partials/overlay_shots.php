@@ -8,98 +8,97 @@ $refMediaJson = htmlspecialchars(json_encode($shotRefMedia ?? []), ENT_QUOTES);
 ?>
 
 <div class="overlay-header">
-  <h2>Shots</h2>
+  <h2><?= te('sec.shots') ?></h2>
 </div>
 
 <div id="shotsWrap" data-slug="<?= $slug ?>" data-refmedia="<?= $refMediaJson ?>">
   <p style="opacity:.6;font-size:.85em;margin:0 0 .7rem;">
-    Everything you want to capture. Type an idea and press Enter — sort out
-    the day, angle and references later.
+    <?= te('shots.lead') ?>
   </p>
 
   <div style="display:flex;gap:.4rem;margin-bottom:.8rem;">
-    <input id="shotQuickAdd" type="text" placeholder="New shot idea… e.g. Sunrise drone over the dunes"
+    <input id="shotQuickAdd" type="text" placeholder="<?= te('shots.quick_placeholder') ?>"
            style="flex:1;min-width:0;background:#15161A;border:1px solid #2b3346;color:#ddd;
                   padding:.5rem .7rem;border-radius:8px;">
-    <button type="button" id="btnQuickAdd" class="btn btn-primary" style="flex-shrink:0;">Add</button>
+    <button type="button" id="btnQuickAdd" class="btn btn-primary" style="flex-shrink:0;"><?= te('action.add') ?></button>
   </div>
 
   <div id="shotsProgress" style="opacity:.65;font-size:.82em;margin-bottom:.4rem;"></div>
 
   <div id="shotsList" style="display:flex;flex-direction:column;gap:.45rem;margin-bottom:.6rem;">
-    <div style="opacity:.5;font-size:.9em;">Loading…</div>
+    <div style="opacity:.5;font-size:.9em;"><?= te('action.loading') ?></div>
   </div>
 
   <div id="shotFormCard" class="card" hidden style="margin-top:1rem;">
     <form id="shotForm">
       <input type="hidden" name="shot_id" value="">
 
-      <label for="shotTitle">Shot</label>
-      <input id="shotTitle" name="title" type="text" placeholder="What do you want to capture?">
+      <label for="shotTitle"><?= te('shots.shot') ?></label>
+      <input id="shotTitle" name="title" type="text" placeholder="<?= te('shots.title_placeholder') ?>">
 
       <div class="shot-meta-row">
         <div>
-          <label for="shotType">Type</label>
+          <label for="shotType"><?= te('shots.type') ?></label>
           <select id="shotType" name="shot_type">
             <option value="">—</option>
-            <option value="drone">🚁 Drone</option>
-            <option value="broll">🎥 B-roll</option>
-            <option value="interview">🎤 Interview / to camera</option>
-            <option value="timelapse">⏱ Timelapse</option>
-            <option value="photo">📷 Photo</option>
-            <option value="pov">🎬 POV / action</option>
-            <option value="other">✨ Other</option>
+            <option value="drone">🚁 <?= te('shots.type_drone') ?></option>
+            <option value="broll">🎥 <?= te('shots.type_broll') ?></option>
+            <option value="interview">🎤 <?= te('shots.type_interview') ?></option>
+            <option value="timelapse">⏱ <?= te('shots.type_timelapse') ?></option>
+            <option value="photo">📷 <?= te('shots.type_photo') ?></option>
+            <option value="pov">🎬 <?= te('shots.type_pov') ?></option>
+            <option value="other">✨ <?= te('shots.type_other') ?></option>
           </select>
         </div>
         <div>
-          <label for="shotLight">Light</label>
+          <label for="shotLight"><?= te('shots.light') ?></label>
           <select id="shotLight" name="light">
-            <option value="">Any time</option>
-            <option value="sunrise">🌅 Sunrise</option>
-            <option value="golden">🌇 Golden hour</option>
-            <option value="midday">☀️ Midday</option>
-            <option value="blue">🌆 Blue hour</option>
-            <option value="night">🌙 Night</option>
+            <option value=""><?= te('shots.light_any') ?></option>
+            <option value="sunrise">🌅 <?= te('shots.light_sunrise') ?></option>
+            <option value="golden">🌇 <?= te('shots.light_golden') ?></option>
+            <option value="midday">☀️ <?= te('shots.light_midday') ?></option>
+            <option value="blue">🌆 <?= te('shots.light_blue') ?></option>
+            <option value="night">🌙 <?= te('shots.light_night') ?></option>
           </select>
         </div>
       </div>
 
       <div class="shot-meta-row">
         <div>
-          <label for="shotDay">Day <span style="opacity:.5;">(empty = anytime)</span></label>
+          <label for="shotDay"><?= te('shots.day') ?> <span style="opacity:.5;">(<?= te('shots.day_hint') ?>)</span></label>
           <input id="shotDay" name="day_date" type="date">
         </div>
         <div>
-          <label for="shotLocation">Location <span style="opacity:.5;">(optional)</span></label>
-          <input id="shotLocation" name="location" type="text" placeholder="Place or address">
+          <label for="shotLocation"><?= te('shots.location') ?> <span style="opacity:.5;">(<?= te('account.optional') ?>)</span></label>
+          <input id="shotLocation" name="location" type="text" placeholder="<?= te('shots.location_placeholder') ?>">
         </div>
       </div>
 
-      <label for="shotHow">How <span style="opacity:.5;">(angle, movement, what to say…)</span></label>
+      <label for="shotHow"><?= te('shots.how') ?> <span style="opacity:.5;">(<?= te('shots.how_hint') ?>)</span></label>
       <textarea id="shotHow" name="how_notes" rows="2"
-                placeholder="Low pass south to north, end on the car. Remember to mention the sponsor."></textarea>
+                placeholder="<?= te('shots.how_placeholder') ?>"></textarea>
 
       <label style="font-size:.8em;opacity:.7;display:block;margin-top:.2rem;">
-        Reference images <span style="opacity:.6;">(from the linked mood board — tap to pin)</span>
+        <?= te('shots.refs') ?> <span style="opacity:.6;">(<?= te('shots.refs_hint') ?>)</span>
       </label>
       <div id="shotRefPicker" class="shot-ref-picker"></div>
 
       <label class="switch switch-row" style="margin-top:.4rem;">
-        <span class="switch-label">★ Must-have</span>
+        <span class="switch-label">★ <?= te('shots.must') ?></span>
         <input class="switch-input" type="checkbox" name="priority">
         <span class="knob" aria-hidden="true"></span>
       </label>
       <label class="switch switch-row">
-        <span class="switch-label">Show on Trip layer</span>
+        <span class="switch-label"><?= te('sec.show_on_trip') ?></span>
         <input class="switch-input" type="checkbox" name="show_on_trip" checked>
         <span class="knob" aria-hidden="true"></span>
       </label>
 
       <div style="margin-top:1rem; display:flex; align-items:center; gap:.6rem; flex-wrap:wrap;">
-        <button type="button" class="btn" id="btnCloseShot">Close</button>
-        <button type="button" class="btn btn-primary" id="btnCaptureShot" hidden>✓ Captured</button>
-        <button type="button" class="btn" id="btnReopenShot" hidden>↺ Reopen</button>
-        <button type="button" class="btn btn-danger" id="btnDeleteShot" hidden>Delete</button>
+        <button type="button" class="btn" id="btnCloseShot"><?= te('action.close') ?></button>
+        <button type="button" class="btn btn-primary" id="btnCaptureShot" hidden>✓ <?= te('shots.captured') ?></button>
+        <button type="button" class="btn" id="btnReopenShot" hidden>↺ <?= te('shots.reopen') ?></button>
+        <button type="button" class="btn btn-danger" id="btnDeleteShot" hidden><?= te('action.delete') ?></button>
         <span id="shotStatus" style="margin-left:auto;opacity:.6;font-size:.85em;"></span>
       </div>
     </form>
@@ -176,10 +175,26 @@ $refMediaJson = htmlspecialchars(json_encode($shotRefMedia ?? []), ENT_QUOTES);
   const delBtn   = wrap.querySelector('#btnDeleteShot');
   const picker   = wrap.querySelector('#shotRefPicker');
 
-  const TYPE_LABEL = { drone:'🚁 Drone', broll:'🎥 B-roll', interview:'🎤 Interview',
-                       timelapse:'⏱ Timelapse', photo:'📷 Photo', pov:'🎬 POV', other:'✨' };
-  const LIGHT_LABEL = { sunrise:'🌅 sunrise', golden:'🌇 golden hour', midday:'☀️ midday',
-                        blue:'🌆 blue hour', night:'🌙 night' };
+  // Strings come from PHP so the list, chips and confirms speak the user's language
+  const T = <?= json_encode([
+      'type_drone'=>t('shots.type_drone'),'type_broll'=>t('shots.type_broll'),
+      'type_interview'=>t('shots.type_interview'),'type_timelapse'=>t('shots.type_timelapse'),
+      'type_photo'=>t('shots.type_photo'),'type_pov'=>t('shots.type_pov'),'type_other'=>t('shots.type_other'),
+      'light_sunrise'=>t('shots.light_sunrise'),'light_golden'=>t('shots.light_golden'),
+      'light_midday'=>t('shots.light_midday'),'light_blue'=>t('shots.light_blue'),'light_night'=>t('shots.light_night'),
+      'must'=>t('shots.must'),'hidden_on_trip'=>t('sec.hidden_on_trip'),
+      'anytime'=>t('shots.anytime'),'none_yet'=>t('shots.none_yet'),
+      'progress'=>t('shots.progress'),'progress_must'=>t('shots.progress_must'),
+      'saving'=>t('status.saving'),'saved'=>t('status.saved'),'save_failed'=>t('status.save_failed'),
+      'net_error'=>t('status.net_error'),'load_failed'=>t('shots.load_failed'),
+      'confirm_delete'=>t('shots.confirm_delete'),'delete_failed'=>t('status.delete_failed'),
+      'migration'=>t('shots.migration'),
+  ], JSON_UNESCAPED_UNICODE) ?>;
+  const TYPE_LABEL = { drone:'🚁 '+T.type_drone, broll:'🎥 '+T.type_broll,
+                       interview:'🎤 '+T.type_interview, timelapse:'⏱ '+T.type_timelapse,
+                       photo:'📷 '+T.type_photo, pov:'🎬 '+T.type_pov, other:'✨ '+T.type_other };
+  const LIGHT_LABEL = { sunrise:'🌅 '+T.light_sunrise, golden:'🌇 '+T.light_golden,
+                        midday:'☀️ '+T.light_midday, blue:'🌆 '+T.light_blue, night:'🌙 '+T.light_night };
 
   let shots = [];
   let pinnedRefs = new Set();   // media ids pinned on the shot being edited
@@ -201,14 +216,14 @@ $refMediaJson = htmlspecialchars(json_encode($shotRefMedia ?? []), ENT_QUOTES);
     const done  = shots.filter(s => s.status === 'captured').length;
     const musts = shots.filter(s => +s.priority);
     const mustsDone = musts.filter(s => s.status === 'captured').length;
-    progress.textContent = `${done} of ${total} captured` +
-      (musts.length ? ` · must-haves ${mustsDone}/${musts.length}` : '');
+    progress.textContent = T.progress.replace(':done', done).replace(':total', total) +
+      (musts.length ? ' · ' + T.progress_must.replace(':done', mustsDone).replace(':total', musts.length) : '');
   }
 
   function renderList() {
     renderProgress();
     if (!shots.length) {
-      list.innerHTML = '<div style="opacity:.6;font-size:.9em;">No shots yet — add the first idea above.</div>';
+      list.innerHTML = '<div style="opacity:.6;font-size:.9em;">' + T.none_yet + '</div>';
       return;
     }
     let html = '', lastDay = '·none·';
@@ -216,14 +231,14 @@ $refMediaJson = htmlspecialchars(json_encode($shotRefMedia ?? []), ENT_QUOTES);
       const day = s.day_date || '';
       if (day !== lastDay) {
         lastDay = day;
-        html += `<div class="shot-day">${day ? '📅 ' + esc(dayLabel(day)) : '✨ Anytime — keep an eye out'}</div>`;
+        html += `<div class="shot-day">${day ? '📅 ' + esc(dayLabel(day)) : '✨ ' + T.anytime}</div>`;
       }
       const captured = s.status === 'captured';
       const sub = [
         s.shot_type ? TYPE_LABEL[s.shot_type] || s.shot_type : '',
         s.light ? LIGHT_LABEL[s.light] || s.light : '',
         s.location ? '📍 ' + s.location : '',
-        !+s.show_on_trip ? 'hidden on trip' : '',
+        !+s.show_on_trip ? T.hidden_on_trip : '',
       ].filter(Boolean).join(' · ');
       const thumbs = (s.refs || []).slice(0, 4)
         .map(r => `<img src="${esc(r.thumb)}" alt="" loading="lazy">`).join('');
@@ -232,7 +247,7 @@ $refMediaJson = htmlspecialchars(json_encode($shotRefMedia ?? []), ENT_QUOTES);
           <input type="checkbox" class="shot-check" ${captured ? 'checked' : ''}
                  title="${captured ? 'Reopen' : 'Mark captured'}">
           <span class="shot-main">
-            <span class="shot-title">${+s.priority ? '<span class="must-star">★</span> ' : ''}${esc(s.title)}</span>
+            <span class="shot-title">${+s.priority ? '<span class="must-star" title="'+esc(T.must)+'">★</span> ' : ''}${esc(s.title)}</span>
             ${sub ? `<span class="shot-sub">${esc(sub)}</span>` : ''}
             ${thumbs ? `<span class="shot-thumbs">${thumbs}</span>` : ''}
           </span>
@@ -247,11 +262,11 @@ $refMediaJson = htmlspecialchars(json_encode($shotRefMedia ?? []), ENT_QUOTES);
       const j = await res.json();
       shots = j?.shots || [];
       if (j?.migration_missing) {
-        list.innerHTML = '<div style="color:#e8c267;font-size:.85em;">Run db/migrations/2026-07-14_shots.sql first.</div>';
+        list.innerHTML = '<div style="color:#e8c267;font-size:.85em;">' + T.migration + '</div>';
         return;
       }
       renderList();
-    } catch { list.innerHTML = '<div class="error">Failed to load shots.</div>'; }
+    } catch { list.innerHTML = '<div class="error">' + T.load_failed + '</div>'; }
   }
 
   function renderPicker() {
@@ -300,7 +315,7 @@ $refMediaJson = htmlspecialchars(json_encode($shotRefMedia ?? []), ENT_QUOTES);
     if (!form.title.value.trim()) { status.textContent = ''; return; }
     const sid = form.querySelector('[name="shot_id"]').value.trim();
     const url = sid ? `/api/visions/${slug}/shots/${sid}` : `/api/visions/${slug}/shots/create`;
-    status.textContent = 'Saving…';
+    status.textContent = T.saving;
     try {
       const res = await fetch(url, {
         method:'POST',
@@ -313,10 +328,10 @@ $refMediaJson = htmlspecialchars(json_encode($shotRefMedia ?? []), ENT_QUOTES);
           form.querySelector('[name="shot_id"]').value = j.shot_id;
           delBtn.hidden = capBtn.hidden = false;
         }
-        status.textContent = 'Saved';
+        status.textContent = T.saved;
         loadList();
-      } else status.textContent = '⚠ ' + (j?.error || 'Save failed');
-    } catch { status.textContent = '⚠ Network error'; }
+      } else status.textContent = '⚠ ' + (j?.error || T.save_failed);
+    } catch { status.textContent = '⚠ ' + T.net_error; }
   }
   function autoSave() {
     clearTimeout(saveTimer);
@@ -383,13 +398,13 @@ $refMediaJson = htmlspecialchars(json_encode($shotRefMedia ?? []), ENT_QUOTES);
   delBtn.addEventListener('click', async () => {
     const sid = form.querySelector('[name="shot_id"]').value.trim();
     if (!sid) return;
-    if (!confirm('Delete this shot?')) return;
+    if (!confirm(T.confirm_delete)) return;
     try {
       const res = await fetch(`/api/visions/${slug}/shots/${sid}/delete`, { method:'POST' });
       const j = await res.json();
       if (j?.success) { hideForm(); loadList(); }
-      else alert(j?.error || 'Delete failed');
-    } catch { alert('Delete failed'); }
+      else alert(j?.error || T.delete_failed);
+    } catch { alert(T.delete_failed); }
   });
 
   list.addEventListener('click', e => {

@@ -1,14 +1,14 @@
 <?php
 // views/trip_disabled.php — shown when a trip's master switch is off.
 // Standalone HTML, no site chrome.
-$titleE = htmlspecialchars($title ?? 'Trip', ENT_QUOTES, 'UTF-8');
+$titleE = htmlspecialchars($title ?? t('board.trip'), ENT_QUOTES, 'UTF-8');
 ?>
 <!doctype html>
-<html lang="en">
+<html lang="<?= htmlspecialchars(I18n::lang(), ENT_QUOTES) ?>">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title><?= $titleE ?> — Not published</title>
+  <title><?= $titleE ?> — <?= te('trip.not_published') ?></title>
   <style>
     html, body { margin:0; padding:0; }
     body {
@@ -37,8 +37,8 @@ $titleE = htmlspecialchars($title ?? 'Trip', ENT_QUOTES, 'UTF-8');
 <body>
   <div class="card">
     <div class="icon">🔒</div>
-    <h1>This trip isn't published</h1>
-    <p>The owner hasn't made <strong><?= $titleE ?></strong> public yet.</p>
+    <h1><?= te('trip.not_published_head') ?></h1>
+    <p><?= te('trip.not_published_body', ['title' => $title ?? '']) ?></p>
   </div>
 </body>
 </html>

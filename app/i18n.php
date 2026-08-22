@@ -240,6 +240,19 @@ function fmt_date($when): string
     ]);
 }
 
+/**
+ * Localised weekday name, e.g. "Saturday" / "l\u00f8rdag".
+ *
+ * @param int|string|null $when  timestamp, or anything strtotime() accepts
+ */
+function fmt_weekday($when): string
+{
+    if ($when === null || $when === '') return '';
+    $ts = is_int($when) ? $when : strtotime((string)$when);
+    if (!$ts) return '';
+    return I18n::t('day.' . strtolower(date('D', $ts)));
+}
+
 /** Escaped shorthand — the common case in HTML. */
 function te(string $key, array $vars = []): string
 {

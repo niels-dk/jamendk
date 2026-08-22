@@ -696,4 +696,56 @@ return [
     'dash.confirm_delete'     => 'Slet for altid?',
     'dash.confirm_delete_perm'=> 'Slet permanent?',
 
+
+    /* ── Weekdays (itinerary day headings) ── */
+    'day.mon' => 'mandag',  'day.tue' => 'tirsdag', 'day.wed' => 'onsdag',
+    'day.thu' => 'torsdag', 'day.fri' => 'fredag',  'day.sat' => 'lørdag',
+    'day.sun' => 'søndag',
+
+    /* ── Trip page (public) ── */
+    'trip.not_published'      => 'Ikke udgivet',
+    'trip.not_published_head' => 'Denne trip er ikke udgivet',
+    'trip.not_published_body' => 'Ejeren har ikke gjort :title offentlig endnu.',
+
+    'trip.offline_copy'   => 'Offline-kopi',
+    'trip.offline_tip'    => 'Hent en enkelt fil, der virker uden internet — billeder og dokumenter er inkluderet',
+    'trip.print'          => 'Print / PDF',
+    'trip.print_tip'      => 'Print, eller vælg "Gem som PDF" som printer',
+
+    'trip.shots_captured' => ':done af :total shots fanget',
+    'trip.musts'          => 'must-haves :done/:total',
+    'trip.must'           => 'must',
+    'trip.captured_status'=> 'Fanget-status',
+    'trip.reference'      => 'Reference',
+    'trip.saved_here'     => 'gemt på denne enhed',
+    'trip.waiting_sync'   => ':n venter på synkronisering',
+    'trip.pencil_tip'     => 'Sæt flueben som med en blyant — gemmes kun på denne enhed',
+
+    'trip.empty'             => 'Denne trip er tom.',
+    'trip.empty_help_before' => 'Åbn visionen og slå',
+    'trip.empty_help_after'  => 'til på de sektioner og punkter, du vil udgive.',
+
+    'trip.shots_anytime'  => 'Shots — hold øjnene åbne',
+    'trip.open_maps'      => 'Åbn i Google Maps',
+    'trip.due'            => 'Deadline',
+    'trip.milestones_of'  => ':done/:total milepæle',
+
+    'trip.paid'           => 'betalt',
+    'trip.planned_so_far' => 'Planlagt indtil nu',
+    'trip.over_budget'    => 'Over budget',
+    'trip.total_budget'   => 'Samlet budget',
+
+    'trip.online_only'     => 'Kun online',
+    'trip.online_only_tip' => 'Filen var for stor til at blive lagt ind i offline-kopien — hent den online, før du går offline',
+
+    'trip.workflow_notes' => 'Workflow-noter',
+    'trip.canvas_empty'   => 'Mood boardet har ingen elementer endnu.',
+
+    'trip.planned_with'   => 'Planlagt med',
+    'trip.brand_tip'      => 'Merely a Dream — fang idéen, udbyg planen, åbn shot-listen når du står der',
+    'trip.offline_of'     => 'Offline-kopi af ”:title” · genereret :when',
+    'trip.embedded_note'  => '— billeder og dokumenter ligger i denne fil.',
+    'trip.latest_version' => 'Nyeste version:',
+    'trip.generated'      => 'Genereret :when',
+
 ];

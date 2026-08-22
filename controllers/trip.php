@@ -92,6 +92,15 @@ class trip_controller
     private static function render(array $vision, bool $export, ?string $shareToken): void
     {
         global $db;
+
+        // A trip page speaks its OWNER's language. The /t/{token} URL has no
+        // logged-in visitor to ask, and the content on the page — shot titles,
+        // itinerary notes, contact names — is already whatever the creator
+        // typed, so chrome in a different language would read oddly. It also
+        // keeps a token deterministic: the same link always renders the same,
+        // which matters for a page people print, export and re-share.
+        I18n::use(I18n::forUser($db, (int)($vision['user_id'] ?? 0)));
+
         $visionId = (int)$vision['id'];
 
         // Source dream lineage (visions promoted from a dream)

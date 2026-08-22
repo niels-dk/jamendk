@@ -685,4 +685,56 @@ return [
     'dash.confirm_delete'     => 'Delete forever?',
     'dash.confirm_delete_perm'=> 'Permanently delete?',
 
+
+    /* ── Weekdays (itinerary day headings) ── */
+    'day.mon' => 'Monday',   'day.tue' => 'Tuesday', 'day.wed' => 'Wednesday',
+    'day.thu' => 'Thursday', 'day.fri' => 'Friday',  'day.sat' => 'Saturday',
+    'day.sun' => 'Sunday',
+
+    /* ── Trip page (public) ── */
+    'trip.not_published'      => 'Not published',
+    'trip.not_published_head' => "This trip isn't published",
+    'trip.not_published_body' => "The owner hasn't made :title public yet.",
+
+    'trip.offline_copy'   => 'Offline copy',
+    'trip.offline_tip'    => 'Download a single-file copy that works without internet — images and documents included',
+    'trip.print'          => 'Print / PDF',
+    'trip.print_tip'      => "Print, or choose 'Save as PDF' as the printer",
+
+    'trip.shots_captured' => ':done of :total shots captured',
+    'trip.musts'          => 'must-haves :done/:total',
+    'trip.must'           => 'must',
+    'trip.captured_status'=> 'Captured status',
+    'trip.reference'      => 'Reference',
+    'trip.saved_here'     => 'saved on this device',
+    'trip.waiting_sync'   => ':n waiting to sync',
+    'trip.pencil_tip'     => 'Tick like a pencil — saved on this device only',
+
+    'trip.empty'             => 'This trip is empty.',
+    'trip.empty_help_before' => 'Open the vision and toggle',
+    'trip.empty_help_after'  => "on the sections and items you'd like to publish.",
+
+    'trip.shots_anytime'  => 'Shots — keep an eye out',
+    'trip.open_maps'      => 'Open in Google Maps',
+    'trip.due'            => 'Due',
+    'trip.milestones_of'  => ':done/:total milestones',
+
+    'trip.paid'           => 'paid',
+    'trip.planned_so_far' => 'Planned so far',
+    'trip.over_budget'    => 'Over budget',
+    'trip.total_budget'   => 'Total budget',
+
+    'trip.online_only'     => 'Online only',
+    'trip.online_only_tip' => 'This file was too large to embed in the offline copy — download it online before you go offline',
+
+    'trip.workflow_notes' => 'Workflow notes',
+    'trip.canvas_empty'   => 'The mood board has no items yet.',
+
+    'trip.planned_with'   => 'Planned with',
+    'trip.brand_tip'      => "Merely a Dream — catch the idea, grow the plan, open the shot list when you're standing there",
+    'trip.offline_of'     => 'Offline copy of “:title” · generated :when',
+    'trip.embedded_note'  => '— images and documents are embedded in this file.',
+    'trip.latest_version' => 'Latest version:',
+    'trip.generated'      => 'Generated :when',
+
 ];

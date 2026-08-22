@@ -6,7 +6,7 @@
 //                            inlined as base64 and documents become data:
 //                            URIs (prepared by the controller in $docEmbeds).
 function tr_e($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
-function tr_date($s) { return $s ? date('M j, Y', strtotime($s)) : ''; }
+function tr_date($s) { return $s ? fmt_date($s) : ''; }
 
 $export     = $export     ?? false;
 $docEmbeds  = $docEmbeds  ?? [];
@@ -41,18 +41,18 @@ $assetUrl = function (string $url) use ($export): string {
         : $url;
 };
 
-$title       = $vision['title'] ?: 'Trip';
+$title       = $vision['title'] ?: t('board.trip');
 $startDate   = tr_date($vision['start_date'] ?? '');
 $endDate     = tr_date($vision['end_date']   ?? '');
 $updatedAt   = tr_date($vision['updated_at'] ?? '');
 $dateRange   = ($startDate && $endDate) ? "$startDate — $endDate" : ($startDate ?: $endDate);
 
 $STATUS_LABELS = [
-    'not_started' => 'Not started',
-    'in_progress' => 'In progress',
-    'awaiting'    => 'Awaiting',
-    'done'        => 'Done',
-    'cancelled'   => 'Cancelled',
+    'not_started' => t('goals.not_started'),
+    'in_progress' => t('goals.in_progress'),
+    'awaiting'    => t('goals.awaiting'),
+    'done'        => t('goals.done'),
+    'cancelled'   => t('goals.cancelled'),
 ];
 $priorityLabel = fn($p) => 'P' . max(1, min(5, (int)$p));
 
@@ -122,17 +122,34 @@ $shotDone  = count(array_filter($shots, fn($s) => $s['status'] === 'captured'));
 $shotMusts = array_filter($shots, fn($s) => !empty($s['priority']));
 $shotMustsDone = count(array_filter($shotMusts, fn($s) => $s['status'] === 'captured'));
 
-$SHOT_TYPE_LABEL = ['drone'=>'🚁 Drone','broll'=>'🎥 B-roll','interview'=>'🎤 Interview',
-                    'timelapse'=>'⏱ Timelapse','photo'=>'📷 Photo','pov'=>'🎬 POV','other'=>'✨'];
-$SHOT_LIGHT_LABEL = ['sunrise'=>'🌅 sunrise','golden'=>'🌇 golden hour','midday'=>'☀️ midday',
-                     'blue'=>'🌆 blue hour','night'=>'🌙 night'];
+$SHOT_TYPE_LABEL = ['drone'=>'🚁 ' . t('shots.type_drone'),
+                    'broll'=>'🎥 ' . t('shots.type_broll'),
+                    'interview'=>'🎤 ' . t('shots.type_interview'),
+                    'timelapse'=>'⏱ ' . t('shots.type_timelapse'),
+                    'photo'=>'📷 ' . t('shots.type_photo'),
+                    'pov'=>'🎬 ' . t('shots.type_pov'),
+                    'other'=>'✨'];
+$SHOT_LIGHT_LABEL = ['sunrise'=>'🌅 ' . t('shots.light_sunrise'),
+                     'golden'=>'🌇 ' . t('shots.light_golden'),
+                     'midday'=>'☀️ ' . t('shots.light_midday'),
+                     'blue'=>'🌆 ' . t('shots.light_blue'),
+                     'night'=>'🌙 ' . t('shots.light_night')];
+
+// Document status: ucfirst(str_replace('_',' ', ...)) on the stored value can
+// never translate, so the labels come from the same keys the overlay uses.
+$DOC_STATUS_LABEL = [
+    'draft'         => t('docs.draft'),
+    'waiting_brand' => t('docs.waiting_brand'),
+    'final'         => t('docs.final'),
+    'signed'        => t('docs.signed'),
+];
 ?>
 <!doctype html>
-<html lang="en">
+<html lang="<?= tr_e(I18n::lang()) ?>">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title><?= tr_e($title) ?> — Trip</title>
+  <title><?= tr_e($title) ?> — <?= te('board.trip') ?></title>
 <?php if (!$export): ?>
   <!-- Same install identity as the app — crew keep this page on the home screen -->
   <link rel="manifest" href="/public/manifest.json">
@@ -494,13 +511,13 @@ $SHOT_LIGHT_LABEL = ['sunrise'=>'🌅 sunrise','golden'=>'🌇 golden hour','mid
     <div class="hero-actions">
       <?php if (!$export): ?>
         <a class="hero-pill" href="<?= tr_e($downloadHref) ?>"
-           title="Download a single-file copy that works without internet — images and documents included">
-          ⬇ Offline copy
+           title="<?= te('trip.offline_tip') ?>">
+          ⬇ <?= te('trip.offline_copy') ?>
         </a>
       <?php endif; ?>
       <button type="button" class="hero-pill" onclick="window.print()"
-              title="Print, or choose 'Save as PDF' as the printer">
-        🖨 Print / PDF
+              title="<?= te('trip.print_tip') ?>">
+        🖨 <?= te('trip.print') ?>
       </button>
     </div>
     <?php if ($coverUrl): ?>
@@ -510,19 +527,19 @@ $SHOT_LIGHT_LABEL = ['sunrise'=>'🌅 sunrise','golden'=>'🌇 golden hour','mid
       <h1><?= tr_e($title) ?></h1>
       <div class="hero-meta">
         <?php if ($dateRange): ?><span><?= tr_e($dateRange) ?></span><?php endif; ?>
-        <?php if ($updatedAt): ?><span>Updated <?= tr_e($updatedAt) ?></span><?php endif; ?>
+        <?php if ($updatedAt): ?><span><?= te('home.updated') ?> <?= tr_e($updatedAt) ?></span><?php endif; ?>
         <?php if (!empty($workflow)): ?>
           <span class="pill status-<?= tr_e($workflow['status']) ?>">
             <?= tr_e($STATUS_LABELS[$workflow['status']] ?? $workflow['status']) ?>
           </span>
         <?php endif; ?>
         <?php if (!empty($sourceDream)): ?>
-          <span>From Dream: <?= tr_e($sourceDream['title'] ?: 'Untitled') ?></span>
+          <span><?= te('vision.from_dream') ?> <?= tr_e($sourceDream['title'] ?: t('common.untitled')) ?></span>
         <?php endif; ?>
         <?php if (!empty($shots)): ?>
           <span class="shots-progress" id="shotsProgressPill">
-            🎬 <?= $shotDone ?> of <?= count($shots) ?> shots captured<?=
-              $shotMusts ? ' · must-haves ' . $shotMustsDone . '/' . count($shotMusts) : '' ?>
+            🎬 <?= te('trip.shots_captured', ['done' => $shotDone, 'total' => count($shots)]) ?><?=
+              $shotMusts ? ' · ' . te('trip.musts', ['done' => $shotMustsDone, 'total' => count($shotMusts)]) : '' ?>
           </span>
         <?php endif; ?>
       </div>
@@ -534,10 +551,10 @@ $SHOT_LIGHT_LABEL = ['sunrise'=>'🌅 sunrise','golden'=>'🌇 golden hour','mid
 
   <?php if (!$hasAnyContent): ?>
     <div class="empty">
-      <p>This trip is empty.</p>
+      <p><?= te('trip.empty') ?></p>
       <p style="font-size:.9em;opacity:.75;">
-        Open the vision and toggle <strong>Show on Trip layer</strong> on the sections and items
-        you'd like to publish.
+        <?= te('trip.empty_help_before') ?> <strong><?= te('sec.show_on_trip') ?></strong>
+        <?= te('trip.empty_help_after') ?>
       </p>
     </div>
   <?php endif; ?>
@@ -550,11 +567,11 @@ $SHOT_LIGHT_LABEL = ['sunrise'=>'🌅 sunrise','golden'=>'🌇 golden hour','mid
         <div class="card shot-entry <?= $done ? 'done' : '' ?>" data-shot-id="<?= (int)$s['id'] ?>">
           <input type="checkbox" class="shot-cb <?= $canCheckShots ? 'live' : '' ?>"
                  <?= $done ? 'checked' : '' ?> <?= $canCheckShots ? '' : 'disabled' ?>
-                 title="<?= $canCheckShots ? ($done ? 'Reopen' : 'Mark captured') : 'Captured status' ?>">
+                 title="<?= $canCheckShots ? ($done ? te('shots.reopen') : te('shots.mark_captured')) : te('trip.captured_status') ?>">
           <span class="what">
             <span class="t"><?= tr_e($s['title']) ?></span>
             <span class="meta">
-              <?php if (!empty($s['priority'])): ?><span class="must-tag">★ must</span><?php endif; ?>
+              <?php if (!empty($s['priority'])): ?><span class="must-tag">★ <?= te('trip.must') ?></span><?php endif; ?>
               <?php if (!empty($s['shot_type'])): ?><span><?= tr_e($SHOT_TYPE_LABEL[$s['shot_type']] ?? $s['shot_type']) ?></span><?php endif; ?>
               <?php if (!empty($s['light'])): ?><span><?= tr_e($SHOT_LIGHT_LABEL[$s['light']] ?? $s['light']) ?></span><?php endif; ?>
               <?php if (!empty($s['location'])): ?>
@@ -567,7 +584,7 @@ $SHOT_LIGHT_LABEL = ['sunrise'=>'🌅 sunrise','golden'=>'🌇 golden hour','mid
             <?php if (!empty($s['ref_thumbs'])): ?>
               <span class="refs">
                 <?php foreach ($s['ref_thumbs'] as $thumb): ?>
-                  <img src="<?= tr_e($assetUrl($thumb)) ?>" alt="Reference" loading="lazy">
+                  <img src="<?= tr_e($assetUrl($thumb)) ?>" alt="<?= te('trip.reference') ?>" loading="lazy">
                 <?php endforeach; ?>
               </span>
             <?php endif; ?>
@@ -578,9 +595,9 @@ $SHOT_LIGHT_LABEL = ['sunrise'=>'🌅 sunrise','golden'=>'🌇 golden hour','mid
   ?>
 
   <?php if (!empty($allDays)): ?>
-    <h2>Itinerary</h2>
+    <h2><?= te('sec.itinerary') ?></h2>
     <?php foreach ($allDays as $day): ?>
-      <div class="itin-day-head">📅 <?= tr_e(date('l · M j, Y', strtotime($day))) ?></div>
+      <div class="itin-day-head">📅 <?= tr_e(fmt_weekday($day) . ' · ' . fmt_date($day)) ?></div>
       <?php foreach ($itinByDay[$day] ?? [] as $en): ?>
         <div class="card itin-entry">
           <span class="when"><?= $en['start_time'] ? tr_e(substr($en['start_time'], 0, 5)) : '·' ?></span>
@@ -600,21 +617,21 @@ $SHOT_LIGHT_LABEL = ['sunrise'=>'🌅 sunrise','golden'=>'🌇 golden hour','mid
   <?php endif; ?>
 
   <?php if (!empty($shotsAnytime)): ?>
-    <h2>Shots — keep an eye out</h2>
+    <h2><?= te('trip.shots_anytime') ?></h2>
     <?php foreach ($shotsAnytime as $s) $renderShot($s); ?>
   <?php endif; ?>
 
   <?php if (!empty($anchors) && array_filter($anchors)): ?>
-    <h2>Anchors</h2>
+    <h2><?= te('vision.anchors') ?></h2>
     <div class="anchor-grid">
       <?php foreach ($anchorOrder as $key): ?>
         <?php if (empty($anchors[$key])) continue; ?>
         <div class="card anchor-block">
-          <h4><?= ($anchorIcon[$key] ?? '') ?> <?= tr_e(ucfirst($key)) ?></h4>
+          <h4><?= ($anchorIcon[$key] ?? '') ?> <?= te('anchor.' . $key) ?></h4>
           <?php foreach ($anchors[$key] as $val): ?>
             <?php if ($key === 'locations'): ?>
               <a class="chip" href="<?= tr_e($mapUrl($val)) ?>" target="_blank" rel="noopener"
-                 title="Open in Google Maps">📍 <?= tr_e($val) ?></a>
+                 title="<?= te('trip.open_maps') ?>">📍 <?= tr_e($val) ?></a>
             <?php else: ?>
               <span class="chip"><?= tr_e($val) ?></span>
             <?php endif; ?>
@@ -634,7 +651,7 @@ $SHOT_LIGHT_LABEL = ['sunrise'=>'🌅 sunrise','golden'=>'🌇 golden hour','mid
   <?php endif; ?>
 
   <?php if (!empty($goals)): ?>
-    <h2>Goals &amp; Milestones</h2>
+    <h2><?= te('sec.goals') ?></h2>
     <?php foreach ($goals as $g): ?>
       <?php
         $total = count($g['milestones'] ?? []);
@@ -650,10 +667,10 @@ $SHOT_LIGHT_LABEL = ['sunrise'=>'🌅 sunrise','golden'=>'🌇 golden hour','mid
             <?= tr_e($STATUS_LABELS[$g['status']] ?? $g['status']) ?>
           </span>
           <?php if (!empty($g['due_date'])): ?>
-            <span>Due <?= tr_e(tr_date($g['due_date'])) ?></span>
+            <span><?= te('trip.due') ?> <?= tr_e(tr_date($g['due_date'])) ?></span>
           <?php endif; ?>
           <?php if ($total): ?>
-            <span><?= $done ?>/<?= $total ?> milestones · <?= $pct ?>%</span>
+            <span><?= te('trip.milestones_of', ['done' => $done, 'total' => $total]) ?> · <?= $pct ?>%</span>
           <?php endif; ?>
         </div>
         <?php if (!empty($g['description'])): ?>
@@ -672,7 +689,7 @@ $SHOT_LIGHT_LABEL = ['sunrise'=>'🌅 sunrise','golden'=>'🌇 golden hour','mid
   <?php endif; ?>
 
   <?php if ($budget): ?>
-    <h2>Budget</h2>
+    <h2><?= te('sec.budget') ?></h2>
     <?php if (!empty($budgetItems)): ?>
       <?php
         $biSum   = 0;
@@ -687,26 +704,26 @@ $SHOT_LIGHT_LABEL = ['sunrise'=>'🌅 sunrise','golden'=>'🌇 golden hour','mid
           <?php foreach ($budgetItems as $bi): ?>
             <tr>
               <td><?= tr_e($bi['label']) ?></td>
-              <td class="paid"><?= !empty($bi['paid']) ? '<span class="paid-tag">paid</span>' : '' ?></td>
+              <td class="paid"><?= !empty($bi['paid']) ? '<span class="paid-tag">' . te('trip.paid') . '</span>' : '' ?></td>
               <td class="amt"><?= $fmt((int)$bi['amount_cents']) ?></td>
             </tr>
           <?php endforeach; ?>
           <?php if ($biTotal !== $biSum): ?>
             <tr>
-              <td style="color:var(--muted);">Planned so far</td>
+              <td style="color:var(--muted);"><?= te('trip.planned_so_far') ?></td>
               <td></td>
               <td class="amt" style="color:var(--muted);"><?= $fmt($biSum) ?></td>
             </tr>
             <tr>
               <td style="color:<?= $biLeft < 0 ? '#a01a36' : 'var(--muted)' ?>;">
-                <?= $biLeft < 0 ? 'Over budget' : 'Remaining' ?>
+                <?= $biLeft < 0 ? te('trip.over_budget') : te('budget.remaining') ?>
               </td>
               <td></td>
               <td class="amt" style="color:<?= $biLeft < 0 ? '#a01a36' : 'var(--muted)' ?>;"><?= $fmt(abs($biLeft)) ?></td>
             </tr>
           <?php endif; ?>
           <tr class="total">
-            <td>Total budget</td>
+            <td><?= te('trip.total_budget') ?></td>
             <td></td>
             <td class="amt"><?= $fmt($biTotal) ?> <?= tr_e($budget['currency'] ?? '') ?></td>
           </tr>
@@ -721,14 +738,14 @@ $SHOT_LIGHT_LABEL = ['sunrise'=>'🌅 sunrise','golden'=>'🌇 golden hour','mid
   <?php endif; ?>
 
   <?php if (!empty($contacts)): ?>
-    <h2>Contacts</h2>
+    <h2><?= te('sec.contacts') ?></h2>
     <div class="contacts-grid">
       <?php foreach ($contacts as $c): ?>
         <div class="card contact">
           <div class="name">
-            <?= tr_e($c['name'] ?: $c['email'] ?: '(unnamed)') ?>
-            <?php if (!empty($c['is_main'])):    ?><span class="flag">Main</span><?php endif; ?>
-            <?php if (!empty($c['is_current'])): ?><span class="flag">Current</span><?php endif; ?>
+            <?= tr_e($c['name'] ?: $c['email'] ?: t('contacts.unnamed')) ?>
+            <?php if (!empty($c['is_main'])):    ?><span class="flag"><?= te('contacts.main') ?></span><?php endif; ?>
+            <?php if (!empty($c['is_current'])): ?><span class="flag"><?= te('contacts.current') ?></span><?php endif; ?>
           </div>
           <?php if (!empty($c['company'])): ?><div class="row"><?= tr_e($c['company']) ?></div><?php endif; ?>
           <?php if (!empty($c['email'])):   ?><div class="row"><a href="mailto:<?= tr_e($c['email']) ?>"><?= tr_e($c['email']) ?></a></div><?php endif; ?>
@@ -740,7 +757,7 @@ $SHOT_LIGHT_LABEL = ['sunrise'=>'🌅 sunrise','golden'=>'🌇 golden hour','mid
   <?php endif; ?>
 
   <?php if (!empty($documents)): ?>
-    <h2>Documents</h2>
+    <h2><?= te('sec.documents') ?></h2>
     <ul class="docs-list">
       <?php foreach ($documents as $doc): ?>
         <?php
@@ -754,7 +771,7 @@ $SHOT_LIGHT_LABEL = ['sunrise'=>'🌅 sunrise','golden'=>'🌇 golden hour','mid
             <div class="doc-name"><?= tr_e($name) ?></div>
             <div class="doc-meta">
               <span class="pill status-<?= tr_e(in_array($status,['final','done']) ? 'done' : ($status==='waiting_brand'?'awaiting':($status==='signed'?'in_progress':'not_started'))) ?>">
-                <?= tr_e(ucfirst(str_replace('_',' ',$status))) ?>
+                <?= tr_e($DOC_STATUS_LABEL[$status] ?? ucfirst(str_replace('_',' ',$status))) ?>
               </span>
               <?php if (!empty($doc['created_at'])): ?>
                 <span> · <?= tr_e(tr_date($doc['created_at'])) ?></span>
@@ -763,14 +780,14 @@ $SHOT_LIGHT_LABEL = ['sunrise'=>'🌅 sunrise','golden'=>'🌇 golden hour','mid
           </div>
           <?php if (!empty($doc['uuid'])): ?>
             <?php if (!$export): ?>
-              <a class="download" href="/documents/<?= tr_e($doc['uuid']) ?>/download">Download</a>
+              <a class="download" href="/documents/<?= tr_e($doc['uuid']) ?>/download"><?= te('docs.download') ?></a>
             <?php elseif (!empty($docEmbeds[$doc['uuid']])): ?>
               <!-- Embedded in this file — works fully offline -->
               <a class="download" href="<?= $docEmbeds[$doc['uuid']] ?>"
-                 download="<?= tr_e(basename($name)) ?>">Download</a>
+                 download="<?= tr_e(basename($name)) ?>"><?= te('docs.download') ?></a>
             <?php else: ?>
-              <span class="doc-onlineonly" title="This file was too large to embed in the offline copy — download it online before you go offline">
-                ⚠ Online only
+              <span class="doc-onlineonly" title="<?= te('trip.online_only_tip') ?>">
+                ⚠ <?= te('trip.online_only') ?>
               </span>
             <?php endif; ?>
           <?php endif; ?>
@@ -780,14 +797,14 @@ $SHOT_LIGHT_LABEL = ['sunrise'=>'🌅 sunrise','golden'=>'🌇 golden hour','mid
   <?php endif; ?>
 
   <?php if (!empty($workflow) && !empty($workflow['notes'])): ?>
-    <h2>Workflow notes</h2>
+    <h2><?= te('trip.workflow_notes') ?></h2>
     <div class="card workflow">
       <div class="notes"><?= tr_e($workflow['notes']) ?></div>
     </div>
   <?php endif; ?>
 
   <?php if ($mood): ?>
-    <h2>Mood: <?= tr_e($mood['title'] ?: 'Untitled') ?></h2>
+    <h2><?= te('board.mood') ?>: <?= tr_e($mood['title'] ?: t('common.untitled')) ?></h2>
     <?php if (!empty($mood['description'])): ?>
       <div class="card" style="padding:.9rem 1.1rem; margin-bottom:.6rem;">
         <?= $mood['description'] ?>
@@ -895,7 +912,7 @@ $SHOT_LIGHT_LABEL = ['sunrise'=>'🌅 sunrise','golden'=>'🌇 golden hour','mid
       </div>
       </div><!-- /.trip-canvas-wrap -->
     <?php elseif (empty($canvasItems)): ?>
-      <div class="card canvas-empty">The mood board has no items yet.</div>
+      <div class="card canvas-empty"><?= te('trip.canvas_empty') ?></div>
     <?php endif; ?>
   <?php endif; ?>
 
@@ -911,8 +928,8 @@ $SHOT_LIGHT_LABEL = ['sunrise'=>'🌅 sunrise','golden'=>'🌇 golden hour','mid
     ?>
     <div style="margin-bottom:.5rem;">
       <a href="<?= tr_e($brandUrl) ?>" style="color:#5a6878;font-weight:600;"
-         title="Merely a Dream — catch the idea, grow the plan, open the shot list when you're standing there">
-        🎬 Planned with <span style="color:#2c5aa0;">Merely a Dream</span> →
+         title="<?= te('trip.brand_tip') ?>">
+        🎬 <?= te('trip.planned_with') ?> <span style="color:#2c5aa0;"><?= tr_e(defined('SITE_NAME') ? SITE_NAME : 'Merely a Dream') ?></span> →
       </a>
     </div>
     <?php if ($export): ?>
@@ -925,17 +942,31 @@ $SHOT_LIGHT_LABEL = ['sunrise'=>'🌅 sunrise','golden'=>'🌇 golden hour','mid
             . '://' . ($_SERVER['HTTP_HOST'] ?? '') . '/t/' . $liveToken
           : '';
       ?>
-      Offline copy of “<?= tr_e($title) ?>” · generated <?= tr_e(date('M j, Y · H:i')) ?>
-      — images and documents are embedded in this file.
+      <?= te('trip.offline_of', ['title' => $title, 'when' => fmt_date(time()) . ' · ' . date('H:i')]) ?>
+      <?= te('trip.embedded_note') ?>
       <?php if ($liveUrl): ?>
-        <br>Latest version: <a href="<?= tr_e($liveUrl) ?>"><?= tr_e($liveUrl) ?></a>
+        <br><?= te('trip.latest_version') ?> <a href="<?= tr_e($liveUrl) ?>"><?= tr_e($liveUrl) ?></a>
       <?php endif; ?>
     <?php else: ?>
-      Generated <?= tr_e(date('M j, Y · H:i')) ?>
+      <?= te('trip.generated', ['when' => fmt_date(time()) . ' · ' . date('H:i')]) ?>
     <?php endif; ?>
   </footer>
 
 </div>
+
+<script>
+// Strings for the two offline scripts below. Inlined rather than fetched so
+// the downloaded single-file copy keeps working with no network.
+window.TRIP_T = <?= json_encode([
+  // No vars passed on purpose: t() leaves :done / :total in place so the same
+  // key serves the PHP render above and the JS recount below.
+  'shots_captured' => t('trip.shots_captured'),
+  'musts'          => t('trip.musts'),
+  'saved_here'     => t('trip.saved_here'),
+  'waiting_sync'   => t('trip.waiting_sync'),
+  'pencil_tip'     => t('trip.pencil_tip'),
+], JSON_UNESCAPED_UNICODE) ?>;
+</script>
 
 <!-- Click-to-zoom for canvas images (inline, so it works offline too) -->
 <div id="trip-lb"><img alt=""></div>
@@ -975,6 +1006,7 @@ if ('serviceWorker' in navigator) {
   var slug = <?= json_encode((string)($vision['slug'] ?? '')) ?>;
   if (!slug) return;
   var QKEY = 'shotQueue:' + slug;
+  var T = window.TRIP_T;
   var pill = document.getElementById('shotsProgressPill');
   var pillBase = pill ? pill.textContent.trim() : '';
 
@@ -985,7 +1017,7 @@ if ('serviceWorker' in navigator) {
     var n = Object.keys(q).length;
     if (n) localStorage.setItem(QKEY, JSON.stringify(q));
     else localStorage.removeItem(QKEY);
-    if (pill) pill.textContent = pillBase + (n ? ' · ' + n + ' waiting to sync' : '');
+    if (pill) pill.textContent = pillBase + (n ? ' · ' + T.waiting_sync.replace(':n', n) : '');
   }
 
   function send(id, status) {
@@ -1067,6 +1099,7 @@ if ('serviceWorker' in navigator) {
 <script>
 (function () {
   var KEY = 'tripTicks:' + <?= json_encode((string)($shareToken ?: ($vision['trip_token'] ?? $vision['slug'] ?? 'trip'))) ?>;
+  var T = window.TRIP_T;
   var pill = document.getElementById('shotsProgressPill');
 
   function load() {
@@ -1084,9 +1117,10 @@ if ('serviceWorker' in navigator) {
       if (isDone) done++;
       if (isMust) { musts++; if (isDone) mustsDone++; }
     });
-    pill.textContent = '🎬 ' + done + ' of ' + entries.length + ' shots captured'
-      + (musts ? ' · must-haves ' + mustsDone + '/' + musts : '')
-      + ' · saved on this device';
+    pill.textContent = '🎬 '
+      + T.shots_captured.replace(':done', done).replace(':total', entries.length)
+      + (musts ? ' · ' + T.musts.replace(':done', mustsDone).replace(':total', musts) : '')
+      + ' · ' + T.saved_here;
   }
 
   var ticks = load();
@@ -1095,7 +1129,7 @@ if ('serviceWorker' in navigator) {
     if (!cb) return;
     cb.disabled = false;
     cb.classList.add('live');
-    cb.title = 'Tick like a pencil — saved on this device only';
+    cb.title = T.pencil_tip;
     var id = entry.dataset.shotId;
     if (id in ticks) {
       var done = !!ticks[id];

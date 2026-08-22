@@ -33,10 +33,10 @@ class I18n
      * country, but a flag is what people scan for.
      */
     public const LANGUAGES = [
-        'en' => ['label' => 'English', 'native' => 'English', 'cc' => 'gb'],
-        'da' => ['label' => 'Danish',  'native' => 'Dansk',   'cc' => 'dk'],
+        'en'    => ['label' => 'English',    'native' => 'English',            'cc' => 'gb'],
+        'da'    => ['label' => 'Danish',     'native' => 'Dansk',              'cc' => 'dk'],
+        'pt-BR' => ['label' => 'Portuguese', 'native' => 'Português (Brasil)', 'cc' => 'br'],
         // Ready to switch on once translated and reviewed:
-        // 'pt-BR' => ['label' => 'Portuguese', 'native' => 'Português (Brasil)', 'cc' => 'br'],
         // 'es'    => ['label' => 'Spanish',    'native' => 'Español',            'cc' => 'es'],
     ];
 

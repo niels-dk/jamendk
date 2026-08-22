@@ -218,6 +218,28 @@ function t(string $key, array $vars = []): string
     return I18n::t($key, $vars);
 }
 
+/**
+ * Localised medium date, e.g. "May 28, 2026" / "28. maj 2026".
+ *
+ * date() only ever speaks English, so the month name comes from the language
+ * file and the field order from 'date.medium'. Deliberately not IntlDateFormatter:
+ * the intl extension is not guaranteed on shared hosting, and a missing
+ * extension would be a fatal on every page that shows a date.
+ *
+ * @param int|string|null $when  timestamp, or anything strtotime() accepts
+ */
+function fmt_date($when): string
+{
+    if ($when === null || $when === '') return '';
+    $ts = is_int($when) ? $when : strtotime((string)$when);
+    if (!$ts) return '';
+    return I18n::t('date.medium', [
+        'd' => (int)date('j', $ts),
+        'm' => I18n::t('month.' . strtolower(date('M', $ts))),
+        'y' => date('Y', $ts),
+    ]);
+}
+
 /** Escaped shorthand — the common case in HTML. */
 function te(string $key, array $vars = []): string
 {

@@ -56,54 +56,51 @@ $f_in      = function_exists('is_logged_in') && is_logged_in();
   <div class="sf-inner">
     <div class="sf-brand">
       <div class="sf-logo"><?= $f_e($siteName) ?></div>
-      <p>
-        Catch the idea, grow it into a plan, and open the shot list when you're
-        standing there. Built for filmmakers and creators.
-      </p>
+      <p><?= te('footer.blurb') ?></p>
       <div class="sf-social">
         <a href="<?= $f_e($siteInsta) ?>" target="_blank" rel="noopener me">
-          📷 Instagram
+          📷 <?= te('footer.instagram') ?>
         </a>
-        <a href="mailto:<?= $f_e($siteEmail) ?>">✉️ Email</a>
+        <a href="mailto:<?= $f_e($siteEmail) ?>">✉️ <?= te('footer.email') ?></a>
       </div>
     </div>
 
     <div class="sf-col">
-      <h4>Product</h4>
+      <h4><?= te('footer.product') ?></h4>
       <ul>
-        <li><a href="/">How it works</a></li>
-        <li><a href="/pricing">Pricing</a></li>
+        <li><a href="/"><?= te('footer.how_it_works') ?></a></li>
+        <li><a href="/pricing"><?= te('nav.pricing') ?></a></li>
         <?php if ($f_in): ?>
-          <li><a href="/dashboard">Dashboard</a></li>
-          <li><a href="/dreams/new">New Dream</a></li>
-          <li><a href="/account">My account</a></li>
+          <li><a href="/dashboard"><?= te('nav.dashboard') ?></a></li>
+          <li><a href="/dreams/new"><?= te('home.new_dream') ?></a></li>
+          <li><a href="/account"><?= te('nav.my_account') ?></a></li>
         <?php else: ?>
-          <li><a href="/register">Create account</a></li>
-          <li><a href="/login">Sign in</a></li>
+          <li><a href="/register"><?= te('nav.create_account') ?></a></li>
+          <li><a href="/login"><?= te('nav.signin') ?></a></li>
         <?php endif; ?>
       </ul>
     </div>
 
     <div class="sf-col">
-      <h4>Support</h4>
+      <h4><?= te('footer.support') ?></h4>
       <ul>
-        <li><a href="/help">Help</a></li>
-        <li><a href="/contact">Contact</a></li>
+        <li><a href="/help"><?= te('footer.help') ?></a></li>
+        <li><a href="/contact"><?= te('footer.contact') ?></a></li>
         <li><a href="mailto:<?= $f_e($siteEmail) ?>"><?= $f_e($siteEmail) ?></a></li>
       </ul>
     </div>
 
     <div class="sf-col">
-      <h4>Legal</h4>
+      <h4><?= te('footer.legal') ?></h4>
       <ul>
-        <li><a href="/privacy">Privacy policy</a></li>
-        <li><a href="/terms">Terms</a></li>
+        <li><a href="/privacy"><?= te('footer.privacy') ?></a></li>
+        <li><a href="/terms"><?= te('footer.terms') ?></a></li>
       </ul>
     </div>
   </div>
 
   <div class="sf-bottom">
     <span>&copy; <?= date('Y') ?> <?= $f_e($siteName) ?></span>
-    <span>Made in Denmark 🇩🇰</span>
+    <span><?= te('footer.made_in') ?> 🇩🇰</span>
   </div>
 </footer>

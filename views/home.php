@@ -4,7 +4,7 @@
 //   2. logged in, no boards → get-started
 //   3. logged in, active    → welcome back
 function h_e($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
-function h_dt($s) { return $s ? date('M j, Y', strtotime($s)) : ''; }
+function h_dt($s) { return $s ? fmt_date($s) : ''; }
 
 // Relative time: "just now", "3 days ago", "in 2 days", "yesterday", etc.
 function h_rel($s) {
@@ -14,14 +14,24 @@ function h_rel($s) {
     $diff = $t - time();              // future = positive
     $past = $diff < 0;
     $a = abs($diff);
-    if ($a < 60)        return $past ? 'just now' : 'in a moment';
-    if ($a < 3600)      { $n = round($a/60);   return $past ? "$n min ago"  : "in $n min"; }
-    if ($a < 86400)     { $n = round($a/3600); return $past ? "$n hr ago"   : "in $n hr"; }
+    if ($a < 60)        return t($past ? 'time.just_now' : 'time.in_a_moment');
+    if ($a < 3600)      { $n = round($a/60);   return t($past ? 'time.min_ago' : 'time.in_min', ['n' => $n]); }
+    if ($a < 86400)     { $n = round($a/3600); return t($past ? 'time.hr_ago'  : 'time.in_hr',  ['n' => $n]); }
     $days = round($a/86400);
-    if ($days === 1)    return $past ? 'yesterday' : 'tomorrow';
-    if ($days < 30)     return $past ? "$days days ago" : "in $days days";
-    return date('M j, Y', $t);
+    if ($days === 1)    return t($past ? 'time.yesterday' : 'time.tomorrow');
+    if ($days < 30)     return t($past ? 'time.days_ago' : 'time.in_days', ['n' => $days]);
+    return fmt_date($t);
 }
+// "3 days ago" / "in 3 days" — split out because four call sites built the
+// same phrase inline, and English pluralisation rules do not survive translation.
+function h_ago($days)   { $n = abs((int)$days); return t($n === 1 ? 'time.day_ago' : 'time.days_ago', ['n' => $n]); }
+function h_ahead($days) {
+    $n = (int)$days;
+    if ($n === 0) return t('time.today');
+    if ($n === 1) return t('time.tomorrow');
+    return t('time.in_days', ['n' => $n]);
+}
+
 // Days until a date (negative = overdue). Date-only granularity.
 function h_days_until($s) {
     if (!$s) return null;
@@ -559,10 +569,10 @@ $typeIcon = [
 
   <section class="home-welcome-bar">
     <div>
-      <h1>Welcome<?= $userName ? ', ' . h_e($userName) : '' ?> 👋</h1>
-      <p class="sub">Start with a Dream — one line is enough. You can grow it later.</p>
+      <h1><?= te('home.welcome') ?><?= $userName ? ', ' . h_e($userName) : '' ?> 👋</h1>
+      <p class="sub"><?= te('home.welcome_sub') ?></p>
     </div>
-    <a class="home-btn primary" href="/dreams/new">+ Start your first Dream</a>
+    <a class="home-btn primary" href="/dreams/new">+ <?= te('home.first_dream') ?></a>
   </section>
 
   <!-- A blank dashboard plus four unfamiliar nouns is a bad first minute.
@@ -570,39 +580,33 @@ $typeIcon = [
   <form method="post" action="/demo/load" class="lp-example">
     <input type="hidden" name="csrf_token" value="<?= h_e(csrf_token()) ?>">
     <div class="lp-ex-copy">
-      <h3>🚚 Not sure where to start?</h3>
-      <p>
-        Load a complete example project — a Dream that grew into a real Vision
-        with a shot list, budget, contacts and a published Trip page. It goes
-        into your account, so you can click through it, change it, and delete
-        it when you've got the idea.
-      </p>
+      <h3>🚚 <?= te('home.example_title') ?></h3>
+      <p><?= te('home.example_body') ?></p>
     </div>
-    <button type="submit" class="home-btn primary">Load example project</button>
+    <button type="submit" class="home-btn primary"><?= te('home.example_btn') ?></button>
   </form>
 
   <div class="lp-steps">
     <div class="lp-step s1">
       <div class="n">Step 1</div>
       <div class="ico"><?= $typeIcon['dream'] ?></div>
-      <h3>Catch it</h3>
-      <p>A Dream is one line — the thought before it evaporates. No forms, no fields.</p>
-      <div class="k">Works with no signal. Syncs when you're back.</div>
+      <h3><?= te('home.step1') ?></h3>
+      <p><?= te('home.step1_short') ?></p>
+      <div class="k"><?= te('home.step1_k') ?></div>
     </div>
     <div class="lp-step s2">
       <div class="n">Step 2</div>
       <div class="ico"><?= $typeIcon['vision'] ?></div>
-      <h3>Grow it</h3>
-      <p>Promote it to a Vision: dates, contacts, documents, budget, and the shot
-         list of what you want to film.</p>
-      <div class="k">Bring in your team when you need them.</div>
+      <h3><?= te('home.step2') ?></h3>
+      <p><?= te('home.step2_short') ?></p>
+      <div class="k"><?= te('home.step2_k') ?></div>
     </div>
     <div class="lp-step s3">
       <div class="n">Step 3</div>
       <div class="ico"><?= $typeIcon['trip'] ?></div>
-      <h3>Take it with you</h3>
-      <p>Publish a Trip page — one link, no login, works offline, ready to share.</p>
-      <div class="k">Or print it and use a pencil.</div>
+      <h3><?= te('home.step3') ?></h3>
+      <p><?= te('home.step3_short') ?></p>
+      <div class="k"><?= te('home.step3_k') ?></div>
     </div>
   </div>
 
@@ -611,63 +615,63 @@ $typeIcon = [
 
   <section class="home-welcome-bar">
     <div>
-      <h1>Welcome back<?= $userName ? ', ' . h_e($userName) : '' ?> 👋</h1>
-      <p class="sub">Pick up where you left off, or start something new.</p>
+      <h1><?= te('home.welcome_back') ?><?= $userName ? ', ' . h_e($userName) : '' ?> 👋</h1>
+      <p class="sub"><?= te('home.welcome_back_sub') ?></p>
     </div>
-    <a class="home-btn primary" href="/dashboard">Go to dashboard</a>
+    <a class="home-btn primary" href="/dashboard"><?= te('home.go_dashboard') ?></a>
   </section>
 
   <div class="quick-create">
-    <span class="qc-label">Create</span>
-    <a class="qc-btn qc-dream"  href="/dreams/new">🌕 New Dream</a>
-    <a class="qc-btn qc-vision" href="/visions/new">📄 New Vision</a>
-    <a class="qc-btn qc-mood"   href="/moods/new">🎨 New Mood</a>
+    <span class="qc-label"><?= te('home.create') ?></span>
+    <a class="qc-btn qc-dream"  href="/dreams/new">🌕 <?= te('home.new_dream') ?></a>
+    <a class="qc-btn qc-vision" href="/visions/new">📄 <?= te('home.new_vision') ?></a>
+    <a class="qc-btn qc-mood"   href="/moods/new">🎨 <?= te('home.new_mood') ?></a>
   </div>
 
   <div class="welcome">
     <div class="stat-card">
-      <h3>Your boards</h3>
+      <h3><?= te('home.your_boards') ?></h3>
       <div class="stat-row">
         <a href="/dashboard/dream">
-          <span class="label"><?= h_e($typeIcon['dream']) ?> Dreams</span>
+          <span class="label"><?= h_e($typeIcon['dream']) ?> <?= te('board.dreams') ?></span>
           <span class="num"><?= $stats['dreams'] ?></span>
         </a>
         <a href="/dashboard/vision">
-          <span class="label"><?= h_e($typeIcon['vision']) ?> Visions</span>
+          <span class="label"><?= h_e($typeIcon['vision']) ?> <?= te('board.visions') ?></span>
           <span class="num"><?= $stats['visions'] ?></span>
         </a>
         <a href="/dashboard/mood">
-          <span class="label"><?= h_e($typeIcon['mood']) ?> Moods</span>
+          <span class="label"><?= h_e($typeIcon['mood']) ?> <?= te('board.moods') ?></span>
           <span class="num"><?= $stats['moods'] ?></span>
         </a>
         <a href="/dashboard/trip">
-          <span class="label"><?= h_e($typeIcon['trip']) ?> Trips</span>
+          <span class="label"><?= h_e($typeIcon['trip']) ?> <?= te('board.trips') ?></span>
           <span class="num"><?= $stats['trips'] ?></span>
         </a>
       </div>
       <?php if ((int)$stats['trips'] > 0): ?>
         <a class="stat-callout" href="/dashboard/trip">
-          ✨ <?= (int)$stats['trips'] ?> trip<?= $stats['trips'] == 1 ? '' : 's' ?> ready to share
+          ✨ <?= te($stats['trips'] == 1 ? 'home.trip_ready' : 'home.trips_ready', ['n' => (int)$stats['trips']]) ?>
         </a>
       <?php endif; ?>
     </div>
 
     <div class="recent-card">
-      <h3>Recently updated</h3>
+      <h3><?= te('home.recently_updated') ?></h3>
       <?php if (empty($recentBoards)): ?>
-        <p style="color:#7a8aa0;font-size:.9em;margin:0;">No recent activity yet.</p>
+        <p style="color:#7a8aa0;font-size:.9em;margin:0;"><?= te('home.no_activity') ?></p>
       <?php else: ?>
         <div class="recent-grid">
           <?php foreach ($recentBoards as $rb): ?>
             <?php
               $type = $rb['type'] ?? 'dream';
               $href = '/' . $type . 's/' . h_e($rb['slug']);
-              $label = ucfirst($type);
+              $label = t('board.' . $type);
             ?>
             <a class="recent-tile rt-<?= h_e($type) ?>" href="<?= $href ?>">
               <div class="rt-type"><?= h_e($typeIcon[$type] ?? '') ?> <?= h_e($label) ?></div>
-              <div class="rt-title"><?= h_e($rb['title'] ?: 'Untitled') ?></div>
-              <div class="rt-meta">Updated <?= h_e(h_rel($rb['ts'] ?? null)) ?></div>
+              <div class="rt-title"><?= h_e($rb['title'] ?: t('common.untitled')) ?></div>
+              <div class="rt-meta"><?= te('home.updated') ?> <?= h_e(h_rel($rb['ts'] ?? null)) ?></div>
             </a>
           <?php endforeach; ?>
         </div>
@@ -677,7 +681,7 @@ $typeIcon = [
 
   <?php $taskDeadlines = $taskDeadlines ?? []; ?>
   <?php if (!empty($upcoming) || !empty($taskDeadlines)): ?>
-    <div class="home-section-title">Upcoming dates</div>
+    <div class="home-section-title"><?= te('home.upcoming') ?></div>
     <div class="upcoming">
       <?php foreach ($upcoming as $u): ?>
         <?php
@@ -699,13 +703,13 @@ $typeIcon = [
           }
           if ($kind === null) continue;
 
-          if ($kind === 'overdue')      { $badge = 'Overdue';  $cls = 'u-overdue';  $rel = abs($days).' day'.(abs($days)==1?'':'s').' ago'; }
-          elseif ($kind === 'ending')   { $badge = 'Ends';     $cls = 'u-ending';   $rel = $days === 0 ? 'today' : ($days === 1 ? 'tomorrow' : "in $days days"); }
-          else                          { $badge = 'Starts';   $cls = 'u-starting'; $rel = $days === 0 ? 'today' : ($days === 1 ? 'tomorrow' : "in $days days"); }
+          if ($kind === 'overdue')      { $badge = t('home.overdue'); $cls = 'u-overdue';  $rel = h_ago($days); }
+          elseif ($kind === 'ending')   { $badge = t('home.ends');    $cls = 'u-ending';   $rel = h_ahead($days); }
+          else                          { $badge = t('home.starts');  $cls = 'u-starting'; $rel = h_ahead($days); }
         ?>
         <a class="u-row <?= $cls ?>" href="/visions/<?= h_e($u['slug']) ?>">
-          <span class="u-badge"><?= $badge ?></span>
-          <span class="u-title"><?= h_e($u['title'] ?: 'Untitled vision') ?></span>
+          <span class="u-badge"><?= h_e($badge) ?></span>
+          <span class="u-title"><?= h_e($u['title'] ?: t('home.untitled_vision')) ?></span>
           <span class="u-when"><?= h_e($rel) ?> · <?= h_e(h_dt($dateStr)) ?></span>
         </a>
       <?php endforeach; ?>
@@ -716,17 +720,15 @@ $typeIcon = [
           if ($days === null) continue;
           $overdue = $days < 0;
           $cls = $overdue ? 'u-overdue' : ($days <= 2 ? 'u-ending' : 'u-starting');
-          $badge = $t['kind'] === 'milestone' ? 'Milestone' : 'Goal';
-          $rel = $overdue
-            ? abs($days).' day'.(abs($days)==1?'':'s').' ago'
-            : ($days === 0 ? 'today' : ($days === 1 ? 'tomorrow' : "in $days days"));
+          $badge = t($t['kind'] === 'milestone' ? 'home.milestone' : 'home.goal');
+          $rel = $overdue ? h_ago($days) : h_ahead($days);
           $who = !empty($t['assignee_name']) ? ' · '.$t['assignee_name'] : '';
         ?>
         <a class="u-row <?= $cls ?>" href="/visions/<?= h_e($t['vision_slug']) ?>">
-          <span class="u-badge"><?= $badge ?></span>
+          <span class="u-badge"><?= h_e($badge) ?></span>
           <span class="u-title">
-            <?= h_e($t['title'] ?: 'Untitled') ?>
-            <span style="opacity:.55;font-weight:400;">— <?= h_e($t['vision_title'] ?: 'vision') ?><?= h_e($who) ?></span>
+            <?= h_e($t['title'] ?: t('common.untitled')) ?>
+            <span style="opacity:.55;font-weight:400;">— <?= h_e($t['vision_title'] ?: t('board.vision')) ?><?= h_e($who) ?></span>
           </span>
           <span class="u-when"><?= h_e($rel) ?> · <?= h_e(h_dt($t['due_date'])) ?></span>
         </a>
@@ -736,7 +738,7 @@ $typeIcon = [
 <?php endif; ?>
 
   <div class="home-footer">
-    Merely a Dream &middot; Catch it &middot; Grow it &middot; Take it with you
+    <?= h_e(defined('SITE_NAME') ? SITE_NAME : 'Merely a Dream') ?> &middot; <?= te('home.step1') ?> &middot; <?= te('home.step2') ?> &middot; <?= te('home.step3') ?>
   </div>
 
 </div>

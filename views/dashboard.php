@@ -3,25 +3,34 @@
 // Expects: $dreams, $filter, $boardType, $boardTypes (from controller)
 
 $boardLabels = [
-  'dream'  => '🌕 Dreams',
-  'vision' => '📄 Visions',
-  'mood'   => '🎨 Moods',
-  'trip'   => '🗺️ Trips',
+  'dream'  => '🌕 ' . t('board.dreams'),
+  'vision' => '📄 ' . t('board.visions'),
+  'mood'   => '🎨 ' . t('board.moods'),
+  'trip'   => '🗺️ ' . t('board.trips'),
 ];
 
 // Fallbacks
 $boardType   = $boardType ?? 'dream';
 $filter      = $filter ?? 'active';
 $filterLabels = [
-  'active'         => 'Active',
-  'archived'       => 'Archived',
-  'trash'          => 'Trash',
-  'promoted'       => 'Promoted',
-  'shared-with-me' => 'Shared with me',
-  'shared-by-me'   => 'Shared by me',
+  'active'         => t('filter.active'),
+  'archived'       => t('filter.archived'),
+  'trash'          => t('filter.trash'),
+  'promoted'       => t('filter.promoted'),
+  'shared-with-me' => t('filter.shared_with_me'),
+  'shared-by-me'   => t('filter.shared_by_me'),
+];
+
+// Collaborator role shown on a shared card. ucfirst() on the raw column can
+// never translate, so map the stored value onto the roles.* labels.
+$sharedRoleLabels = [
+  'co_owner' => t('roles.co_owner_short'),
+  'editor'   => t('roles.editor_short'),
+  'viewer'   => t('roles.viewer_short'),
+  'delegate' => t('roles.delegate_short'),
 ];
 $activeLabel = $filterLabels[$filter] ?? ucfirst($filter);
-$currentTypeLabel = $boardLabels[$boardType] ?? 'Boards';
+$currentTypeLabel = $boardLabels[$boardType] ?? t('dash.boards');
 ?>
 
 <style>
@@ -79,7 +88,7 @@ $currentTypeLabel = $boardLabels[$boardType] ?? 'Boards';
 
 </style>
 
-<input id="search" type="search" placeholder="Search boards…" style="width:100%;margin-bottom:1rem;padding:.6rem;border:1px solid var(--border);border-radius:4px;">
+<input id="search" type="search" placeholder="<?= te('dash.search') ?>" style="width:100%;margin-bottom:1rem;padding:.6rem;border:1px solid var(--border);border-radius:4px;">
 
 <!-- Big bold title with two dropdowns -->
 <h1 class="dash-title">
@@ -88,11 +97,11 @@ $currentTypeLabel = $boardLabels[$boardType] ?? 'Boards';
       <span><?= htmlspecialchars($currentTypeLabel) ?></span>
       <span class="chev">▾</span>
     </button>
-    <div class="menu" role="menu" aria-label="Choose board type">
-      <a href="/dashboard/dream<?= $filter !== 'active' ? '/'.$filter : '' ?>" role="menuitem">🌕 Dreams</a>
-      <a href="/dashboard/vision<?= $filter !== 'active' ? '/'.$filter : '' ?>" role="menuitem">📄 Visions</a>
-      <a href="/dashboard/mood<?= $filter !== 'active' ? '/'.$filter : '' ?>" role="menuitem">🎨 Moods</a>
-      <a href="/dashboard/trip<?= $filter !== 'active' ? '/'.$filter : '' ?>" role="menuitem">🗺️ Trips</a>
+    <div class="menu" role="menu" aria-label="<?= te('dash.choose_type') ?>">
+      <a href="/dashboard/dream<?= $filter !== 'active' ? '/'.$filter : '' ?>" role="menuitem">🌕 <?= te('board.dreams') ?></a>
+      <a href="/dashboard/vision<?= $filter !== 'active' ? '/'.$filter : '' ?>" role="menuitem">📄 <?= te('board.visions') ?></a>
+      <a href="/dashboard/mood<?= $filter !== 'active' ? '/'.$filter : '' ?>" role="menuitem">🎨 <?= te('board.moods') ?></a>
+      <a href="/dashboard/trip<?= $filter !== 'active' ? '/'.$filter : '' ?>" role="menuitem">🗺️ <?= te('board.trips') ?></a>
     </div>
   </span>
 
@@ -103,16 +112,16 @@ $currentTypeLabel = $boardLabels[$boardType] ?? 'Boards';
       <span><?= htmlspecialchars($activeLabel) ?></span>
       <span class="chev">▾</span>
     </button>
-    <div class="menu" role="menu" aria-label="Choose board state">
-      <a href="/dashboard/<?= $boardType ?>" role="menuitem">Active</a>
-      <a href="/dashboard/<?= $boardType ?>/archived" role="menuitem">Archived</a>
-      <a href="/dashboard/<?= $boardType ?>/trash" role="menuitem">Trash</a>
+    <div class="menu" role="menu" aria-label="<?= te('dash.choose_state') ?>">
+      <a href="/dashboard/<?= $boardType ?>" role="menuitem"><?= te('filter.active') ?></a>
+      <a href="/dashboard/<?= $boardType ?>/archived" role="menuitem"><?= te('filter.archived') ?></a>
+      <a href="/dashboard/<?= $boardType ?>/trash" role="menuitem"><?= te('filter.trash') ?></a>
       <?php if ($boardType === 'dream'): ?>
-        <a href="/dashboard/<?= $boardType ?>/promoted" role="menuitem">Promoted</a>
+        <a href="/dashboard/<?= $boardType ?>/promoted" role="menuitem"><?= te('filter.promoted') ?></a>
       <?php endif; ?>
       <?php if ($boardType === 'vision' || $boardType === 'mood'): ?>
-        <a href="/dashboard/<?= $boardType ?>/shared-with-me" role="menuitem">🤝 Shared with me</a>
-        <a href="/dashboard/<?= $boardType ?>/shared-by-me" role="menuitem">📤 Shared by me</a>
+        <a href="/dashboard/<?= $boardType ?>/shared-with-me" role="menuitem">🤝 <?= te('filter.shared_with_me') ?></a>
+        <a href="/dashboard/<?= $boardType ?>/shared-by-me" role="menuitem">📤 <?= te('filter.shared_by_me') ?></a>
       <?php endif; ?>
     </div>
   </span>
@@ -120,11 +129,11 @@ $currentTypeLabel = $boardLabels[$boardType] ?? 'Boards';
 
 <?php if (empty($dreams)): ?>
   <div class="empty-state">
-    <p>No boards found under “<?= htmlspecialchars($activeLabel) ?>”.</p>
+    <p><?= te('dash.none_under', ['label' => $activeLabel]) ?></p>
     <?php if ($filter === 'active' && $boardType !== 'trip'): ?>
-      <a class="btn" href="/<?= $boardType ?>s/new">➕ Create Your First <?= htmlspecialchars($boardTypes[$boardType] ?? ucfirst($boardType)) ?></a>
+      <a class="btn" href="/<?= $boardType ?>s/new">➕ <?= te('dash.create_first', ['type' => t('board.' . $boardType)]) ?></a>
     <?php elseif ($boardType === 'trip'): ?>
-      <span class="hint" style="opacity:.75;">Trips are generated when a Vision is paired with a Mood board.</span>
+      <span class="hint" style="opacity:.75;"><?= te('dash.trips_hint') ?></span>
     <?php endif; ?>
   </div>
 <?php else: ?>
@@ -146,35 +155,35 @@ $currentTypeLabel = $boardLabels[$boardType] ?? 'Boards';
             <span class="board-tag board-tag-<?= $boardType ?>">
               <?= htmlspecialchars(mb_substr($boardLabels[$boardType] ?? '❓', 0, 2)) ?>
             </span>
-            <?= htmlspecialchars($d['title'] ?: 'Untitled') ?>
+            <?= htmlspecialchars($d['title'] ?: t('common.untitled')) ?>
           </a>
           <?php if ($boardType === 'dream' && !empty($d['is_promoted'])): ?>
-            <span title="Promoted to a Vision"
+            <span title="<?= te('dash.promoted_tip') ?>"
                   style="display:inline-block;margin-left:.4rem;padding:.05rem .4rem;
                          border-radius:999px;background:rgba(58,118,210,.18);
                          border:1px solid rgba(58,118,210,.45);color:#a8c4ee;
                          font-size:.7rem;vertical-align:middle;font-weight:600;">
-              ✨ Promoted
+              ✨ <?= te('dash.promoted') ?>
             </span>
           <?php endif; ?>
           <?php global $currentUserId;
                 $roleLbl = !empty($d['my_shared_role'])
-                  ? ' · ' . ucfirst(str_replace('_', '-', $d['my_shared_role'])) : '';
+                  ? ' · ' . ($sharedRoleLabels[$d['my_shared_role']] ?? $d['my_shared_role']) : '';
                 if (!empty($d['user_id']) && (int)$d['user_id'] !== (int)$currentUserId): ?>
-            <span title="Shared with you (or another user's board, if you're admin)"
+            <span title="<?= te('dash.shared_tip') ?>"
                   style="display:inline-block;margin-left:.4rem;padding:.05rem .4rem;
                          border-radius:999px;background:rgba(126,217,154,.14);
                          border:1px solid rgba(126,217,154,.4);color:#7ed99a;
                          font-size:.7rem;vertical-align:middle;font-weight:600;">
-              🤝 Shared<?= htmlspecialchars($roleLbl) ?>
+              🤝 <?= te('dash.shared') ?><?= htmlspecialchars($roleLbl) ?>
             </span>
           <?php elseif (!empty($d['shared_with_names'])): ?>
-            <span title="You shared this board with: <?= htmlspecialchars($d['shared_with_names']) ?>"
+            <span title="<?= te('dash.shared_by_tip', ['names' => $d['shared_with_names']]) ?>"
                   style="display:inline-block;margin-left:.4rem;padding:.05rem .4rem;
                          border-radius:999px;background:rgba(58,118,210,.14);
                          border:1px solid rgba(58,118,210,.4);color:#8fb1d8;
                          font-size:.7rem;vertical-align:middle;font-weight:600;">
-              📤 Shared with <?= htmlspecialchars($d['shared_with_names']) ?>
+              📤 <?= te('dash.shared_with', ['names' => $d['shared_with_names']]) ?>
             </span>
           <?php endif; ?>
         </h3>
@@ -195,23 +204,27 @@ $currentTypeLabel = $boardLabels[$boardType] ?? 'Boards';
 
         <small class="text-muted">
           <?= $filter === 'trash'
-            ? 'Deleted ' . date('Y-m-d', strtotime($d['deleted_at']))
-            : 'Created ' . date('Y-m-d', strtotime($d['created_at'])) ?>
+            ? te('dash.deleted') . ' ' . date('Y-m-d', strtotime($d['deleted_at']))
+            : te('vision.created') . ' ' . date('Y-m-d', strtotime($d['created_at'])) ?>
         </small>
 
 		  <?php if ($boardType !== 'trip'): ?>
-		  <button class="menu-toggle" aria-label="Actions">&#8942;</button> <!-- ? -->
+		  <button class="menu-toggle" aria-label="<?= te('dash.actions') ?>">&#8942;</button> <!-- ? -->
         <div class="card-menu">
           <ul class="menu">
+            <?php
+              $jsConfirm = fn(string $key) => htmlspecialchars(
+                  json_encode(t($key), JSON_UNESCAPED_UNICODE), ENT_QUOTES, 'UTF-8');
+            ?>
             <?php if ($filter === 'active'): ?>
-              <li><button onclick="location='/<?= $boardType ?>s/<?= $d['slug'] ?>/archive'">Archive</button></li>
-              <li><button onclick="if(confirm('Delete forever?')) location='/<?= $boardType ?>s/<?= $d['slug'] ?>/delete'">Delete</button></li>
+              <li><button onclick="location='/<?= $boardType ?>s/<?= $d['slug'] ?>/archive'"><?= te('dash.archive') ?></button></li>
+              <li><button onclick="if(confirm(<?= $jsConfirm('dash.confirm_delete') ?>)) location='/<?= $boardType ?>s/<?= $d['slug'] ?>/delete'"><?= te('action.delete') ?></button></li>
             <?php elseif ($filter === 'archived'): ?>
-              <li><button onclick="location='/<?= $boardType ?>s/<?= $d['slug'] ?>/unarchive'">Unarchive</button></li>
-              <li><button onclick="if(confirm('Delete forever?')) location='/<?= $boardType ?>s/<?= $d['slug'] ?>/delete'">Delete</button></li>
+              <li><button onclick="location='/<?= $boardType ?>s/<?= $d['slug'] ?>/unarchive'"><?= te('dash.unarchive') ?></button></li>
+              <li><button onclick="if(confirm(<?= $jsConfirm('dash.confirm_delete') ?>)) location='/<?= $boardType ?>s/<?= $d['slug'] ?>/delete'"><?= te('action.delete') ?></button></li>
             <?php elseif ($filter === 'trash'): ?>
-              <li><button onclick="location='/<?= $boardType ?>s/<?= $d['slug'] ?>/restore'">Restore</button></li>
-              <li><button onclick="if(confirm('Permanently delete?')) location='/<?= $boardType ?>s/<?= $d['slug'] ?>/delete'">Delete Permanently</button></li>
+              <li><button onclick="location='/<?= $boardType ?>s/<?= $d['slug'] ?>/restore'"><?= te('dash.restore') ?></button></li>
+              <li><button onclick="if(confirm(<?= $jsConfirm('dash.confirm_delete_perm') ?>)) location='/<?= $boardType ?>s/<?= $d['slug'] ?>/delete'"><?= te('dash.delete_permanently') ?></button></li>
             <?php endif; ?>
           </ul>
         </div>

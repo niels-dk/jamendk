@@ -664,4 +664,36 @@ return [
     'canvas.connector' => 'Forbindelse',
     'canvas.snap'      => 'Snap',
 
+
+    /* ── Board states ── */
+    'filter.active'          => 'Aktive',
+    'filter.archived'        => 'Arkiverede',
+    'filter.trash'           => 'Papirkurv',
+    'filter.promoted'        => 'Gjort til Vision',
+    'filter.shared_with_me'  => 'Delt med mig',
+    'filter.shared_by_me'    => 'Delt af mig',
+
+    /* ── Dashboard grid ── */
+    'dash.boards'             => 'Boards',
+    'dash.search'             => 'Søg i boards…',
+    'dash.choose_type'        => 'Vælg board-type',
+    'dash.choose_state'       => 'Vælg board-tilstand',
+    'dash.none_under'         => 'Ingen boards under ”:label”.',
+    'dash.create_first'       => 'Opret din første :type',
+    'dash.trips_hint'         => 'Trips dannes, når en Vision er koblet sammen med et Mood board.',
+    'dash.promoted'           => 'Gjort til Vision',
+    'dash.promoted_tip'       => 'Gjort til en Vision',
+    'dash.shared'             => 'Delt',
+    'dash.shared_tip'         => 'Delt med dig (eller en anden brugers board, hvis du er admin)',
+    'dash.shared_with'        => 'Delt med :names',
+    'dash.shared_by_tip'      => 'Du har delt dette board med: :names',
+    'dash.deleted'            => 'Slettet',
+    'dash.actions'            => 'Handlinger',
+    'dash.archive'            => 'Arkivér',
+    'dash.unarchive'          => 'Tag ud af arkiv',
+    'dash.restore'            => 'Gendan',
+    'dash.delete_permanently' => 'Slet permanent',
+    'dash.confirm_delete'     => 'Slet for altid?',
+    'dash.confirm_delete_perm'=> 'Slet permanent?',
+
 ];

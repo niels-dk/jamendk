@@ -653,4 +653,36 @@ return [
     'canvas.connector' => 'Connector',
     'canvas.snap'      => 'Snap',
 
+
+    /* ── Board states ── */
+    'filter.active'          => 'Active',
+    'filter.archived'        => 'Archived',
+    'filter.trash'           => 'Trash',
+    'filter.promoted'        => 'Promoted',
+    'filter.shared_with_me'  => 'Shared with me',
+    'filter.shared_by_me'    => 'Shared by me',
+
+    /* ── Dashboard grid ── */
+    'dash.boards'             => 'Boards',
+    'dash.search'             => 'Search boards…',
+    'dash.choose_type'        => 'Choose board type',
+    'dash.choose_state'       => 'Choose board state',
+    'dash.none_under'         => 'No boards found under “:label”.',
+    'dash.create_first'       => 'Create your first :type',
+    'dash.trips_hint'         => 'Trips are generated when a Vision is paired with a Mood board.',
+    'dash.promoted'           => 'Promoted',
+    'dash.promoted_tip'       => 'Promoted to a Vision',
+    'dash.shared'             => 'Shared',
+    'dash.shared_tip'         => "Shared with you (or another user's board, if you're admin)",
+    'dash.shared_with'        => 'Shared with :names',
+    'dash.shared_by_tip'      => 'You shared this board with: :names',
+    'dash.deleted'            => 'Deleted',
+    'dash.actions'            => 'Actions',
+    'dash.archive'            => 'Archive',
+    'dash.unarchive'          => 'Unarchive',
+    'dash.restore'            => 'Restore',
+    'dash.delete_permanently' => 'Delete Permanently',
+    'dash.confirm_delete'     => 'Delete forever?',
+    'dash.confirm_delete_perm'=> 'Permanently delete?',
+
 ];

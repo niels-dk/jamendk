@@ -17,15 +17,15 @@ $brandName = defined('SITE_NAME') ? SITE_NAME : 'Merely a Dream';
   <nav class="home-actions">
     <?php if ($loggedIn): ?>
       <?php if (!empty($_SESSION['impersonator_id'])): ?>
-        <a href="/admin/return" title="You are browsing as this user — click to return to your admin account"
+        <a href="/admin/return" title="<?= te('nav.viewing_as_tip') ?>"
            style="display:inline-flex;align-items:center;gap:.35rem;margin-right:.4rem;
                   padding:.3rem .7rem;border-radius:999px;text-decoration:none;
                   background:rgba(232,194,103,.15);border:1px solid rgba(232,194,103,.5);
                   color:#e8c267;font-size:.85em;font-weight:600;">
-          👁 Viewing as <?= htmlspecialchars($me['name'] ?: $me['email']) ?> — Return to admin
+          👁 <?= te('nav.viewing_as', ['name' => $me['name'] ?: $me['email']]) ?>
         </a>
       <?php endif; ?>
-      <a class="topbar-user" href="/account" title="My account"
+      <a class="topbar-user" href="/account" title="<?= te('nav.my_account') ?>"
          style="display:inline-flex;align-items:center;gap:.4rem;text-decoration:none;
                 color:#cfdbe8;font-size:.95em;margin-right:.4rem;">
         <span style="display:inline-flex;align-items:center;justify-content:center;
@@ -35,51 +35,21 @@ $brandName = defined('SITE_NAME') ? SITE_NAME : 'Merely a Dream';
         </span>
         <?= htmlspecialchars($me['name'] ?: $me['email']) ?>
       </a>
-      <a class="btn btn-ghost" href="/capture" title="Catch an idea — fast">⚡ <?= te('nav.capture') ?></a>
-      <a class="btn btn-ghost" href="/teams" title="My teams">👥 <?= te('nav.teams') ?></a>
+      <a class="btn btn-ghost" href="/capture" title="<?= te('nav.capture_tip') ?>">⚡ <?= te('nav.capture') ?></a>
+      <a class="btn btn-ghost" href="/teams" title="<?= te('teams.im_on') ?>">👥 <?= te('nav.teams') ?></a>
       <?php if (function_exists('is_admin') && is_admin()): ?>
-        <a class="btn btn-ghost" href="/admin/users" title="User management">⚙️ Users</a>
-        <a class="btn btn-ghost" href="/admin/analytics" title="Traffic & usage">📊 Analytics</a>
-        <a class="btn btn-ghost" href="/admin/links" title="Tracked links">🔗 Links</a>
-        <a class="btn btn-ghost" href="/admin/pricing" title="Shadow revenue">📈 Revenue</a>
+        <a class="btn btn-ghost" href="/admin/users" title="<?= te('adm.users_sub') ?>">⚙️ <?= te('nav.users') ?></a>
+        <a class="btn btn-ghost" href="/admin/analytics" title="<?= te('adm.analytics_sub') ?>">📊 <?= te('nav.analytics') ?></a>
+        <a class="btn btn-ghost" href="/admin/links" title="<?= te('adm.links_sub') ?>">🔗 <?= te('nav.links') ?></a>
+        <a class="btn btn-ghost" href="/admin/pricing" title="<?= te('adm.revenue') ?>">📈 <?= te('nav.revenue') ?></a>
       <?php endif; ?>
-      <?php
-        // Language picker — flag + code, click for the list. Logged-in only
-        // for now; anonymous visitors stay on English until translations are
-        // reviewed (see I18n::ALLOW_ANON).
-        $curLang  = I18n::lang();
-        $curMeta  = I18n::LANGUAGES[$curLang] ?? I18n::LANGUAGES['en'];
-        $backHere = htmlspecialchars($_SERVER['REQUEST_URI'] ?? '/dashboard', ENT_QUOTES);
-      ?>
-      <div class="lang-picker">
-        <button type="button" class="btn btn-ghost lang-toggle"
-                aria-haspopup="true" aria-expanded="false"
-                title="<?= te('nav.language') ?>">
-          <?= I18n::flag($curMeta['cc'], 18) ?>
-          <span class="lang-code"><?= htmlspecialchars(strtoupper(explode('-', $curLang)[0])) ?></span>
-        </button>
-        <div class="lang-menu" hidden>
-          <div class="lang-menu-head"><?= te('nav.language') ?></div>
-          <?php foreach (I18n::LANGUAGES as $code => $meta): ?>
-            <form method="post" action="/account/language">
-              <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token(), ENT_QUOTES) ?>">
-              <input type="hidden" name="lang" value="<?= htmlspecialchars($code, ENT_QUOTES) ?>">
-              <input type="hidden" name="next" value="<?= $backHere ?>">
-              <button type="submit" class="lang-item <?= $code === $curLang ? 'is-current' : '' ?>">
-                <?= I18n::flag($meta['cc'], 20) ?>
-                <span class="lang-native"><?= htmlspecialchars($meta['native']) ?></span>
-                <span class="lang-label"><?= htmlspecialchars($meta['label']) ?></span>
-                <?php if ($code === $curLang): ?><span class="lang-check">✓</span><?php endif; ?>
-              </button>
-            </form>
-          <?php endforeach; ?>
-        </div>
-      </div>
+      <?php include __DIR__ . '/lang-picker.php'; ?>
       <a class="btn btn-ghost" href="/logout"><?= te('nav.logout') ?></a>
     <?php else: ?>
-      <a class="btn btn-ghost" href="/pricing">Pricing</a>
-      <a class="btn btn-ghost" href="/login">Sign in</a>
-      <a class="btn btn-primary" href="/register">Create account</a>
+      <a class="btn btn-ghost" href="/pricing"><?= te('nav.pricing') ?></a>
+      <?php include __DIR__ . '/lang-picker.php'; ?>
+      <a class="btn btn-ghost" href="/login"><?= te('nav.signin') ?></a>
+      <a class="btn btn-primary" href="/register"><?= te('nav.create_account') ?></a>
     <?php endif; ?>
   </nav>
 </header>

@@ -365,10 +365,13 @@ class user_controller
     /** POST /account/language  body: lang — set interface + email language. */
     public static function setLanguage(): void
     {
-        require_login();
+        // No require_login(): anonymous visitors can switch language too.
+        // I18n::setForCurrentUser() writes users.lang only when there is a
+        // user, and always writes the session, so both cases work unchanged.
         require_once __DIR__ . '/../app/i18n.php';
 
-        $back = self::safeNext($_POST['next'] ?? '') ?: '/dashboard';
+        $back = self::safeNext($_POST['next'] ?? '')
+                ?: (function_exists('is_logged_in') && is_logged_in() ? '/dashboard' : '/');
         if (csrf_check($_POST['csrf_token'] ?? null)) {
             I18n::setForCurrentUser((string)($_POST['lang'] ?? ''));
         }

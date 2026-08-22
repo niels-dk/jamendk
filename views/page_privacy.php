@@ -10,151 +10,62 @@ $siteOwner = defined('SITE_LEGAL_ENTITY') ? SITE_LEGAL_ENTITY : 'Niels, Denmark'
 $updated   = '18 July 2026';
 ?>
 <div class="doc">
-  <h1>Privacy policy</h1>
-  <p class="doc-lead">
-    The short version: your boards are yours, we don't track you, we don't run
-    ads, and we don't sell anything to anyone. Below is the detail.
-  </p>
-  <p class="doc-meta">Last updated <?= $p_e($updated) ?></p>
+  <h1><?= te('footer.privacy') ?></h1>
+  <p class="doc-lead"><?= t('pg.priv_lead') ?></p>
+  <p class="doc-meta"><?= te('pg.last_updated') ?> <?= $p_e($updated) ?></p>
+  <?php if (I18n::lang() !== I18n::DEFAULT_LANG): ?>
+    <p class="doc-meta"><?= t('pg.legal_language') ?></p>
+  <?php endif; ?>
 
-  <h2>Who is responsible</h2>
-  <p>
-    <?= $p_e($siteName) ?> is operated by <?= $p_e($siteOwner) ?>. For anything
-    on this page, contact <a href="mailto:<?= $p_e($siteEmail) ?>"><?= $p_e($siteEmail) ?></a>.
-  </p>
+  <h2><?= te('pg.priv_h_who') ?></h2>
+  <p><?= t('pg.priv_who', ['site' => $p_e($siteName), 'owner' => $p_e($siteOwner),
+        'email' => '<a href="mailto:' . $p_e($siteEmail) . '">' . $p_e($siteEmail) . '</a>']) ?></p>
 
-  <h2>What we store, and why</h2>
+  <h2><?= te('pg.priv_h_store') ?></h2>
 
-  <h3>Your account</h3>
-  <p>
-    Your email address, your name, and optionally a company or organisation if
-    you fill them in. Your password is never stored — only a one-way hash of
-    it, which cannot be reversed back into your password. We record the time of
-    your last sign-in so you can spot access you don't recognise.
-  </p>
-  <p>
-    We need these to give you an account at all. Your email is also how we send
-    you a confirmation link and, if you ask for one, a password-reset link.
-  </p>
+  <h3><?= te('pg.priv_h_account') ?></h3>
+  <p><?= t('pg.priv_account_1') ?></p>
+  <p><?= t('pg.priv_account_2') ?></p>
 
-  <h3>Your content</h3>
-  <p>
-    Everything you put into the app: Dreams, Visions, Mood boards, shot lists,
-    itineraries, budgets, contacts, notes, and any images or documents you
-    upload. It's stored so we can show it back to you. We don't read it, mine
-    it, or use it to train anything.
-  </p>
-  <p>
-    <strong>Uploaded documents are encrypted at rest</strong>, so the raw files
-    on the server are unreadable without the key held by the application.
-  </p>
+  <h3><?= te('pg.priv_h_content') ?></h3>
+  <p><?= t('pg.priv_content_1') ?></p>
+  <p><?= t('pg.priv_content_2') ?></p>
 
-  <h3>Email log</h3>
-  <p>
-    When the app sends you an email (confirmation, password reset) we log the
-    recipient address, the subject, whether it sent or failed, and the IP
-    address the request came from. This exists so we can tell you what happened
-    when a link doesn't arrive, and to stop the signup form being abused to
-    send mail to strangers.
-  </p>
+  <h3><?= te('pg.priv_h_maillog') ?></h3>
+  <p><?= t('pg.priv_maillog') ?></p>
 
-  <h3>Visit statistics</h3>
-  <p>
-    We count visits so we can tell whether anyone is finding the site and which
-    pages are useful. We built this ourselves rather than using Google
-    Analytics, and it is deliberately as thin as we could make it. For each page
-    view we record: the date, the page address, the domain that linked you here
-    (never the full referring address), any campaign tag in the link, whether
-    you were signed in, and whether the device is a phone, tablet or computer.
-  </p>
-  <p>
-    <strong>Your IP address is never stored.</strong> To count a person once per
-    day without identifying them, your IP and browser are combined with a secret
-    value <em>and the current date</em> into a one-way fingerprint. It cannot be
-    turned back into your IP, and because the date is part of it, the same
-    visitor produces an unrelated fingerprint tomorrow — so nobody can be
-    followed from one day to the next. Raw rows are deleted after about a year.
-  </p>
+  <h3><?= te('pg.priv_h_stats') ?></h3>
+  <p><?= t('pg.priv_stats_1') ?></p>
+  <p><?= t('pg.priv_stats_2') ?></p>
 
-  <h3>Cookies</h3>
-  <p>
-    One cookie: a session cookie that keeps you signed in. It's strictly
-    necessary for the site to work and it disappears when you sign out.
-  </p>
-  <p>
-    <strong>There is no advertising, no third-party tracking, and no analytics
-    cookie.</strong> Our visit statistics set nothing on your device and send
-    nothing to anyone else — the data stays in our own database. Nothing follows
-    you off this site. That's also why you aren't being nagged by a cookie banner.
-  </p>
-  <p>
-    The app also stores a little data in your browser's own storage — offline
-    Dreams waiting to sync, shot ticks made with no signal, and whether you
-    collapsed the sidebar. That never leaves your device except to sync your
-    own content to your own account.
-  </p>
+  <h3><?= te('pg.priv_h_cookies') ?></h3>
+  <p><?= t('pg.priv_cookies_1') ?></p>
+  <p><?= t('pg.priv_cookies_2') ?></p>
+  <p><?= t('pg.priv_cookies_3') ?></p>
 
-  <h2>Who else can see your data</h2>
-  <p>
-    People you explicitly share a board with, under <strong>Roles &amp;
-    Permissions</strong>. Nobody else — with two exceptions you control:
-  </p>
+  <h2><?= te('pg.priv_h_whoelse') ?></h2>
+  <p><?= t('pg.priv_whoelse') ?></p>
   <ul>
-    <li>
-      <strong>Published Trip pages are public.</strong> If you switch on
-      <em>Publish as Trip</em>, anyone with that link can read the page without
-      an account. That's the purpose of the feature. The link is long and
-      unguessable, but treat it as public: anyone you send it to can forward
-      it. Switch the toggle off and the link stops working immediately.
-    </li>
-    <li>
-      <strong>Document download links work the same way.</strong> They're long
-      and unguessable, but anyone holding one can download that file — that's
-      what lets documents work on a shared Trip page.
-    </li>
+    <li><?= t('pg.priv_we1') ?></li>
+    <li><?= t('pg.priv_we2') ?></li>
   </ul>
-  <p>
-    Site administrators can access accounts for support purposes.
-  </p>
+  <p><?= t('pg.priv_admins') ?></p>
 
-  <h2>Where your data lives</h2>
-  <p>
-    On servers operated by <strong>DreamHost</strong>, our hosting provider,
-    located in the United States. Using the service means your data is
-    transferred to and stored there. They are our only processor: no analytics
-    service, no email marketing platform, no CDN. Our visit statistics are
-    calculated on our own server, not by anyone else.
-  </p>
+  <h2><?= te('pg.priv_h_where') ?></h2>
+  <p><?= t('pg.priv_where') ?></p>
 
-  <h2>How long we keep it</h2>
-  <p>
-    Your content stays until you delete it or ask us to delete your account.
-    Email logs are kept as long as they're useful for support and abuse
-    prevention.
-  </p>
+  <h2><?= te('pg.priv_h_howlong') ?></h2>
+  <p><?= t('pg.priv_howlong') ?></p>
 
-  <h2>Your rights</h2>
-  <p>
-    Under the GDPR you can ask us to show you what we hold about you, correct
-    it, delete it, or give you a copy of it. You can object to how we use it.
-    Email <a href="mailto:<?= $p_e($siteEmail) ?>"><?= $p_e($siteEmail) ?></a>
-    from the address on your account and we'll sort it out — no forms, no
-    hoops.
-  </p>
-  <p>
-    If you think we've handled your data badly and we haven't fixed it, you can
-    complain to the Danish Data Protection Agency
-    (<a href="https://www.datatilsynet.dk" target="_blank" rel="noopener">Datatilsynet</a>).
-  </p>
+  <h2><?= te('pg.priv_h_rights') ?></h2>
+  <p><?= t('pg.priv_rights', ['email' => '<a href="mailto:' . $p_e($siteEmail) . '">' . $p_e($siteEmail) . '</a>']) ?></p>
+  <p><?= t('pg.priv_complain') ?></p>
 
-  <h2>Changes</h2>
-  <p>
-    If this policy changes in a way that matters, we'll update the date at the
-    top and tell you by email before it takes effect.
-  </p>
+  <h2><?= te('pg.priv_h_changes') ?></h2>
+  <p><?= t('pg.priv_changes') ?></p>
 
   <div class="doc-cta">
-    <p>A question this page doesn't answer?</p>
-    <a class="doc-btn" href="/contact">Ask us</a>
+    <p><?= te('pg.priv_cta') ?></p>
+    <a class="doc-btn" href="/contact"><?= te('pg.priv_cta_btn') ?></a>
   </div>
 </div>

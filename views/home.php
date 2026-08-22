@@ -389,21 +389,16 @@ $typeIcon = [
 
   <section class="lp-hero">
     <div>
-      <span class="lp-eyebrow">For filmmakers &amp; creators</span>
-      <h1>You'll forget the shot<br><span class="accent">by the time you get there.</span></h1>
-      <p class="lp-sub">
-        New place, new light, a hundred things happening at once — and the idea you
-        had three weeks ago is gone. Merely a Dream catches it in seconds, grows it into
-        a real plan, and puts the shot list in your hand when you're standing in
-        the right place.
-      </p>
+      <span class="lp-eyebrow"><?= te('lp.eyebrow') ?></span>
+      <h1><?= te('lp.h1_a') ?><br><span class="accent"><?= te('lp.h1_b') ?></span></h1>
+      <p class="lp-sub"><?= te('lp.sub') ?></p>
       <div class="lp-cta">
-        <a class="home-btn primary" href="/register">Create your free account</a>
+        <a class="home-btn primary" href="/register"><?= te('lp.cta') ?></a>
         <?php if ($demoTrip): ?>
-          <a class="home-btn ghost" href="<?= h_e($demoTrip) ?>">See a real Trip page →</a>
+          <a class="home-btn ghost" href="<?= h_e($demoTrip) ?>"><?= te('lp.see_trip') ?> →</a>
         <?php endif; ?>
       </div>
-      <p class="lp-trust">Free · No card · Works offline when the signal doesn't</p>
+      <p class="lp-trust"><?= te('lp.trust') ?></p>
     </div>
 
     <div class="lp-phone-wrap">
@@ -411,19 +406,19 @@ $typeIcon = [
       <div class="lp-phone" aria-hidden="true">
         <div class="lp-p-hero">
           <div class="lp-p-title">Hilux · Brazil</div>
-          <div class="lp-p-meta">Mar 14 — Apr 2 · Updated today</div>
-          <span class="lp-p-pill">🎬 4 of 9 shots captured</span>
+          <div class="lp-p-meta"><?= te('lp.mock_dates') ?></div>
+          <span class="lp-p-pill">🎬 <?= te('trip.shots_captured', ['done' => 4, 'total' => 9]) ?></span>
         </div>
-        <div class="lp-p-day">📅 Saturday · Mar 14</div>
+        <div class="lp-p-day">📅 <?= te('lp.mock_day') ?></div>
 
         <div class="lp-p-shot">
           <span class="lp-p-box"></span>
           <span>
-            <span class="lp-p-st">Sunrise drone over Arpoador</span>
+            <span class="lp-p-st"><?= te('lp.mock_shot1') ?></span>
             <span class="lp-p-chips">
-              <span class="lp-p-chip must">★ must</span>
-              <span class="lp-p-chip">🚁 Drone</span>
-              <span class="lp-p-chip">🌅 sunrise</span>
+              <span class="lp-p-chip must">★ <?= te('trip.must') ?></span>
+              <span class="lp-p-chip">🚁 <?= te('shots.type_drone') ?></span>
+              <span class="lp-p-chip">🌅 <?= te('shots.light_sunrise') ?></span>
             </span>
           </span>
         </div>
@@ -431,9 +426,9 @@ $typeIcon = [
         <div class="lp-p-shot">
           <span class="lp-p-box"></span>
           <span>
-            <span class="lp-p-st">Piece to camera — why this road</span>
+            <span class="lp-p-st"><?= te('lp.mock_shot2') ?></span>
             <span class="lp-p-chips">
-              <span class="lp-p-chip">🎤 Interview</span>
+              <span class="lp-p-chip">🎤 <?= te('shots.type_interview') ?></span>
               <span class="lp-p-chip">📍 Leblon</span>
             </span>
           </span>
@@ -442,124 +437,93 @@ $typeIcon = [
         <div class="lp-p-shot done">
           <span class="lp-p-box on"></span>
           <span>
-            <span class="lp-p-st">Refuel stop, wide, low angle</span>
+            <span class="lp-p-st"><?= te('lp.mock_shot3') ?></span>
             <span class="lp-p-chips">
-              <span class="lp-p-chip">🎥 B-roll</span>
+              <span class="lp-p-chip">🎥 <?= te('shots.type_broll') ?></span>
             </span>
           </span>
         </div>
 
-        <div class="lp-p-day">✨ Anytime — keep an eye out</div>
+        <div class="lp-p-day">✨ <?= te('shots.anytime') ?></div>
         <div class="lp-p-shot">
           <span class="lp-p-box"></span>
-          <span><span class="lp-p-st">Hilux covered in red dust</span></span>
+          <span><span class="lp-p-st"><?= te('lp.mock_shot4') ?></span></span>
         </div>
       </div>
     </div>
   </section>
 
   <section class="lp-story">
-    <p>
-      “I drove around Brazil with a camera. Every day was new, everything was
-      worth filming — and by the time I got somewhere, the idea I'd had for
-      that exact place was gone. Too much, too fast, nothing written down.”
-    </p>
-    <p>
-      “So I built the thing I needed: catch the idea the second it lands, add
-      the detail later when you're sitting still, and open the plan when you
-      arrive.”
-    </p>
-    <p class="who">— Niels, who built Merely a Dream after that trip</p>
+    <p><?= te('lp.story1') ?></p>
+    <p><?= te('lp.story2') ?></p>
+    <p class="who">— <?= te('lp.story_who') ?></p>
   </section>
 
-  <h2 class="lp-h2">Three steps, from spark to standing there</h2>
-  <p class="lp-lead">
-    Ideas arrive fast and messy. Plans take time. Merely a Dream is built around that gap.
-  </p>
+  <h2 class="lp-h2"><?= te('lp.steps_h2') ?></h2>
+  <p class="lp-lead"><?= te('lp.steps_lead') ?></p>
 
   <div class="lp-steps">
     <div class="lp-step s1">
-      <div class="n">Step 1</div>
+      <div class="n"><?= te('lp.step_n', ['n' => 1]) ?></div>
       <div class="ico"><?= $typeIcon['dream'] ?></div>
-      <h3>Catch it</h3>
-      <p>
-        A Dream is one line: “Get sponsored by Toyota and drive their Hilux
-        across a continent.” No forms, no fields — just the thought before it
-        evaporates.
-      </p>
-      <div class="k">Works with no signal. Syncs when you're back.</div>
+      <h3><?= te('home.step1') ?></h3>
+      <p><?= te('lp.step1_long') ?></p>
+      <div class="k"><?= te('home.step1_k') ?></div>
     </div>
     <div class="lp-step s2">
-      <div class="n">Step 2</div>
+      <div class="n"><?= te('lp.step_n', ['n' => 2]) ?></div>
       <div class="ico"><?= $typeIcon['vision'] ?></div>
-      <h3>Grow it</h3>
-      <p>
-        When you're ready, it becomes a Vision: dates, the people you're
-        talking to, the contracts and bookings, the budget — and the shot list
-        of what you actually want to film, with reference images pinned to each one.
-      </p>
-      <div class="k">Bring in your team, hand work back and forth.</div>
+      <h3><?= te('home.step2') ?></h3>
+      <p><?= te('lp.step2_long') ?></p>
+      <div class="k"><?= te('lp.step2_k') ?></div>
     </div>
     <div class="lp-step s3">
-      <div class="n">Step 3</div>
+      <div class="n"><?= te('lp.step_n', ['n' => 3]) ?></div>
       <div class="ico"><?= $typeIcon['trip'] ?></div>
-      <h3>Take it with you</h3>
-      <p>
-        Publish a Trip page: one link, no login, your day-by-day plan and shot
-        list. Tick shots off as you get them — even with no signal — and share
-        the same link with a client or crew.
-      </p>
-      <div class="k">Or print it and use a pencil. Genuinely.</div>
+      <h3><?= te('home.step3') ?></h3>
+      <p><?= te('lp.step3_long') ?></p>
+      <div class="k"><?= te('lp.step3_k') ?></div>
     </div>
   </div>
 
   <section class="lp-light">
-    <h2>The page you open when you're actually there</h2>
-    <p class="lp-lead">
-      Everything you planned, on your phone, at 6am on a roadside. Built for
-      the moment you need it — not the meeting where you made it.
-    </p>
+    <h2><?= te('lp.payoff_h2') ?></h2>
+    <p class="lp-lead"><?= te('lp.payoff_lead') ?></p>
     <div class="lp-feats">
       <div class="lp-feat">
         <span class="fi">🎬</span>
-        <span><b>Shot list by day</b><span>What to film, the angle, the light,
-          what to say to camera — with your mood-board references attached.</span></span>
+        <span><b><?= te('lp.f1_t') ?></b><span><?= te('lp.f1_d') ?></span></span>
       </div>
       <div class="lp-feat">
         <span class="fi">✈️</span>
-        <span><b>Works offline</b><span>The page keeps working with no signal.
-          Tick shots off in the field; they sync themselves when you're back.</span></span>
+        <span><b><?= te('lp.f2_t') ?></b><span><?= te('lp.f2_d') ?></span></span>
       </div>
       <div class="lp-feat">
         <span class="fi">📍</span>
-        <span><b>Every place is a map link</b><span>Locations in your itinerary
-          and shots open straight into Google Maps.</span></span>
+        <span><b><?= te('lp.f3_t') ?></b><span><?= te('lp.f3_d') ?></span></span>
       </div>
       <div class="lp-feat">
         <span class="fi">🔗</span>
-        <span><b>One link to share</b><span>Send it to a client, a brand or your
-          crew. No account needed to read it. You choose what's visible.</span></span>
+        <span><b><?= te('lp.f4_t') ?></b><span><?= te('lp.f4_d') ?></span></span>
       </div>
       <div class="lp-feat">
         <span class="fi">📄</span>
-        <span><b>Contracts &amp; contacts, kept together</b><span>The deal, the
-          bookings, and the person to call — attached to the project, not lost in email.</span></span>
+        <span><b><?= te('lp.f5_t') ?></b><span><?= te('lp.f5_d') ?></span></span>
       </div>
       <div class="lp-feat">
         <span class="fi">🖨️</span>
-        <span><b>Print it</b><span>Some days the best device is paper and a
-          pencil in your pocket. One button.</span></span>
+        <span><b><?= te('lp.f6_t') ?></b><span><?= te('lp.f6_d') ?></span></span>
       </div>
     </div>
   </section>
 
   <section class="lp-close">
-    <h2>Your next idea is going to arrive at a bad time.</h2>
-    <p>Have somewhere to put it.</p>
+    <h2><?= te('lp.close_h2') ?></h2>
+    <p><?= te('lp.close_p') ?></p>
     <div class="lp-cta" style="justify-content:center;">
-      <a class="home-btn primary" href="/register">Create your free account</a>
+      <a class="home-btn primary" href="/register"><?= te('lp.cta') ?></a>
       <?php if ($demoTrip): ?>
-        <a class="home-btn ghost" href="<?= h_e($demoTrip) ?>">See a real Trip page →</a>
+        <a class="home-btn ghost" href="<?= h_e($demoTrip) ?>"><?= te('lp.see_trip') ?> →</a>
       <?php endif; ?>
     </div>
   </section>
@@ -588,21 +552,21 @@ $typeIcon = [
 
   <div class="lp-steps">
     <div class="lp-step s1">
-      <div class="n">Step 1</div>
+      <div class="n"><?= te('lp.step_n', ['n' => 1]) ?></div>
       <div class="ico"><?= $typeIcon['dream'] ?></div>
       <h3><?= te('home.step1') ?></h3>
       <p><?= te('home.step1_short') ?></p>
       <div class="k"><?= te('home.step1_k') ?></div>
     </div>
     <div class="lp-step s2">
-      <div class="n">Step 2</div>
+      <div class="n"><?= te('lp.step_n', ['n' => 2]) ?></div>
       <div class="ico"><?= $typeIcon['vision'] ?></div>
       <h3><?= te('home.step2') ?></h3>
       <p><?= te('home.step2_short') ?></p>
       <div class="k"><?= te('home.step2_k') ?></div>
     </div>
     <div class="lp-step s3">
-      <div class="n">Step 3</div>
+      <div class="n"><?= te('lp.step_n', ['n' => 3]) ?></div>
       <div class="ico"><?= $typeIcon['trip'] ?></div>
       <h3><?= te('home.step3') ?></h3>
       <p><?= te('home.step3_short') ?></p>

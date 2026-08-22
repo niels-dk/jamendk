@@ -10,9 +10,12 @@
  *   2. users.lang          — persists across devices and drives outbound email
  *   3. DEFAULT_LANG ('en')
  *
- * Anonymous visitors are NOT translated yet — the marketing pages stay English
- * until the translations are checked by a native speaker. Flip ALLOW_ANON to
- * true when that's done.
+ * Anonymous visitors can switch language too, but only by clicking the picker
+ * — the choice lives in the session. Accept-Language is deliberately NOT
+ * sniffed: one URL serves English to every first-time visitor and every
+ * crawler, so there is no duplicate-content or wrong-language-indexed problem
+ * to solve. Per-language URLs (/da/… plus hreflang) would be the answer if SEO
+ * in other languages ever matters; that is a separate, bigger change.
  *
  * Missing strings fall back to English, and then to the key itself, so a gap
  * shows up as visible text rather than a blank space.
@@ -21,8 +24,8 @@ class I18n
 {
     public const DEFAULT_LANG = 'en';
 
-    /** Set true to translate for logged-out visitors as well. */
-    public const ALLOW_ANON = false;
+    /** Translate for logged-out visitors as well (picker only — see above). */
+    public const ALLOW_ANON = true;
 
     /**
      * Languages offered in the picker. Order is the order shown.

@@ -7,26 +7,24 @@ $in  = function_exists('is_logged_in') && is_logged_in();
 // Human band label from min/max people.
 $band = function (array $t): string {
     [, , $min, $max] = $t;
-    if ($max === null)   return $min . '+ people';
-    if ($min === $max)   return $min . ($min === 1 ? ' person' : ' people');
-    return $min . '–' . $max . ' people';
+    if ($max === null) return t('pr.band_plus', ['n' => $min]);
+    if ($min === $max) return t($min === 1 ? 'pr.band_one' : 'pr.band_n', ['n' => $min]);
+    return t('pr.band_range', ['min' => $min, 'max' => $max]);
 };
 $blurbs = [
-    'solo'       => 'Everything, for one creator. Forever.',
-    'crew'       => 'You and a couple of collaborators — a director, an editor, an AC.',
-    'studio'     => 'A small production working a real shoot together.',
-    'production' => 'A production company running several projects at once.',
-    'network'    => 'Studios, agencies and networks running many crews at once.',
+    'solo'       => t('pr.blurb_solo'),
+    'crew'       => t('pr.blurb_crew'),
+    'studio'     => t('pr.blurb_studio'),
+    'production' => t('pr.blurb_production'),
+    'network'    => t('pr.blurb_network'),
 ];
 ?>
 <div class="doc pricing">
   <div style="text-align:center;">
-    <span class="pr-beta">✨ Free while we're just getting started</span>
-    <h1>Pay for people, never for features</h1>
+    <span class="pr-beta">✨ <?= te('pr.beta') ?></span>
+    <h1><?= te('pr.h1') ?></h1>
     <p class="doc-lead" style="margin:0 auto 2rem;max-width:34rem;">
-      One creator gets everything, free forever. You only move up a band when a
-      team works <em>with</em> you — and sharing your work with the world always
-      costs nothing.
+      <?= t('pr.lead') ?>
     </p>
   </div>
 
@@ -43,10 +41,10 @@ $blurbs = [
         <div class="pr-price">
           <?php if ($paid): ?>
             <span class="pr-was"><?= $p_e(Pricing::money($mCents)) ?><span class="pr-per">/mo</span></span>
-            <span class="pr-now">Free right now</span>
+            <span class="pr-now"><?= te('pr.free_now') ?></span>
           <?php else: ?>
-            <span class="pr-now pr-now-free">Free</span>
-            <span class="pr-per">always</span>
+            <span class="pr-now pr-now-free"><?= te('pr.free') ?></span>
+            <span class="pr-per"><?= te('pr.always') ?></span>
           <?php endif; ?>
         </div>
         <p class="pr-blurb"><?= $p_e($blurbs[$key] ?? '') ?></p>
@@ -54,70 +52,32 @@ $blurbs = [
     <?php endforeach; ?>
   </div>
 
-  <p class="pr-foot">
-    Prices are shown so you know where things are headed — but
-    <strong>nothing charges today</strong>. Every plan is free while we're
-    still getting started. When paid plans arrive, paying yearly will get
-    you two months free.
-  </p>
+  <p class="pr-foot"><?= t('pr.foot') ?></p>
 
   <div class="pr-founder">
-    <h2>💛 Here first? You stay free.</h2>
-    <p>
-      Everyone who signs up <strong>before paid plans launch</strong> is a
-      <strong>Founding Creator</strong>. The promise, precisely: whatever size
-      your team is <em>on the day paid plans switch on</em>, that stays free for
-      you — forever. Grow before that day and the bigger team is what's locked
-      in; grow beyond it afterwards and only the extra band is ever billed.
-      You believed in it early; that's the thank-you. Your dashboard shows what
-      your plan would cost, so you can watch the gift add up.
-    </p>
+    <h2>💛 <?= te('pr.founder_h') ?></h2>
+    <p><?= t('pr.founder_p') ?></p>
   </div>
 
-  <h2>Questions</h2>
+  <h2><?= te('pr.questions') ?></h2>
 
-  <h3>What counts as a “person”?</h3>
-  <p>
-    Someone who <em>works</em> on your boards with you — a co-owner, editor or
-    delegate, or a team member with one of those roles. Two kinds of people
-    never count: anyone you share a published Trip page with (that link is
-    public and unlimited), and <strong>read-only viewers</strong> — someone who
-    signs in only to look is audience, not crew. Pay for collaborators, not
-    for an audience.
-  </p>
+  <h3><?= te('pr.q_person') ?></h3>
+  <p><?= t('pr.a_person') ?></p>
 
-  <h3>What happens when my team grows or shrinks?</h3>
-  <p>
-    Your plan follows your team — crews grow for a shoot and shrink for the
-    edit, and that's how it should work. When paid plans arrive, the rule will
-    be simple and the same for everyone: <strong>a month is billed at the
-    biggest team you ran at any point in that month.</strong> Growing takes
-    effect right away; shrinking takes effect from the next month. No lock-ins,
-    no downgrade forms — drop back down and the price follows automatically.
-  </p>
-  <p>
-    And because slips happen: we measure your team <strong>once a day</strong>,
-    not the instant you click. Gave the wrong person an editing role? Fix it
-    the same day and it never counted.
-  </p>
+  <h3><?= te('pr.q_grow') ?></h3>
+  <p><?= t('pr.a_grow') ?></p>
+  <p><?= t('pr.a_grow_2') ?></p>
 
-  <h3>Are any features locked behind a paid plan?</h3>
-  <p>
-    No. Every feature is available on every plan, including free. The only thing
-    that grows with a paid band is how many people can work alongside you.
-  </p>
+  <h3><?= te('pr.q_locked') ?></h3>
+  <p><?= t('pr.a_locked') ?></p>
 
-  <h3>Is it really free right now?</h3>
-  <p>
-    Yes — completely, on every tier, with no card required. When paid plans do
-    arrive, we'll tell you by email well before anything changes, and Founding
-    Creators keep their free plan.
-  </p>
+  <h3><?= te('pr.q_free') ?></h3>
+  <p><?= t('pr.a_free') ?></p>
 
   <div class="doc-cta">
-    <p><?= $in ? 'Go build something.' : 'Start free — no card, no catch.' ?></p>
+    <p><?= $in ? te('pr.cta_in') : te('pr.cta_out') ?></p>
     <a class="doc-btn" href="<?= $in ? '/dashboard' : '/register' ?>">
-      <?= $in ? 'Open your dashboard' : 'Create your free account' ?>
+      <?= $in ? te('home.go_dashboard') : te('lp.cta') ?>
     </a>
   </div>
 </div>

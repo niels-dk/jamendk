@@ -3,8 +3,8 @@
 $slug = htmlspecialchars($board['slug'] ?? '');
 ?>
 <nav class="board-nav">
-  <a href="/moods/<?= $slug ?>">Info</a>
-  <a href="/moods/<?= $slug ?>/media">Media</a>
-  <a href="/moods/<?= $slug ?>/canvas">Canvas</a>
+  <a href="/moods/<?= $slug ?>"><?= te('mood.nav_info') ?></a>
+  <a href="/moods/<?= $slug ?>/media"><?= te('mood.nav_media') ?></a>
+  <a href="/moods/<?= $slug ?>/canvas"><?= te('mood.nav_canvas') ?></a>
   <a href="/moods/<?= $slug ?>/settings" class="js-open-settings">Settings</a>
 </nav>

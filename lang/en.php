@@ -1195,4 +1195,27 @@ return [
     'teams.create'         => 'Create team',
     'teams.remove_member'  => 'Remove from team',
 
+
+    /* ── Mood board context nav ── */
+    'mood.nav_info'   => 'Info',
+    'mood.nav_media'  => 'Media',
+    'mood.nav_canvas' => 'Canvas',
+
+    /* ── Media library (strings handed to mood-board-library.js) ── */
+    'lib.edit_tags'      => 'Edit tags',
+    'lib.current_tags'   => 'Current tags',
+    'lib.none_yet'       => 'None yet',
+    'lib.add_tag'        => 'Add tag',
+    'lib.tag_placeholder'=> 'Type and press Enter',
+    'lib.change_group'   => 'Change group',
+    'lib.choose_group'   => 'Choose existing group',
+    'lib.new_group_ph'   => 'New group name',
+    'lib.url'            => 'URL',
+    'lib.url_placeholder'=> 'Paste YouTube, Vimeo or any URL…',
+    'lib.no_preview'     => 'No preview',
+    'lib.attach'         => 'Attach to this board',
+    'lib.detach'         => 'Remove from this board',
+    'lib.no_files'       => 'No files yet.',
+
+    'sec.in_use'         => 'In use',
 ];

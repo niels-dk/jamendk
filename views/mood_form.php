@@ -4,6 +4,33 @@
 ?>
 <script>
   window.moodSlug = <?= json_encode($mood['slug'] ?? $board['slug'] ?? $slug ?? '') ?>;
+
+  // Strings for public/js/mood-board-library.js — a static asset that cannot
+  // call t(). Every read there falls back to the English literal.
+  window.LIB_T = <?= json_encode([
+    'all_groups'    => t('mood.all_groups'),
+    'close'         => t('action.close'),
+    'remove'        => t('action.remove'),
+    'cancel'        => t('action.cancel'),
+    'save'          => t('action.save'),
+    'add'           => t('action.add'),
+    'delete'        => t('action.delete'),
+    'edit_tags'     => t('lib.edit_tags'),
+    'current_tags'  => t('lib.current_tags'),
+    'none_yet'      => t('lib.none_yet'),
+    'add_tag'       => t('lib.add_tag'),
+    'tag_placeholder'=> t('lib.tag_placeholder'),
+    'change_group'  => t('lib.change_group'),
+    'choose_group'  => t('lib.choose_group'),
+    'new_group_ph'  => t('lib.new_group_ph'),
+    'url'           => t('lib.url'),
+    'url_placeholder'=> t('lib.url_placeholder'),
+    'no_preview'    => t('lib.no_preview'),
+    'attach'        => t('lib.attach'),
+    'detach'        => t('lib.detach'),
+    'no_files'      => t('lib.no_files'),
+    'uploading'     => t('docs.uploading'),
+  ], JSON_UNESCAPED_UNICODE) ?>;
 </script>
 <!-- Library Drawer Root + Controls -->
 <div id="mood-lib-root"

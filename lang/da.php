@@ -644,8 +644,8 @@ return [
     'mood.groups'       => 'Grupper',
     'mood.all_groups'   => 'Alle grupper',
     'mood.filter_tags'  => 'Filtrér efter tags',
-    'mood.view_sort'    => 'Sorterér:',
-    'mood.sort'         => 'Sorterér',
+    'mood.view_sort'    => 'Sortér:',
+    'mood.sort'         => 'Sortér',
     'mood.s_newest'     => 'Nyeste',
     'mood.s_name'       => 'Navn',
     'mood.s_type'       => 'Type',
@@ -1206,4 +1206,27 @@ return [
     'teams.create'         => 'Opret team',
     'teams.remove_member'  => 'Fjern fra team',
 
+
+    /* ── Mood board context nav ── */
+    'mood.nav_info'   => 'Info',
+    'mood.nav_media'  => 'Medier',
+    'mood.nav_canvas' => 'Canvas',
+
+    /* ── Media library (strings handed to mood-board-library.js) ── */
+    'lib.edit_tags'      => 'Redigér tags',
+    'lib.current_tags'   => 'Nuværende tags',
+    'lib.none_yet'       => 'Ingen endnu',
+    'lib.add_tag'        => 'Tilføj tag',
+    'lib.tag_placeholder'=> 'Skriv og tryk Enter',
+    'lib.change_group'   => 'Skift gruppe',
+    'lib.choose_group'   => 'Vælg eksisterende gruppe',
+    'lib.new_group_ph'   => 'Navn på ny gruppe',
+    'lib.url'            => 'URL',
+    'lib.url_placeholder'=> 'Indsæt YouTube, Vimeo eller en hvilken som helst URL…',
+    'lib.no_preview'     => 'Ingen forhåndsvisning',
+    'lib.attach'         => 'Hæft på dette board',
+    'lib.detach'         => 'Fjern fra dette board',
+    'lib.no_files'       => 'Ingen filer endnu.',
+
+    'sec.in_use'         => 'I brug',
 ];

@@ -6,7 +6,7 @@ $badge = function (string $key) use ($badges): string {
     return '<span class="board-nav-badge">' . $n . '</span>';
 };
 $dot = function (string $key) use ($badges): string {
-    return !empty($badges[$key]) ? '<span class="board-nav-dot" title="In use"></span>' : '';
+    return !empty($badges[$key]) ? '<span class="board-nav-dot" title="' . te('sec.in_use') . '"></span>' : '';
 };
 ?>
 <style>

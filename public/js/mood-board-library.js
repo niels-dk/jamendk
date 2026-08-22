@@ -4,6 +4,10 @@
   // -----------------------------
   // Small DOM helpers
   // -----------------------------
+  // Injected by views/mood_form.php; every read falls back to English.
+  const LT = (typeof window !== 'undefined' && window.LIB_T) || {};
+  const lt = (k, fallback) => (LT[k] !== undefined && LT[k] !== null) ? LT[k] : fallback;
+
   const $  = (sel, el) => (el || document).querySelector(sel);
   const $$ = (sel, el) => Array.from((el || document).querySelectorAll(sel));
 
@@ -208,7 +212,7 @@
       // prime the <select> if present
       if (groupSel) {
         const cur = groupSel.value;
-        groupSel.innerHTML = `<option value="">All groups</option>` + GROUPS_CACHE.map(g => `<option value="${g.id}">${g.name}</option>`).join('');
+        groupSel.innerHTML = `<option value="">${lt('all_groups', 'All groups')}</option>` + GROUPS_CACHE.map(g => `<option value="${g.id}">${g.name}</option>`).join('');
         if (cur && GROUPS_CACHE.some(g => g.id === cur)) groupSel.value = cur;
       }
     } catch {
@@ -342,7 +346,7 @@
     sheet.innerHTML = `
       <div class="ml-head">
         <div class="ml-title" id="ml-title">${title}</div>
-        <button class="ml-close" aria-label="Close" type="button">✕</button>
+        <button class="ml-close" aria-label="${lt('close', 'Close')}" type="button">✕</button>
       </div>
       <div class="ml-body">${bodyHTML || ''}</div>
       <div class="ml-actions">${actionsHTML || ''}</div>
@@ -378,27 +382,27 @@
       .join('');
 
     openSheet(
-      'Edit tags',
+      lt('edit_tags', 'Edit tags'),
       `
         <div>
-          <div class="ml-hint">Current tags</div>
+          <div class="ml-hint">${lt('current_tags', 'Current tags')}</div>
           <div class="ml-chips" id="ml-tags">
             ${normalized.length ? normalized.map(name => `
               <span class="ml-chip" data-name="${name}">
                 ${name}
-                <button type="button" aria-label="remove">×</button>
-              </span>`).join('') : '<span class="ml-hint">None yet</span>'}
+                <button type="button" aria-label="${lt('remove', 'remove')}">×</button>
+              </span>`).join('') : `<span class="ml-hint">${lt('none_yet', 'None yet')}</span>`}
           </div>
         </div>
         <div>
-          <div class="ml-hint">Add tag</div>
-          <input id="ml-tag-input" class="ml-input" list="ml-tag-datalist" placeholder="Type and press Enter">
+          <div class="ml-hint">${lt('add_tag', 'Add tag')}</div>
+          <input id="ml-tag-input" class="ml-input" list="ml-tag-datalist" placeholder="${lt('tag_placeholder', 'Type and press Enter')}">
           <datalist id="ml-tag-datalist">${options}</datalist>
         </div>
       `,
       `
-        <button class="ml-btn" id="ml-cancel" type="button">Cancel</button>
-        <button class="ml-btn primary" id="ml-save" type="button">Save</button>
+        <button class="ml-btn" id="ml-cancel" type="button">${lt('cancel', 'Cancel')}</button>
+        <button class="ml-btn primary" id="ml-save" type="button">${lt('save', 'Save')}</button>
       `
     );
 
@@ -420,7 +424,7 @@
         if (!has) chipBox.insertAdjacentHTML('beforeend', `
           <span class="ml-chip" data-name="${val}">
             ${val}
-            <button type="button" aria-label="remove">×</button>
+            <button type="button" aria-label="${lt('remove', 'remove')}">×</button>
           </span>`);
         input.value = '';
       }
@@ -445,16 +449,16 @@
       .join('');
 
     openSheet(
-      'Change group',
+      lt('change_group', 'Change group'),
       `
-        <label>Choose existing group</label>
+        <label>${lt('choose_group', 'Choose existing group')}</label>
         <select class="ml-select" id="ml-group-select">${options}</select>
         <div class="ml-hint">or create a new group below</div>
-        <input class="ml-input" id="ml-group-new" placeholder="New group name">
+        <input class="ml-input" id="ml-group-new" placeholder="${lt('new_group_ph', 'New group name')}">
       `,
       `
-        <button class="ml-btn" id="ml-cancel" type="button">Cancel</button>
-        <button class="ml-btn primary" id="ml-save" type="button">Save</button>
+        <button class="ml-btn" id="ml-cancel" type="button">${lt('cancel', 'Cancel')}</button>
+        <button class="ml-btn primary" id="ml-save" type="button">${lt('save', 'Save')}</button>
       `
     );
 
@@ -480,14 +484,14 @@
       'Add link',
       `
         <div class="ml-field">
-          <label class="ml-label" for="ml-link-url">URL</label>
-          <input id="ml-link-url" class="ml-input" type="url" placeholder="Paste YouTube, Vimeo or any URL…">
+          <label class="ml-label" for="ml-link-url">${lt('url', 'URL')}</label>
+          <input id="ml-link-url" class="ml-input" type="url" placeholder="${lt('url_placeholder', 'Paste YouTube, Vimeo or any URL…')}">
           <div class="ml-hint">We’ll try to detect the provider automatically.</div>
         </div>
       `,
       `
-        <button class="ml-btn" id="ml-cancel" type="button">Cancel</button>
-        <button class="ml-btn primary" id="ml-save" type="button">Add</button>
+        <button class="ml-btn" id="ml-cancel" type="button">${lt('cancel', 'Cancel')}</button>
+        <button class="ml-btn primary" id="ml-save" type="button">${lt('add', 'Add')}</button>
       `
     );
 
@@ -606,7 +610,7 @@
       <div class="media-card" data-id="${m.id}" data-type="${label}" draggable="true">
         <button class="menu-toggle" aria-label="menu" type="button">⋮</button>
         <div class="thumb">
-          ${thumb ? `<img src="${thumb}" alt="">` : `<div class="thumb-fallback">No preview</div>`}
+          ${thumb ? `<img src="${thumb}" alt="">` : `<div class="thumb-fallback">${lt('no_preview', 'No preview')}</div>`}
           ${label === 'video' ? `<div class="play-badge">▶</div>` : ``}
         </div>
         <div class="meta">
@@ -616,11 +620,11 @@
         ${renderTagChips(m)}
         <div class="card-menu">
           <ul>
-            <li class="act-attach"  data-id="${m.id}">Attach to this board</li>
-            <li class="act-detach"  data-id="${m.id}">Remove from this board</li>
-            <li class="act-tags"    data-id="${m.id}">Edit tags</li>
-            <li class="act-groups"  data-id="${m.id}">Change group</li>
-            <li class="act-delete"  data-id="${m.id}">Delete</li>
+            <li class="act-attach"  data-id="${m.id}">${lt('attach', 'Attach to this board')}</li>
+            <li class="act-detach"  data-id="${m.id}">${lt('detach', 'Remove from this board')}</li>
+            <li class="act-tags"    data-id="${m.id}">${lt('edit_tags', 'Edit tags')}</li>
+            <li class="act-groups"  data-id="${m.id}">${lt('change_group', 'Change group')}</li>
+            <li class="act-delete"  data-id="${m.id}">${lt('delete', 'Delete')}</li>
           </ul>
         </div>
       </div>
@@ -630,7 +634,7 @@
   function render() {
     if (!grid) return;
     if (!items.length) {
-      grid.innerHTML = `<div class="empty" style="opacity:.7;padding:12px">No files yet.</div>`;
+      grid.innerHTML = `<div class="empty" style="opacity:.7;padding:12px">${lt('no_files', 'No files yet.')}</div>`;
       return;
     }
     grid.innerHTML = items.map(templateCard).join('');
@@ -802,7 +806,7 @@
 		<div class="thumb">
 		  ${previewURL
 			? `<img src="${previewURL}" alt="">`
-			: `<div class="thumb-fallback">Uploading…</div>`}
+			: `<div class="thumb-fallback">${lt('uploading', 'Uploading…')}</div>`}
 		  <div class="overlay">
 			<div class="progress"><div class="bar" style="width:0%"></div></div>
 		  </div>
@@ -894,7 +898,8 @@
     if (!pill) return;
     const pending = upQueue.length + inFlight;
     pill.hidden = pending === 0;
-    pill.querySelector('.upl-text').textContent = pending ? `Uploading… (${pending})` : 'Uploading…';
+    const up = lt('uploading', 'Uploading…');
+    pill.querySelector('.upl-text').textContent = pending ? `${up} (${pending})` : up;
   }
 
 	async function fetchMediaById(mediaId) {

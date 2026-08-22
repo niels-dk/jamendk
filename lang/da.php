@@ -1168,4 +1168,42 @@ return [
     'pg.priv_cta'       => 'Et spørgsmål denne side ikke svarer på?',
     'pg.priv_cta_btn'   => 'Spørg os',
 
+
+    /* ── Mood canvas (strings handed to public/js/mood-canvas*.js) ── */
+    'canvas.tool'               => 'Værktøj',
+    'canvas.media'              => 'Medier',
+    'canvas.drag_to_move'       => 'Træk for at flytte',
+    'canvas.arrow_none'         => 'Ingen pil',
+    'canvas.arrow_start'        => 'Pil i starten (den anden vej)',
+    'canvas.swap'               => 'Byt fra / til',
+    'canvas.edit_label'         => 'Redigér etiket',
+    'canvas.select_frame'       => 'Vælg først en ramme.',
+    'canvas.select_frame_media' => 'Vælg en ramme at hæfte medier på.',
+
+    /* ── Register ── */
+    'auth.register_sub' => 'Kom i gang med at drømme, planlægge og udgive trips på få sekunder.',
+
+    /* ── Account: handover ── */
+    'acc.email_change_tip'  => 'Det bliver muligt at ændre e-mail, når bekræftelsesmails er på plads',
+    'acc.email_locked'      => 'E-mail kan ikke ændres endnu — bekræftelsesmail kommer senere.',
+    'acc.new_password'      => 'Ny adgangskode (mindst 6 tegn)',
+    'acc.handover'          => 'Overdrag denne konto',
+    'acc.waiting_for'       => 'Venter på at :who accepterer. Dine :what flytter til dem, når de gør. Intet er flyttet endnu.',
+    'acc.cancel_transfer'   => 'Annullér overdragelse',
+    'acc.handover_intro'    => 'Stopper du, eller giver du arbejdet videre til en anden? Overdrag alt hvad du ejer — dine :what — til en anden creators konto. De får en anmodning og skal acceptere; <strong>boards der er delt med dig bliver, hvor de er</strong>, og intet flytter, før de siger ja. Det kan ikke fortrydes, når det først er accepteret.',
+    'acc.confirm_transfer'  => 'Send en anmodning om overdragelse? Når de accepterer, flytter alt hvad du ejer til dem, og du kan ikke flytte det tilbage.',
+    'acc.recipient_email'   => 'Modtagerens konto-e-mail',
+    'acc.note'              => 'Note',
+    'acc.note_placeholder'  => 'Et par ord til dem, fx hvorfor du overdrager',
+    'acc.request_transfer'  => 'Anmod om overdragelse',
+
+    /* ── Teams ── */
+    'teams.all'            => 'Alle teams',
+    'teams.admin_intro'    => 'Som admin ser du alle brugeres teams og kan administrere dem alle. Klik på et team for at folde medlemmerne ud.',
+    'teams.intro'          => 'Teams er dine private grupper af samarbejdspartnere. Sæt hvert medlems sædvanlige rolle én gang, så kan du tilføje et helt team til en hvilken som helst Vision fra dens <strong>Roles &amp; Permissions</strong>-panel med ét klik. Klik på et team for at folde medlemmerne ud.',
+    'teams.migration'      => 'Teams-tabellerne er ikke oprettet endnu — kør',
+    'teams.in_phpmyadmin'  => 'i phpMyAdmin.',
+    'teams.create'         => 'Opret team',
+    'teams.remove_member'  => 'Fjern fra team',
+
 ];

@@ -1,11 +1,11 @@
 <?php
-$title = 'Create a Creator account';
+$title = t('auth.create_creator');
 ob_start();
 ?>
 <div style="max-width:440px;margin:3rem auto;padding:0 1rem;">
   <h1 style="font-size:1.8rem;margin:0 0 .4rem;"><?= te('auth.register_title') ?></h1>
   <p style="color:#8593a6;margin:0 0 1.2rem;font-size:.95rem;">
-    Start dreaming, planning, and publishing trips in a few seconds.
+    <?= te('auth.register_sub') ?>
   </p>
 
   <?php if (!empty($error)): ?>

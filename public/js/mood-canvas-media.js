@@ -59,7 +59,9 @@
     ov = document.createElement('div'); ov.id = 'mc-media-ov';
     var win = document.createElement('div'); win.id = 'mc-media-win';
     var head = document.createElement('div'); head.id = 'mc-media-head';
-    var title = document.createElement('h3'); title.textContent = 'Media Library';
+    var CT = (window.CANVAS_T || {});
+    var title = document.createElement('h3');
+    title.textContent = CT.media_library || 'Media Library';
     var search = document.createElement('input'); search.type='search'; search.placeholder='Search filename, provider, tags…';
     var close = document.createElement('button'); close.id='mc-media-close'; close.type='button'; close.textContent='✕';
 
@@ -147,7 +149,7 @@
 	  if (!mc || !mc.getState) return;
 
 	  var ids = Array.from(mc.getState().selectedItemIds || []);
-	  if (!ids.length) return void alert('Select a frame first.');
+	  if (!ids.length) return void alert((window.CANVAS_T || {}).select_frame || 'Select a frame first.');
 
 	  var targetId = null;
 	  for (var i=0;i<ids.length;i++){
@@ -229,7 +231,7 @@
           if (el && el.dataset.kind === 'frame'){ hasFrame = true; break; }
         }
       }
-      if (!hasFrame) { alert('Select a frame to attach media.'); return; }
+      if (!hasFrame) { alert((window.CANVAS_T || {}).select_frame_media || 'Select a frame to attach media.'); return; }
       injectStyle(); showOverlay();
     });
 

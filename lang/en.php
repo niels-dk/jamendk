@@ -1157,4 +1157,42 @@ return [
     'pg.priv_cta'       => "A question this page doesn't answer?",
     'pg.priv_cta_btn'   => 'Ask us',
 
+
+    /* ── Mood canvas (strings handed to public/js/mood-canvas*.js) ── */
+    'canvas.tool'               => 'Tool',
+    'canvas.media'              => 'Media',
+    'canvas.drag_to_move'       => 'Drag to move',
+    'canvas.arrow_none'         => 'No arrow',
+    'canvas.arrow_start'        => 'Arrow at start (other way)',
+    'canvas.swap'               => 'Swap from / to',
+    'canvas.edit_label'         => 'Edit label',
+    'canvas.select_frame'       => 'Select a frame first.',
+    'canvas.select_frame_media' => 'Select a frame to attach media.',
+
+    /* ── Register ── */
+    'auth.register_sub' => 'Start dreaming, planning, and publishing trips in a few seconds.',
+
+    /* ── Account: handover ── */
+    'acc.email_change_tip'  => 'Email changes will be possible once verification emails are in place',
+    'acc.email_locked'      => "Email can't be changed yet — verification mail is coming later.",
+    'acc.new_password'      => 'New password (min 6 characters)',
+    'acc.handover'          => 'Hand over this account',
+    'acc.waiting_for'       => 'Waiting for :who to accept. Your :what will move to them once they do. Nothing has moved yet.',
+    'acc.cancel_transfer'   => 'Cancel transfer',
+    'acc.handover_intro'    => "Leaving, or handing the work to someone else? Transfer everything you own — your :what — to another creator's account. They'll get a request and have to accept; <strong>boards shared with you stay put</strong>, and nothing moves until they say yes. This can't be undone once accepted.",
+    'acc.confirm_transfer'  => "Send a transfer request? Once they accept, everything you own moves to them and can't be moved back by you.",
+    'acc.recipient_email'   => "Recipient's account email",
+    'acc.note'              => 'Note',
+    'acc.note_placeholder'  => "A word for them, e.g. why you're handing over",
+    'acc.request_transfer'  => 'Request transfer',
+
+    /* ── Teams ── */
+    'teams.all'            => 'All teams',
+    'teams.admin_intro'    => "As admin you see every user's teams and can manage all of them. Click a team to unfold its members.",
+    'teams.intro'          => "Teams are your private collaborator groups. Set each member's usual role once, and you can add a whole team to any Vision from its <strong>Roles &amp; Permissions</strong> panel in one click. Click a team to unfold its members.",
+    'teams.migration'      => "The teams tables haven't been created yet — run",
+    'teams.in_phpmyadmin'  => 'in phpMyAdmin.',
+    'teams.create'         => 'Create team',
+    'teams.remove_member'  => 'Remove from team',
+
 ];

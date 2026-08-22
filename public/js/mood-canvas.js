@@ -8,6 +8,12 @@
   const svgEl   = document.getElementById('canvasOverlay');  // <svg id="canvasOverlay">
   const toolbar = document.getElementById('canvas-toolbar') || document.querySelector('[data-canvas-toolbar]');
   const toolPill= document.getElementById('tool-pill');
+  // Injected by views/mood_canvas.php; every read falls back to English.
+  const CT = (typeof window !== 'undefined' && window.CANVAS_T) || {};
+  const ct = (k, fallback) => (CT[k] !== undefined && CT[k] !== null) ? CT[k] : fallback;
+  const toolLabel = (a) => (CT.tools && CT.tools[a]) ? CT.tools[a] : a;
+  const pillText = (a, snapOn) =>
+    ct('tool', 'Tool') + ': ' + toolLabel(a) + (snapOn ? ' • ' + ct('snap', 'Snap') : '');
 
   // Create/attach the two overlay groups once (back = permanent lines, front = dashed preview)
   let svgBack  = document.getElementById('overlayBack');
@@ -185,7 +191,7 @@
       action === 'pan'    ? 'move' :
       action === 'select' ? 'default' :
       action === 'resize' ? 'nwse-resize' : 'crosshair';
-    if (toolPill) toolPill.textContent = `Tool: ${action}${snapToGrid ? ' • Snap' : ''}`;
+    if (toolPill) toolPill.textContent = pillText(action, snapToGrid);
     updateSelectionUI();
   }
   // Simple public API for debugging / external UI
@@ -307,7 +313,7 @@
 	  var c = document.createElement('div');
 	  c.className = 'resize-handle center';
 	  c.dataset.handle = 'center';
-	  c.title = 'Drag to move';
+	  c.title = ct('drag_to_move', 'Drag to move');
 	  c.addEventListener('mousedown', startMoveCenter);
 	  el.appendChild(c);
 	}
@@ -400,7 +406,7 @@
 
 		  const title = document.createElement('div');
 		  title.className = 'frame-title';
-		  title.textContent = (item.payload && item.payload.title) ? item.payload.title : 'Frame';
+		  title.textContent = (item.payload && item.payload.title) ? item.payload.title : ct('frame_default', 'Frame');
 		  title.style.cssText = 'font-weight:600;margin:4px 4px 6px 4px;font-size:14px;color:#000';
 		  el.appendChild(title);
 
@@ -626,8 +632,9 @@
     renderItem(item); setSingleSelection(item.id);
   }
   async function createFrameAt(x, y) {
-    const r = await apiPOST(`${apiBase}/create`, { kind:'frame', x:snap(x), y:snap(y), w:300, h:200, payload:{ title:'Frame' } });
-    const item = r.data && r.data.id ? r.data : { id: Date.now(), kind:'frame', x:snap(x), y:snap(y), w:300, h:200, payload:{title:'Frame'} };
+    const frameTitle = ct('frame_default', 'Frame');
+    const r = await apiPOST(`${apiBase}/create`, { kind:'frame', x:snap(x), y:snap(y), w:300, h:200, payload:{ title:frameTitle } });
+    const item = r.data && r.data.id ? r.data : { id: Date.now(), kind:'frame', x:snap(x), y:snap(y), w:300, h:200, payload:{title:frameTitle} };
     renderItem(item); setSingleSelection(item.id);
   }
   async function createConnectorBetween(aId, bId) {
@@ -1463,16 +1470,16 @@
     connToolbar.innerHTML = `
       <button data-cmd="close" class="close" title="Close" type="button">✕</button>
       <span class="sep"></span>
-      <button data-cmd="arrows-none"  class="${cls('none')}"  title="No arrow" type="button">—</button>
+      <button data-cmd="arrows-none"  class="${cls('none')}"  title="${ct('arrow_none', 'No arrow')}" type="button">—</button>
       <button data-cmd="arrows-end"   class="${cls('end')}"   title="Arrow at end (one way)" type="button">→</button>
-      <button data-cmd="arrows-start" class="${cls('start')}" title="Arrow at start (other way)" type="button">←</button>
+      <button data-cmd="arrows-start" class="${cls('start')}" title="${ct('arrow_start', 'Arrow at start (other way)')}" type="button">←</button>
       <button data-cmd="arrows-both"  class="${cls('both')}"  title="Both ends (bidirectional)" type="button">↔</button>
       <span class="sep"></span>
       <button data-cmd="solid"  class="${dcls(!dashed)}" title="Solid line" type="button">──</button>
       <button data-cmd="dashed" class="${dcls(dashed)}"  title="Dashed line" type="button">- -</button>
       <span class="sep"></span>
-      <button data-cmd="reverse" title="Swap from / to" type="button">⇄</button>
-      <button data-cmd="label" title="Edit label" type="button">A</button>
+      <button data-cmd="reverse" title="${ct('swap', 'Swap from / to')}" type="button">⇄</button>
+      <button data-cmd="label" title="${ct('edit_label', 'Edit label')}" type="button">A</button>
       <button data-cmd="delete" class="danger" title="Delete connector" type="button"
               style="min-width:auto;padding:0 .7rem;">× Delete</button>
     `;
@@ -1683,7 +1690,7 @@
         <button data-cmd="style-solid"  ${!dashed ? 'class="is-active"' : ''}>Solid line</button>
         <button data-cmd="style-dashed" ${ dashed ? 'class="is-active"' : ''}>Dashed line</button>
         <div class="menu-sep"></div>
-        <button data-cmd="label">Edit label…</button>
+        <button data-cmd="label">${ct('edit_label_dot', 'Edit label…')}</button>
         <div class="menu-sep"></div>
         <button data-cmd="delete">Delete <kbd>Del</kbd></button>
       `;
@@ -1726,7 +1733,7 @@
       snapToGrid = !snapToGrid;
       btn.classList.toggle('active', snapToGrid);
       (document.getElementById('canvasStage')||stage).classList.toggle('snap-on', snapToGrid);
-      if (toolPill) toolPill.textContent = `Tool: ${currentTool}${snapToGrid ? ' • Snap' : ''}`;
+      if (toolPill) toolPill.textContent = pillText(currentTool, snapToGrid);
       return;
     }
     if (action === 'zoom-in')  { stageScale = Math.min(2, stageScale + 0.1); applyTransforms(); return; }

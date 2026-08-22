@@ -40,10 +40,10 @@ function ac_e($s){ return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
       <label style="display:flex;flex-direction:column;gap:.3rem;">
         <span style="font-size:.85rem;opacity:.8;"><?= te('auth.email') ?></span>
         <input type="text" value="<?= ac_e($user['email']) ?>" disabled
-               title="Email changes will be possible once verification emails are in place"
+               title="<?= te('acc.email_change_tip') ?>"
                style="padding:.55rem .8rem;border:1px solid #232838;background:#101116;
                       color:#8593a6;border-radius:8px;cursor:not-allowed;">
-        <span style="font-size:.75rem;opacity:.5;">Email can't be changed yet — verification mail is coming later.</span>
+        <span style="font-size:.75rem;opacity:.5;"><?= te('acc.email_locked') ?></span>
       </label>
       <label style="display:flex;flex-direction:column;gap:.3rem;">
         <span style="font-size:.85rem;opacity:.8;"><?= te('account.company') ?> <span style="opacity:.5;">(<?= te('account.optional') ?>)</span></span>
@@ -99,7 +99,7 @@ function ac_e($s){ return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
                       color:#ddd;border-radius:8px;">
       </label>
       <label style="display:flex;flex-direction:column;gap:.3rem;">
-        <span style="font-size:.85rem;opacity:.8;">New password (min 6 characters)</span>
+        <span style="font-size:.85rem;opacity:.8;"><?= te('acc.new_password') ?></span>
         <input type="password" name="new_password" required autocomplete="new-password"
                style="padding:.55rem .8rem;border:1px solid #2b3346;background:#15161A;
                       color:#ddd;border-radius:8px;">
@@ -116,43 +116,40 @@ function ac_e($s){ return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
 
   <!-- Account handover -->
   <div class="card" style="padding:1.1rem 1.2rem;margin-top:1rem;border-color:rgba(224,106,106,.3);">
-    <h3 style="margin-top:0;">Hand over this account</h3>
+    <h3 style="margin-top:0;"><?= te('acc.handover') ?></h3>
     <?php if (!empty($pendingTransfer)): ?>
       <p style="color:#e8c889;font-size:.9rem;margin:0 0 .6rem;">
-        ⏳ Waiting for
-        <strong><?= ac_e($pendingTransfer['to_name'] ?: $pendingTransfer['to_email']) ?></strong>
-        to accept. Your <?= ac_e($ownSummaryText) ?> will move to them once they do.
-        Nothing has moved yet.
+        ⏳ <?= t('acc.waiting_for', [
+              'who'  => '<strong>' . ac_e($pendingTransfer['to_name'] ?: $pendingTransfer['to_email']) . '</strong>',
+              'what' => ac_e($ownSummaryText),
+            ]) ?>
       </p>
       <form method="post" action="/account/transfer/cancel">
         <input type="hidden" name="csrf_token" value="<?= ac_e(csrf_token()) ?>">
-        <button type="submit" class="btn">Cancel transfer</button>
+        <button type="submit" class="btn"><?= te('acc.cancel_transfer') ?></button>
       </form>
     <?php else: ?>
       <p style="opacity:.7;font-size:.9rem;margin:0 0 .8rem;">
-        Leaving, or handing the work to someone else? Transfer everything you own —
-        your <?= ac_e($ownSummaryText) ?> — to another creator's account. They'll
-        get a request and have to accept; <strong>boards shared with you stay put</strong>,
-        and nothing moves until they say yes. This can't be undone once accepted.
+        <?= t('acc.handover_intro', ['what' => ac_e($ownSummaryText)]) ?>
       </p>
       <form method="post" action="/account/transfer"
-            onsubmit="return confirm('Send a transfer request? Once they accept, everything you own moves to them and can\'t be moved back by you.');"
+            onsubmit="return confirm(<?= htmlspecialchars(json_encode(t('acc.confirm_transfer'), JSON_UNESCAPED_UNICODE), ENT_QUOTES, 'UTF-8') ?>);"
             style="display:flex;flex-direction:column;gap:.6rem;">
         <input type="hidden" name="csrf_token" value="<?= ac_e(csrf_token()) ?>">
         <label style="display:flex;flex-direction:column;gap:.3rem;">
-          <span style="font-size:.85rem;opacity:.8;">Recipient's account email</span>
+          <span style="font-size:.85rem;opacity:.8;"><?= te('acc.recipient_email') ?></span>
           <input type="email" name="email" required placeholder="new-owner@example.com"
                  style="padding:.55rem .8rem;border:1px solid #2b3346;background:#15161A;
                         color:#ddd;border-radius:8px;">
         </label>
         <label style="display:flex;flex-direction:column;gap:.3rem;">
-          <span style="font-size:.85rem;opacity:.8;">Note <span style="opacity:.5;">(optional)</span></span>
-          <input type="text" name="note" maxlength="500" placeholder="A word for them, e.g. why you're handing over"
+          <span style="font-size:.85rem;opacity:.8;"><?= te('acc.note') ?> <span style="opacity:.5;">(<?= te('adm.optional') ?>)</span></span>
+          <input type="text" name="note" maxlength="500" placeholder="<?= te('acc.note_placeholder') ?>"
                  style="padding:.55rem .8rem;border:1px solid #2b3346;background:#15161A;
                         color:#ddd;border-radius:8px;">
         </label>
         <button type="submit" class="btn" style="align-self:flex-start;
-                background:#7a2e2e;color:#fff;border:0;">Request transfer</button>
+                background:#7a2e2e;color:#fff;border:0;"><?= te('acc.request_transfer') ?></button>
       </form>
     <?php endif; ?>
   </div>

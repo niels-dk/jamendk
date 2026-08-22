@@ -10,22 +10,20 @@ global $currentUserId;
 $isAdminView = function_exists('is_admin') && is_admin();
 ?>
 
-<h1 style="margin-bottom:.3rem;"><?= $isAdminView ? 'All teams' : 'My teams' ?></h1>
+<h1 style="margin-bottom:.3rem;"><?= $isAdminView ? te('teams.all') : te('teams.im_on') ?></h1>
 <p style="opacity:.65;margin-top:0;max-width:44rem;">
   <?php if ($isAdminView): ?>
-    As admin you see every user's teams and can manage all of them. Click a team to unfold its members.
+    <?= te('teams.admin_intro') ?>
   <?php else: ?>
-    Teams are your private collaborator groups. Set each member's usual role once, and you can add
-    a whole team to any Vision from its <strong>Roles &amp; Permissions</strong> panel in one click.
-    Click a team to unfold its members.
+    <?= t('teams.intro') ?>
   <?php endif; ?>
 </p>
 
 <?php if (!empty($migrationMissing)): ?>
   <div style="background:rgba(232,194,103,.12);border:1px solid rgba(232,194,103,.4);
               color:#e8c267;padding:.7rem 1rem;border-radius:8px;margin-bottom:1rem;">
-    The teams tables haven't been created yet — run
-    <code>db/migrations/2026-07-10_teams.sql</code> in phpMyAdmin.
+    <?= te('teams.migration') ?>
+    <code>db/migrations/2026-07-10_teams.sql</code> <?= te('teams.in_phpmyadmin') ?>
   </div>
 <?php endif; ?>
 
@@ -86,7 +84,7 @@ $isAdminView = function_exists('is_admin') && is_admin();
 <div class="card" style="padding:1rem 1.2rem;margin-bottom:1.2rem;">
   <div class="team-inline-form" style="margin-top:0;">
     <input type="text" id="newTeamName" placeholder="<?= te('teams.new_placeholder') ?>">
-    <button type="button" class="btn btn-primary" id="btnCreateTeam">＋ Create team</button>
+    <button type="button" class="btn btn-primary" id="btnCreateTeam">＋ <?= te('teams.create') ?></button>
     <span id="teamsStatus" style="opacity:.6;font-size:.85em;"></span>
   </div>
 </div>
@@ -172,7 +170,7 @@ $isAdminView = function_exists('is_admin') && is_admin();
                   <?php endif; ?>
                 </td>
                 <td class="row-actions">
-                  <button type="button" class="m-remove" title="Remove from team">×</button>
+                  <button type="button" class="m-remove" title="<?= te('teams.remove_member') ?>">×</button>
                 </td>
               </tr>
             <?php endforeach; ?>
@@ -222,7 +220,7 @@ $isAdminView = function_exists('is_admin') && is_admin();
             <thead>
               <tr>
                 <th>Member</th>
-                <th>Last active</th>
+                <th><?= te('teams.last_active') ?></th>
                 <th><?= te('teams.role_on_team') ?></th>
               </tr>
             </thead>
@@ -255,12 +253,12 @@ $isAdminView = function_exists('is_admin') && is_admin();
         <div class="team-inline-form">
           <input type="text" class="t-add-email" placeholder="<?= te('teams.add_placeholder') ?>">
           <select class="t-add-role">
-            <option value="viewer">Viewer — read-only</option>
-            <option value="editor">Editor — can modify content</option>
-            <option value="co_owner">Co-owner — full control incl. sharing</option>
-            <option value="delegate">Delegate — acts on behalf of the owner</option>
+            <option value="viewer"><?= te('roles.viewer') ?></option>
+            <option value="editor"><?= te('roles.editor') ?></option>
+            <option value="co_owner"><?= te('roles.co_owner') ?></option>
+            <option value="delegate"><?= te('roles.delegate') ?></option>
           </select>
-          <button type="button" class="btn t-add-member">Add member</button>
+          <button type="button" class="btn t-add-member"><?= te('teams.add_member') ?></button>
         </div>
       </div>
     </div>

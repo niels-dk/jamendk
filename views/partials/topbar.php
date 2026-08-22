@@ -55,10 +55,23 @@ $brandName = defined('SITE_NAME') ? SITE_NAME : 'Merely a Dream';
 </header>
 
 <style>
-  .lang-picker { position:relative; display:inline-block; }
-  .lang-toggle { display:inline-flex; align-items:center; gap:.35rem; }
+  /* .home-actions is a flex row with the default align-items:stretch, so this
+     wrapper is stretched to the tallest button in the row. Stretching the
+     toggle inside it too is what keeps the pill the same height as its
+     neighbours instead of sitting short at the top of a taller box. */
+  .lang-picker { position:relative; display:flex; align-items:stretch; }
+  .lang-toggle {
+    display:inline-flex; align-items:center; gap:.35rem;
+    /* A <button> does not inherit font-family from the page the way the
+       sibling <a class="btn"> elements do — without this it renders in the UA
+       default face, which is a different size at the same font-size and makes
+       the pill visibly shorter and narrower than every button beside it. */
+    font-family:inherit; line-height:inherit;
+  }
   .lang-flag { display:block; flex-shrink:0; border-radius:50%; }
-  .lang-code { font-size:.82rem; font-weight:700; letter-spacing:.03em; }
+  /* 1em, not a rem value: matches the .btn font-size of the buttons either
+     side rather than being sized off the root. */
+  .lang-code { font-size:1em; font-weight:700; letter-spacing:.03em; }
   .lang-menu {
     position:absolute; right:0; top:calc(100% + .4rem); z-index:200;
     min-width:220px; padding:.4rem;

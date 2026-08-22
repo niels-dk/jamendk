@@ -20,7 +20,7 @@ $showTrip = !empty($budget['show_on_trip']);
     <div id="currencyList" class="dropdown-list" hidden></div>
   </div>
 
-  <h4 style="margin-top:.2rem;">Line items <span style="opacity:.5;font-weight:400;font-size:.85em;">(travel, gear, talent…)</span></h4>
+  <h4 style="margin-top:.2rem;"><?= te('budget.line_items') ?> <span style="opacity:.5;font-weight:400;font-size:.85em;">(<?= te('budget.line_items_hint') ?>)</span></h4>
   <div id="budgetItems">
     <?php foreach (($budgetItems ?? []) as $bi): ?>
       <div class="bi-row">
@@ -28,7 +28,7 @@ $showTrip = !empty($budget['show_on_trip']);
                value="<?= htmlspecialchars($bi['label'], ENT_QUOTES) ?>">
         <input type="text" class="bi-amount" inputmode="decimal" placeholder="0.00"
                value="<?= number_format(((int)$bi['amount_cents']) / 100, 2, '.', '') ?>">
-        <label class="bi-paid" title="Paid?">
+        <label class="bi-paid" title="<?= te('budget.paid') ?>">
           <input type="checkbox" <?= !empty($bi['paid']) ? 'checked' : '' ?>>
           <span class="bi-paid-lbl">paid</span>
         </label>
@@ -36,7 +36,7 @@ $showTrip = !empty($budget['show_on_trip']);
       </div>
     <?php endforeach; ?>
   </div>
-  <button type="button" class="btn btn-secondary" id="btnAddBudgetItem">+ Add line</button>
+  <button type="button" class="btn btn-secondary" id="btnAddBudgetItem">+ <?= te('budget.add_line') ?></button>
 
   <label for="budgetAmount" style="margin-top:.8rem;display:block;">
     Total <span id="budgetTotalHint" style="opacity:.5;font-size:.85em;"></span>

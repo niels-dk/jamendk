@@ -2,10 +2,10 @@
 // Expects: $vision (slug), $docs (array of rows: uuid, file_name, status, version, group_id, group_name, created_at)
 $slug = htmlspecialchars($vision['slug'] ?? '', ENT_QUOTES);
 $STATUSES = [
-  'draft'         => 'Draft',
-  'waiting_brand' => 'Waiting Brand',
-  'final'         => 'Final',
-  'signed'        => 'Signed',
+  'draft'         => t('docs.draft'),
+  'waiting_brand' => t('docs.waiting_brand'),
+  'final'         => t('docs.final'),
+  'signed'        => t('docs.signed'),
 ];
 ?>
 
@@ -16,7 +16,7 @@ $STATUSES = [
 <div id="docsWrap" data-slug="<?= $slug ?>">
   <form id="documentUploadForm" enctype="multipart/form-data">
     <input type="file" name="file[]" multiple>
-    <button type="submit" class="btn primary">Upload</button>
+    <button type="submit" class="btn primary"><?= te('docs.upload') ?></button>
     <span id="uploadStatus" class="hint"></span>
   </form>
 
@@ -48,12 +48,12 @@ $STATUSES = [
           </div>
         </div>
         <div class="doc-actions">
-          <a class="action-link" href="/documents/<?= htmlspecialchars($doc['uuid'], ENT_QUOTES) ?>/download">Download</a>
+          <a class="action-link" href="/documents/<?= htmlspecialchars($doc['uuid'], ENT_QUOTES) ?>/download"><?= te('docs.download') ?></a>
         </div>
       </div>
     <?php endforeach; ?>
     <?php if (empty($docs)): ?>
-      <div class="muted" style="opacity:.6;padding:.6rem 0;">No documents yet.</div>
+      <div class="muted" style="opacity:.6;padding:.6rem 0;"><?= te('docs.none_yet') ?></div>
     <?php endif; ?>
   </div>
 

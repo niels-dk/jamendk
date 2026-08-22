@@ -21,7 +21,7 @@
 return [
 
     /* ── Navigation / chrome ─────────────────────────────────────── */
-    'nav.capture'        => 'Fang',
+    'nav.capture'        => 'Drøm',
     'nav.teams'          => 'Teams',
     'nav.users'          => 'Brugere',
     'nav.analytics'      => 'Statistik',
@@ -392,5 +392,49 @@ return [
     'vision.save_stay'        => 'Gem & bliv',
     'vision.save_close'       => 'Gem & luk',
     'vision.save_dash'        => 'Gem & oversigt',
+
+
+    /* ── Anchor types (values stay English — labels only) ── */
+    'anchor.locations' => 'Locations',
+    'anchor.brands'    => 'Brands',
+    'anchor.people'    => 'Personer',
+    'anchor.seasons'   => 'Sæsoner',
+    'anchor.time'      => 'Tid',
+
+    /* ── Vision form extras ── */
+    'vision.name'              => 'Visionens navn',
+    'vision.anchors'           => 'Anchors',
+    'vision.anchors_help'      => 'Hurtige, søgbare tags som locations, brands, personer, sæson/tid. Hjælper søgning og oversigter.',
+    'vision.anchor_placeholder'=> 'fx København / Adidas / Alice / Vinter / Q1',
+    'vision.custom_key'        => 'Eget feltnavn',
+
+    /* ── Workflow ── */
+    'wf.complete' => 'Færdig',
+
+    /* ── Goals extras ── */
+    'goals.add'           => 'Tilføj mål',
+    'goals.add_milestone' => 'Tilføj milepæl',
+    'goals.send'          => 'Send',
+    'goals.mark_resolved' => 'Markér som løst',
+    'goals.p1'            => 'Haster',
+    'goals.p2'            => 'Høj',
+    'goals.p3'            => 'Normal',
+    'goals.p4'            => 'Lav',
+    'goals.p5'            => 'Lavest',
+
+    /* ── Budget extras ── */
+    'budget.line_items'      => 'Poster',
+    'budget.line_items_hint' => 'rejse, grej, medvirkende…',
+    'budget.add_line'        => 'Tilføj post',
+    'budget.paid'            => 'Betalt?',
+
+    /* ── Documents ── */
+    'docs.upload'        => 'Upload',
+    'docs.download'      => 'Download',
+    'docs.none_yet'      => 'Ingen dokumenter endnu.',
+    'docs.draft'         => 'Kladde',
+    'docs.waiting_brand' => 'Afventer brand',
+    'docs.final'         => 'Endelig',
+    'docs.signed'        => 'Underskrevet',
 
 ];

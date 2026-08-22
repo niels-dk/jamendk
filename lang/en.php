@@ -382,4 +382,48 @@ return [
     'vision.save_close'       => 'Save & close',
     'vision.save_dash'        => 'Save & dashboard',
 
+
+    /* ── Anchor types (values stay English — labels only) ── */
+    'anchor.locations' => 'Locations',
+    'anchor.brands'    => 'Brands',
+    'anchor.people'    => 'People',
+    'anchor.seasons'   => 'Seasons',
+    'anchor.time'      => 'Time',
+
+    /* ── Vision form extras ── */
+    'vision.name'              => 'Vision Name',
+    'vision.anchors'           => 'Anchors',
+    'vision.anchors_help'      => 'Quick, queryable tags like locations, brands, people, seasons/time. Helps search & dashboards.',
+    'vision.anchor_placeholder'=> 'e.g. Copenhagen / Adidas / Alice / Winter / Q1',
+    'vision.custom_key'        => 'Custom key',
+
+    /* ── Workflow ── */
+    'wf.complete' => 'Complete',
+
+    /* ── Goals extras ── */
+    'goals.add'           => 'Add goal',
+    'goals.add_milestone' => 'Add milestone',
+    'goals.send'          => 'Send',
+    'goals.mark_resolved' => 'Mark resolved',
+    'goals.p1'            => 'Urgent',
+    'goals.p2'            => 'High',
+    'goals.p3'            => 'Normal',
+    'goals.p4'            => 'Low',
+    'goals.p5'            => 'Lowest',
+
+    /* ── Budget extras ── */
+    'budget.line_items'      => 'Line items',
+    'budget.line_items_hint' => 'travel, gear, talent…',
+    'budget.add_line'        => 'Add line',
+    'budget.paid'            => 'Paid?',
+
+    /* ── Documents ── */
+    'docs.upload'        => 'Upload',
+    'docs.download'      => 'Download',
+    'docs.none_yet'      => 'No documents yet.',
+    'docs.draft'         => 'Draft',
+    'docs.waiting_brand' => 'Waiting Brand',
+    'docs.final'         => 'Final',
+    'docs.signed'        => 'Signed',
+
 ];

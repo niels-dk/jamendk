@@ -20,7 +20,7 @@ $titleText = $isEdit ? 'Edit Vision' : 'Create a Vision';
     <input type="hidden" name="slug"     value="<?= htmlspecialchars($vision['slug'] ?? '', ENT_QUOTES) ?>">
   <?php endif; ?> 
 
-  <label>Vision Name
+  <label><?= te('vision.name') ?>
     <input name="title" type="text" placeholder="<?= te('vision.title_placeholder') ?>"
            value="<?= $isEdit ? htmlspecialchars($vision['title'] ?? '', ENT_QUOTES) : '' ?>">
   </label> 
@@ -32,8 +32,8 @@ $titleText = $isEdit ? 'Edit Vision' : 'Create a Vision';
 
   <!-- Anchors header + toggle -->
   <label class="anchors-header" style="display:flex;gap:.5rem;align-items:center">
-    Anchors 
-    <span title="Quick, queryable tags like locations, brands, people, seasons/time. Helps search &amp; dashboards."
+    <?= te('vision.anchors') ?> 
+    <span title="<?= te('vision.anchors_help') ?>"
           style="opacity:.7;cursor:help;">?</span>
     <!-- Toggle appears only when there are >3 rows.  Initial text set via JS -->
     <button type="button"
@@ -57,20 +57,20 @@ $titleText = $isEdit ? 'Edit Vision' : 'Create a Vision';
 		  <div class="anchors-row" style="display:flex;align-items:center;gap:.5rem;width:100%;">
 			<select class="anchor-key" name="anchors[<?= $i ?>][key]">
 			  <option value=""><?= te('vision.choose') ?></option>
-			  <option <?= $rowKey === 'locations' ? 'selected' : '' ?>>locations</option>
-			  <option <?= $rowKey === 'brands'    ? 'selected' : '' ?>>brands</option>
-			  <option <?= $rowKey === 'people'    ? 'selected' : '' ?>>people</option>
-			  <option <?= $rowKey === 'seasons'   ? 'selected' : '' ?>>seasons</option>
-			  <option <?= $rowKey === 'time'      ? 'selected' : '' ?>>time</option>
+			  <option value="locations" <?= $rowKey === 'locations' ? 'selected' : '' ?>><?= te('anchor.locations') ?></option>
+			  <option value="brands" <?= $rowKey === 'brands'  ? 'selected' : '' ?>><?= te('anchor.brands') ?></option>
+			  <option value="people" <?= $rowKey === 'people'  ? 'selected' : '' ?>><?= te('anchor.people') ?></option>
+			  <option value="seasons" <?= $rowKey === 'seasons' ? 'selected' : '' ?>><?= te('anchor.seasons') ?></option>
+			  <option value="time" <?= $rowKey === 'time'    ? 'selected' : '' ?>><?= te('anchor.time') ?></option>
 			  <?php if ($rowKey && !in_array($rowKey, ['locations','brands','people','seasons','time'], true)): ?>
 				<option value="<?= htmlspecialchars($rowKey, ENT_QUOTES) ?>" selected><?= htmlspecialchars($rowKey, ENT_QUOTES) ?></option>
 			  <?php endif; ?>
-			  <option value="__custom">Custom…</option>
+			  <option value="__custom"><?= te('contacts.custom') ?></option>
 			</select>
 			<input class="anchor-value"
 				   name="anchors[<?= $i ?>][value]"
 				   value="<?= htmlspecialchars($rowVal, ENT_QUOTES) ?>"
-				   placeholder="e.g. Copenhagen / Adidas / Alice / Winter / Q1">
+				   placeholder="<?= te('vision.anchor_placeholder') ?>">
 			<button type="button"
 					class="btn btn-icon remove-anchor"
 					aria-label="Remove"
@@ -243,7 +243,7 @@ $titleText = $isEdit ? 'Edit Vision' : 'Create a Vision';
       const input = document.createElement('input');
       input.type        = 'text';
       input.className   = 'anchor-key';
-      input.placeholder = 'Custom key';
+      input.placeholder = <?= json_encode(t('vision.custom_key')) ?>;
       input.style.width = sel.offsetWidth + 'px';
       sel.replaceWith(input);
       input.focus();

@@ -9,7 +9,7 @@ $goalsUid = (int)($currentUserId ?? ($GLOBALS['currentUserId'] ?? 0));
 
 <div id="goalsWrap" data-slug="<?= $slug ?>" data-uid="<?= $goalsUid ?>">
   <div id="goalsList" class="goals-list"><div style="opacity:.5;font-size:.9em;"><?= te('action.loading') ?></div></div>
-  <button type="button" id="btnAddGoal" class="btn btn-primary">+ Add goal</button>
+  <button type="button" id="btnAddGoal" class="btn btn-primary">+ <?= te('goals.add') ?></button>
 
   <div id="goalFormCard" class="card" hidden style="margin-top:1rem;">
     <form id="goalForm" class="goal-form">
@@ -35,11 +35,11 @@ $goalsUid = (int)($currentUserId ?? ($GLOBALS['currentUserId'] ?? 0));
         <div>
           <label for="goalPriority"><?= te('goals.priority') ?></label>
           <select id="goalPriority" name="priority">
-            <option value="1">P1 — Urgent</option>
-            <option value="2">P2 — High</option>
-            <option value="3" selected>P3 — Normal</option>
-            <option value="4">P4 — Low</option>
-            <option value="5">P5 — Lowest</option>
+            <option value="1">P1 — <?= te('goals.p1') ?></option>
+            <option value="2">P2 — <?= te('goals.p2') ?></option>
+            <option value="3" selected>P3 — <?= te('goals.p3') ?></option>
+            <option value="4">P4 — <?= te('goals.p4') ?></option>
+            <option value="5">P5 — <?= te('goals.p5') ?></option>
           </select>
         </div>
         <div>
@@ -61,13 +61,13 @@ $goalsUid = (int)($currentUserId ?? ($GLOBALS['currentUserId'] ?? 0));
 
       <h4 style="margin-top:1rem;"><?= te('goals.milestones') ?></h4>
       <div id="milestonesWrap"></div>
-      <button type="button" id="btnAddMilestone" class="btn btn-secondary">+ Add milestone</button>
+      <button type="button" id="btnAddMilestone" class="btn btn-secondary">+ <?= te('goals.add_milestone') ?></button>
 
       <!-- Assignee actions (resolve when it's yours) / owner reopen -->
       <div id="goalAssignActions" style="margin-top:.9rem; display:none; gap:.5rem; flex-wrap:wrap;">
         <button type="button" class="btn" id="btnResolveGoal"
-                style="background:#15351f;border:1px solid #1e5530;color:#7ed99a;">✓ Mark resolved</button>
-        <button type="button" class="btn" id="btnReopenGoal" hidden>↺ Reopen</button>
+                style="background:#15351f;border:1px solid #1e5530;color:#7ed99a;">✓ <?= te('goals.mark_resolved') ?></button>
+        <button type="button" class="btn" id="btnReopenGoal" hidden>↺ <?= te('shots.reopen') ?></button>
       </div>
 
       <!-- Comments -->
@@ -77,7 +77,7 @@ $goalsUid = (int)($currentUserId ?? ($GLOBALS['currentUserId'] ?? 0));
         <textarea id="goalCommentBox" rows="2" placeholder="<?= te('goals.comment_placeholder') ?>"
                   style="flex:1;background:#15161A;border:1px solid #2b3346;color:#ddd;
                          border-radius:6px;padding:.4rem .55rem;resize:vertical;margin:0;"></textarea>
-        <button type="button" class="btn btn-primary" id="btnAddComment" style="flex-shrink:0;">Send</button>
+        <button type="button" class="btn btn-primary" id="btnAddComment" style="flex-shrink:0;"><?= te('goals.send') ?></button>
       </div>
 
       <div style="margin-top:1rem; display:flex; align-items:center; gap:.6rem;">

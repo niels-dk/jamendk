@@ -8,9 +8,9 @@ $show   = array_key_exists('workflow', $presentationFlags ?? [])
             : 1;
 
 $STATUSES = [
-  'not_started' => 'Not started',
-  'in_progress' => 'In progress',
-  'complete'    => 'Complete',
+  'not_started' => t('goals.not_started'),
+  'in_progress' => t('goals.in_progress'),
+  'complete'    => t('wf.complete'),
 ];
 ?>
 

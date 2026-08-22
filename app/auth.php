@@ -15,10 +15,15 @@ $currentUser   = $isAuthenticated && !empty($_SESSION['user']) ? $_SESSION['user
 
 // Hydrate the site role for sessions created before users.role existed
 // (one cheap lookup, then cached in the session for the rest of the visit).
-if ($isAuthenticated && (!is_array($currentUser) || !isset($currentUser['role']))) {
+// Also covers 'lang': sessions created before the language column existed
+// carry no 'lang' key, and without it I18n::lang() silently falls back to
+// English however the account is set.
+if ($isAuthenticated && (!is_array($currentUser)
+        || !isset($currentUser['role'])
+        || !array_key_exists('lang', $currentUser))) {
     try {
         global $db;
-        $st = $db->prepare('SELECT id, name, email, role FROM users WHERE id = ? LIMIT 1');
+        $st = $db->prepare('SELECT id, name, email, role, lang FROM users WHERE id = ? LIMIT 1');
         $st->execute([$currentUserId]);
         if ($row = $st->fetch(PDO::FETCH_ASSOC)) {
             $_SESSION['user'] = [
@@ -26,11 +31,16 @@ if ($isAuthenticated && (!is_array($currentUser) || !isset($currentUser['role'])
                 'name'  => $row['name']  ?? '',
                 'email' => $row['email'] ?? '',
                 'role'  => $row['role']  ?? 'user',
+                'lang'  => $row['lang']  ?? null,
             ];
             $currentUser = $_SESSION['user'];
         }
     } catch (\Throwable $e) {
-        // users.role may not exist yet — treat as regular user until migrated
-        if (is_array($currentUser)) { $currentUser['role'] = 'user'; }
+        // users.role or users.lang may not exist yet — treat as a regular user
+        // on the default language until migrated.
+        if (is_array($currentUser)) {
+            if (!isset($currentUser['role'])) { $currentUser['role'] = 'user'; }
+            if (!array_key_exists('lang', $currentUser)) { $currentUser['lang'] = null; }
+        }
     }
 }

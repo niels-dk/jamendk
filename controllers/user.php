@@ -416,7 +416,22 @@ class user_controller
             'name'  => $user['name']  ?? '',
             'email' => $user['email'] ?? '',
             'role'  => $user['role']  ?? 'user',
+            'lang'  => $user['lang']  ?? null,
         ];
+
+        // Signing in restores the ACCOUNT's language, and overrides whatever
+        // the browser was showing. Without this, a language picked while
+        // logged out would sit in the session and outrank the account's own
+        // setting (I18n::lang() reads the session first) — so someone whose
+        // account is Danish would land in English after signing in on an
+        // English page, and the next click on the picker would write that
+        // English back over their stored preference.
+        require_once __DIR__ . '/../app/i18n.php';
+        if (I18n::isSupported($user['lang'] ?? null)) {
+            $_SESSION['lang'] = $user['lang'];
+        } else {
+            unset($_SESSION['lang']);   // no stored preference → fall back to default
+        }
         // Best-effort last-login stamp (column may not be migrated yet)
         try {
             global $db;

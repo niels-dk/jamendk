@@ -23,23 +23,23 @@ $shareUrl    = $tripToken
 ?>
 
 <div class="overlay-header">
-  <h2>Vision Basics</h2>
+  <h2><?= te('basics.title') ?></h2>
 </div>
 
 <form id="basicsForm" class="overlay-form" action="/visions/update-basics" method="post" data-slug="<?= $visionSlug ?>">
   <input type="hidden" name="vision_id" value="<?= $visionId ?>">
 
-  <label for="start-date">Start date</label>
+  <label for="start-date"><?= te('basics.start') ?></label>
   <input id="start-date" type="date" name="start_date" value="<?= htmlspecialchars($startDate, ENT_QUOTES) ?>">
 
-  <label for="end-date">End date</label>
+  <label for="end-date"><?= te('basics.end') ?></label>
   <input id="end-date" type="date" name="end_date" value="<?= htmlspecialchars($endDate, ENT_QUOTES) ?>">
 
-  <h4 style="margin-top:1.2rem;">Trip publishing</h4>
+  <h4 style="margin-top:1.2rem;"><?= te('basics.publishing') ?></h4>
 
   <label class="switch switch-row" title="Master switch — when off, the trip page is not available.">
     <span class="switch-label">
-      <strong>Publish as Trip</strong>
+      <strong><?= te('basics.publish') ?></strong>
       <span style="display:block;opacity:.6;font-size:.8em;margin-top:.1rem;">
         Master switch — when off, /trips/<?= $visionSlug ?> shows "not published".
       </span>
@@ -53,41 +53,42 @@ $shareUrl    = $tripToken
         margin-top:.6rem;padding:.7rem .8rem;border:1px solid #2b3f5f;
         border-radius:8px;background:rgba(58,118,210,.08);">
     <label style="font-size:.8em;opacity:.75;display:block;margin-bottom:.3rem;">
-      Public share link — anyone with it can view the trip
+      <?= te('basics.share_link') ?>
     </label>
     <div style="display:flex;gap:.4rem;">
       <input id="tripShareUrl" type="text" readonly value="<?= htmlspecialchars($shareUrl, ENT_QUOTES) ?>"
              style="flex:1;min-width:0;background:#0f1014;border:1px solid #2b3346;color:#8fb1d8;
                     border-radius:6px;padding:.4rem .55rem;font-size:.82em;font-family:monospace;">
-      <button type="button" class="btn" id="tripShareCopy" style="flex-shrink:0;padding:.35rem .7rem;">Copy</button>
+      <button type="button" class="btn" id="tripShareCopy" style="flex-shrink:0;padding:.35rem .7rem;"><?= te('basics.copy') ?></button>
     </div>
     <div style="display:flex;gap:.4rem;align-items:center;margin-top:.5rem;flex-wrap:wrap;">
       <select id="tripShareExpiry"
               style="background:#15161A;border:1px solid #2b3346;color:#ddd;
                      padding:.3rem .5rem;border-radius:6px;font-size:.85em;">
-        <option value="0">Never expires</option>
-        <option value="7">Expire in 7 days</option>
-        <option value="30">Expire in 30 days</option>
+        <option value="0"><?= te('basics.never') ?></option>
+        <option value="7"><?= te('basics.exp7') ?></option>
+        <option value="30"><?= te('basics.exp30') ?></option>
       </select>
       <button type="button" class="btn" id="tripShareRegen"
               title="Mint a fresh link — the old one stops working"
-              style="padding:.3rem .7rem;font-size:.85em;">↻ New link</button>
+              style="padding:.3rem .7rem;font-size:.85em;">↻ <?= te('basics.new_link') ?></button>
       <span id="tripShareStatus" style="opacity:.65;font-size:.8em;">
         <?= $tripExpires ? 'Expires ' . htmlspecialchars(date('M j, Y', strtotime($tripExpires)), ENT_QUOTES) : '' ?>
       </span>
     </div>
   </div>
 
-  <h4 style="margin-top:1.2rem;">Show on Trip layer</h4>
+  <h4 style="margin-top:1.2rem;"><?= te('sec.show_on_trip') ?></h4>
   <p style="opacity:.6;font-size:.85em;margin:0 0 .6rem;">
-    Choose which sections appear when this trip is published.
+    <?= te('basics.sections_hint') ?>
   </p>
 
   <?php foreach ($defaults as $section => $_): ?>
     <?php
       $id = 'flag_' . $section;
       $checked = !empty($flags[$section]) ? 'checked' : '';
-      $label = ucfirst($section);
+      // Section labels come from the same keys the sidebar uses.
+      $label = t('sec.' . $section);
     ?>
     <label class="switch switch-row" style="opacity:<?= $tripEnabled ? '1' : '.45' ?>;">
       <span class="switch-label"><?= $label ?></span>

@@ -4,36 +4,36 @@ $goalsUid = (int)($currentUserId ?? ($GLOBALS['currentUserId'] ?? 0));
 ?>
 
 <div class="overlay-header">
-  <h2>Goals &amp; Milestones</h2>
+  <h2><?= te('sec.goals') ?></h2>
 </div>
 
 <div id="goalsWrap" data-slug="<?= $slug ?>" data-uid="<?= $goalsUid ?>">
-  <div id="goalsList" class="goals-list"><div style="opacity:.5;font-size:.9em;">Loading…</div></div>
+  <div id="goalsList" class="goals-list"><div style="opacity:.5;font-size:.9em;"><?= te('action.loading') ?></div></div>
   <button type="button" id="btnAddGoal" class="btn btn-primary">+ Add goal</button>
 
   <div id="goalFormCard" class="card" hidden style="margin-top:1rem;">
     <form id="goalForm" class="goal-form">
       <input type="hidden" name="goal_id" value="">
 
-      <label for="goalTitle">Title</label>
-      <input id="goalTitle" name="title" type="text" placeholder="What needs to happen?">
+      <label for="goalTitle"><?= te('goals.title') ?></label>
+      <input id="goalTitle" name="title" type="text" placeholder="<?= te('goals.title_placeholder') ?>">
 
-      <label for="goalDescription">Description</label>
-      <textarea id="goalDescription" name="description" rows="2" placeholder="Optional context, links, why this matters…"></textarea>
+      <label for="goalDescription"><?= te('goals.description') ?></label>
+      <textarea id="goalDescription" name="description" rows="2" placeholder="<?= te('goals.desc_placeholder') ?>"></textarea>
 
       <div class="goal-meta-row">
         <div>
-          <label for="goalStatus">Status</label>
+          <label for="goalStatus"><?= te('wf.status') ?></label>
           <select id="goalStatus" name="status">
-            <option value="not_started">Not started</option>
-            <option value="in_progress">In progress</option>
-            <option value="awaiting">Awaiting</option>
-            <option value="done">Done</option>
-            <option value="cancelled">Cancelled</option>
+            <option value="not_started"><?= te('goals.not_started') ?></option>
+            <option value="in_progress"><?= te('goals.in_progress') ?></option>
+            <option value="awaiting"><?= te('goals.awaiting') ?></option>
+            <option value="done"><?= te('goals.done') ?></option>
+            <option value="cancelled"><?= te('goals.cancelled') ?></option>
           </select>
         </div>
         <div>
-          <label for="goalPriority">Priority</label>
+          <label for="goalPriority"><?= te('goals.priority') ?></label>
           <select id="goalPriority" name="priority">
             <option value="1">P1 — Urgent</option>
             <option value="2">P2 — High</option>
@@ -43,23 +43,23 @@ $goalsUid = (int)($currentUserId ?? ($GLOBALS['currentUserId'] ?? 0));
           </select>
         </div>
         <div>
-          <label for="goalDue">Due date</label>
+          <label for="goalDue"><?= te('goals.due') ?></label>
           <input id="goalDue" name="due_date" type="date">
         </div>
       </div>
 
-      <label for="goalAssignee" style="font-size:.8em;opacity:.7;">Assign to</label>
+      <label for="goalAssignee" style="font-size:.8em;opacity:.7;"><?= te('goals.assign_to') ?></label>
       <select id="goalAssignee" name="assigned_user_id">
-        <option value="">— Unassigned —</option>
+        <option value=""><?= te('goals.unassigned') ?></option>
       </select>
 
       <label class="switch switch-row" style="margin-top:.6rem;">
-        <span class="switch-label">Show on Trip layer</span>
+        <span class="switch-label"><?= te('sec.show_on_trip') ?></span>
         <input class="switch-input" type="checkbox" name="show_on_trip" checked>
         <span class="knob" aria-hidden="true"></span>
       </label>
 
-      <h4 style="margin-top:1rem;">Milestones</h4>
+      <h4 style="margin-top:1rem;"><?= te('goals.milestones') ?></h4>
       <div id="milestonesWrap"></div>
       <button type="button" id="btnAddMilestone" class="btn btn-secondary">+ Add milestone</button>
 
@@ -71,18 +71,18 @@ $goalsUid = (int)($currentUserId ?? ($GLOBALS['currentUserId'] ?? 0));
       </div>
 
       <!-- Comments -->
-      <h4 style="margin-top:1.1rem;">Comments</h4>
+      <h4 style="margin-top:1.1rem;"><?= te('goals.comments') ?></h4>
       <div id="goalComments" style="display:flex;flex-direction:column;gap:.4rem;margin-bottom:.5rem;"></div>
       <div style="display:flex;gap:.4rem;align-items:flex-start;">
-        <textarea id="goalCommentBox" rows="2" placeholder="Write a comment…"
+        <textarea id="goalCommentBox" rows="2" placeholder="<?= te('goals.comment_placeholder') ?>"
                   style="flex:1;background:#15161A;border:1px solid #2b3346;color:#ddd;
                          border-radius:6px;padding:.4rem .55rem;resize:vertical;margin:0;"></textarea>
         <button type="button" class="btn btn-primary" id="btnAddComment" style="flex-shrink:0;">Send</button>
       </div>
 
       <div style="margin-top:1rem; display:flex; align-items:center; gap:.6rem;">
-        <button type="button" class="btn" id="btnCloseGoal">Close</button>
-        <button type="button" class="btn btn-danger" id="btnDeleteGoal" hidden>Delete goal</button>
+        <button type="button" class="btn" id="btnCloseGoal"><?= te('action.close') ?></button>
+        <button type="button" class="btn btn-danger" id="btnDeleteGoal" hidden><?= te('goals.delete') ?></button>
         <span id="goalSaveStatus" style="margin-left:auto;opacity:.6;font-size:.85em;"></span>
       </div>
     </form>
@@ -201,9 +201,24 @@ $goalsUid = (int)($currentUserId ?? ($GLOBALS['currentUserId'] ?? 0));
   const commentInput = wrap.querySelector('#goalCommentBox');
   const addCommentBtn = wrap.querySelector('#btnAddComment');
 
+  // Strings from PHP so the list, prompts and status text follow the user's language
+  const T = <?= json_encode([
+      'not_started'=>t('goals.not_started'),'in_progress'=>t('goals.in_progress'),
+      'awaiting'=>t('goals.awaiting'),'done'=>t('goals.done'),'cancelled'=>t('goals.cancelled'),
+      'none_yet'=>t('goals.none_yet'),'no_comments'=>t('goals.no_comments'),
+      'unassigned'=>t('goals.unassigned'),'save_first'=>t('goals.save_first'),
+      'comment_failed'=>t('goals.comment_failed'),'action_failed'=>t('goals.action_failed'),
+      'note_prompt'=>t('goals.note_prompt'),'confirm_delete'=>t('goals.confirm_delete'),
+      'milestone_placeholder'=>t('goals.milestone_placeholder'),
+      'saving'=>t('status.saving'),'saved'=>t('status.saved'),
+      'save_failed'=>t('status.save_failed'),'net_error'=>t('status.net_error'),
+      'delete_failed'=>t('status.delete_failed'),
+      'no_team'=>t('goals.no_team'),'ms_due'=>t('goals.ms_due'),
+      'ms_assign'=>t('goals.ms_assign'),'load_one_failed'=>t('goals.load_one_failed'),
+  ], JSON_UNESCAPED_UNICODE) ?>;
   const STATUS_LABELS = {
-    not_started: 'Not started', in_progress: 'In progress',
-    awaiting:    'Awaiting',    done:        'Done', cancelled: 'Cancelled'
+    not_started: T.not_started, in_progress: T.in_progress,
+    awaiting:    T.awaiting,    done:        T.done, cancelled: T.cancelled
   };
   const today = new Date().toISOString().slice(0,10);
 
@@ -220,7 +235,7 @@ $goalsUid = (int)($currentUserId ?? ($GLOBALS['currentUserId'] ?? 0));
     return (m.name || m.email) + (m.email ? ` — ${m.email}` : '');
   }
   // Build <optgroup>-based options: one group per team the members belong to,
-  // plus a "Not in a team" group. A member in several teams appears once,
+  // plus a T.no_team group. A member in several teams appears once,
   // under their first team (keeps the list short and unambiguous enough).
   function buildOptions(selected, placeholder) {
     const sel = String(selected ?? '');
@@ -242,7 +257,7 @@ $goalsUid = (int)($currentUserId ?? ($GLOBALS['currentUserId'] ?? 0));
       html += `<optgroup label="👥 ${escapeHtml(tn)}">${groups[tn].map(opt).join('')}</optgroup>`;
     });
     if (loose.length) {
-      html += `<optgroup label="Not in a team">${loose.map(opt).join('')}</optgroup>`;
+      html += `<optgroup label=T.no_team>${loose.map(opt).join('')}</optgroup>`;
     }
     return html;
   }
@@ -269,16 +284,16 @@ $goalsUid = (int)($currentUserId ?? ($GLOBALS['currentUserId'] ?? 0));
         });
       });
     } catch { /* teams optional */ }
-    assigneeSel.innerHTML = buildOptions('', '— Unassigned —');
+    assigneeSel.innerHTML = buildOptions('', T.unassigned);
   }
 
   function msRow(text = '', done = false, due = '', assignee = '') {
     return `
       <div class="milestone-row ${done?'is-done':''}">
         <input type="checkbox" class="ms-done" ${done?'checked':''}>
-        <input type="text" class="ms-text" value="${escapeHtml(text)}" placeholder="Milestone…">
-        <input type="date" class="ms-due" value="${escapeHtml(due || '')}" title="Milestone due date">
-        <select class="ms-assignee" title="Assign this milestone">${memberOptions(assignee)}</select>
+        <input type="text" class="ms-text" value="${escapeHtml(text)}" placeholder="${T.milestone_placeholder}">
+        <input type="date" class="ms-due" value="${escapeHtml(due || '')}" title="${T.ms_due}">
+        <select class="ms-assignee" title="${T.ms_assign}">${memberOptions(assignee)}</select>
         <button type="button" class="ms-remove" aria-label="Remove">×</button>
       </div>`;
   }
@@ -299,7 +314,7 @@ $goalsUid = (int)($currentUserId ?? ($GLOBALS['currentUserId'] ?? 0));
   function renderComments(rows) {
     if (!commentsBox) return;
     if (!rows || !rows.length) {
-      commentsBox.innerHTML = '<div style="opacity:.5;font-size:.85em;">No comments yet.</div>';
+      commentsBox.innerHTML = '<div style="opacity:.5;font-size:.85em;">' + T.no_comments + '</div>';
       return;
     }
     commentsBox.innerHTML = rows.map(c => {
@@ -328,7 +343,7 @@ $goalsUid = (int)($currentUserId ?? ($GLOBALS['currentUserId'] ?? 0));
   addCommentBtn?.addEventListener('click', async () => {
     const gid = form.querySelector('[name="goal_id"]').value.trim();
     const body = commentInput.value.trim();
-    if (!gid) { alert('Save the goal first, then comment.'); return; }
+    if (!gid) { alert(T.save_first); return; }
     if (!body) return;
     addCommentBtn.disabled = true;
     try {
@@ -338,8 +353,8 @@ $goalsUid = (int)($currentUserId ?? ($GLOBALS['currentUserId'] ?? 0));
       });
       const j = await res.json();
       if (j?.success) { commentInput.value = ''; loadComments(gid); }
-      else alert(j?.error || 'Comment failed');
-    } catch { alert('Network error'); }
+      else alert(j?.error || T.comment_failed);
+    } catch { alert(T.net_error); }
     finally { addCommentBtn.disabled = false; }
   });
 
@@ -357,7 +372,7 @@ $goalsUid = (int)($currentUserId ?? ($GLOBALS['currentUserId'] ?? 0));
     const gid = form.querySelector('[name="goal_id"]').value.trim();
     if (!gid) return;
     const note = (kind === 'resolve')
-      ? (prompt('Add a note for the assigner (optional):') ?? '')
+      ? (prompt(T.note_prompt) ?? '')
       : '';
     if (kind === 'resolve' && note === null) return;
     try {
@@ -367,8 +382,8 @@ $goalsUid = (int)($currentUserId ?? ($GLOBALS['currentUserId'] ?? 0));
       });
       const j = await res.json();
       if (j?.success) { hideForm(); loadList(); }
-      else alert(j?.error || 'Action failed');
-    } catch { alert('Network error'); }
+      else alert(j?.error || T.action_failed);
+    } catch { alert(T.net_error); }
   }
   resolveBtn?.addEventListener('click', () => goalAction('resolve'));
   reopenBtn?.addEventListener('click', () => goalAction('reopen'));
@@ -377,7 +392,7 @@ $goalsUid = (int)($currentUserId ?? ($GLOBALS['currentUserId'] ?? 0));
 
   function renderList(rows) {
     if (!Array.isArray(rows) || rows.length === 0) {
-      list.innerHTML = '<div class="muted" style="opacity:.6;">No goals yet. Add one to get started.</div>';
+      list.innerHTML = '<div class="muted" style="opacity:.6;">' + T.none_yet + '</div>';
       return;
     }
     list.innerHTML = rows.map(g => {
@@ -459,7 +474,7 @@ $goalsUid = (int)($currentUserId ?? ($GLOBALS['currentUserId'] ?? 0));
     const url = gid
       ? `/api/visions/${slug}/goals/${gid}`
       : `/api/visions/${slug}/goals/create`;
-    status.textContent = 'Saving…';
+    status.textContent = T.saving;
     try {
       const res = await fetch(url, { method:'POST', body: collectFormData() });
       const j   = await res.json();
@@ -468,10 +483,10 @@ $goalsUid = (int)($currentUserId ?? ($GLOBALS['currentUserId'] ?? 0));
           form.querySelector('[name="goal_id"]').value = j.goal_id;
           delBtn.hidden = false;
         }
-        status.textContent = 'Saved';
+        status.textContent = T.saved;
         loadList();
       } else {
-        status.textContent = '⚠ ' + (j?.error || 'Save failed');
+        status.textContent = '⚠ ' + (j?.error || T.save_failed);
       }
     } catch (e) {
       status.textContent = '⚠ Network error';
@@ -518,13 +533,13 @@ $goalsUid = (int)($currentUserId ?? ($GLOBALS['currentUserId'] ?? 0));
   delBtn.addEventListener('click', async () => {
     const gid = form.querySelector('[name="goal_id"]').value.trim();
     if (!gid) return;
-    if (!confirm('Delete this goal and its milestones?')) return;
+    if (!confirm(T.confirm_delete)) return;
     try {
       const res = await fetch(`/api/visions/${slug}/goals/${gid}/delete`, { method:'DELETE' });
       const j   = await res.json();
       if (j && j.success) { hideForm(); loadList(); }
-      else alert(j?.error || 'Delete failed');
-    } catch { alert('Delete failed'); }
+      else alert(j?.error || T.delete_failed);
+    } catch { alert(T.delete_failed); }
   });
 
   list.addEventListener('click', async e => {
@@ -549,7 +564,7 @@ $goalsUid = (int)($currentUserId ?? ($GLOBALS['currentUserId'] ?? 0));
       updateAssignActions(g);
       loadComments(g.id);
       showForm();
-    } catch { alert('Failed to load goal'); }
+    } catch { alert(T.load_one_failed); }
   });
 
   // Members must load before milestone rows render their assignee options

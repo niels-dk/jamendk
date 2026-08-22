@@ -3,45 +3,45 @@ $slug = htmlspecialchars($vision['slug'] ?? '', ENT_QUOTES);
 ?>
 
 <div class="overlay-header">
-  <h2>Contacts</h2>
+  <h2><?= te('sec.contacts') ?></h2>
 </div>
 
 <div id="contactsWrap" data-slug="<?= $slug ?>">
-  <div id="contactsList" class="contact-list"><div style="opacity:.5;font-size:.9em;">Loading…</div></div>
-  <button type="button" id="btnAddContact" class="btn btn-primary">+ Add contact</button>
+  <div id="contactsList" class="contact-list"><div style="opacity:.5;font-size:.9em;"><?= te('action.loading') ?></div></div>
+  <button type="button" id="btnAddContact" class="btn btn-primary">+ <?= te('contacts.add') ?></button>
 
   <div id="contactFormCard" class="card" hidden style="margin-top:1rem;">
     <form id="contactForm" class="contact-form">
       <input type="hidden" name="vc_id" value="">
 
-      <h4>Fields</h4>
+      <h4><?= te('contacts.fields') ?></h4>
       <div id="fieldsWrap"></div>
-      <button type="button" id="btnAddField" class="btn btn-secondary">+ Add field</button>
+      <button type="button" id="btnAddField" class="btn btn-secondary">+ <?= te('contacts.add_field') ?></button>
 
-      <h4 style="margin-top:1rem;">Flags</h4>
+      <h4 style="margin-top:1rem;"><?= te('contacts.flags') ?></h4>
       <label class="switch switch-row">
-        <span class="switch-label">Current</span>
+        <span class="switch-label"><?= te('contacts.current') ?></span>
         <input class="switch-input" type="checkbox" name="is_current">
         <span class="knob" aria-hidden="true"></span>
       </label>
       <label class="switch switch-row">
-        <span class="switch-label">Main</span>
+        <span class="switch-label"><?= te('contacts.main') ?></span>
         <input class="switch-input" type="checkbox" name="is_main">
         <span class="knob" aria-hidden="true"></span>
       </label>
       <label class="switch switch-row">
-        <span class="switch-label">Show on Dashboard</span>
+        <span class="switch-label"><?= te('vis.show_dashboard') ?></span>
         <input class="switch-input" type="checkbox" name="show_on_dashboard">
         <span class="knob" aria-hidden="true"></span>
       </label>
       <label class="switch switch-row">
-        <span class="switch-label">Show on Trip layer</span>
+        <span class="switch-label"><?= te('sec.show_on_trip') ?></span>
         <input class="switch-input" type="checkbox" name="show_on_trip">
         <span class="knob" aria-hidden="true"></span>
       </label>
 
       <div style="margin-top:1rem;">
-        <button type="button" class="btn" id="btnCloseContact">Close</button>
+        <button type="button" class="btn" id="btnCloseContact"><?= te('action.close') ?></button>
         <span id="contactSaveStatus" style="margin-left:.6rem;opacity:.6;font-size:.85em;"></span>
       </div>
     </form>
@@ -84,6 +84,14 @@ $slug = htmlspecialchars($vision['slug'] ?? '', ENT_QUOTES);
   const addFld   = wrap.querySelector('#btnAddField');
   const closeBtn = wrap.querySelector('#btnCloseContact');
 
+  const T = <?= json_encode([
+      'none_yet'=>t('contacts.none_yet'),'load_failed'=>t('contacts.load_failed'),
+      'confirm_delete'=>t('contacts.confirm_delete'),'custom'=>t('contacts.custom'),
+      'custom_prompt'=>t('contacts.custom_prompt'),'unnamed'=>t('contacts.unnamed'),
+      'saving'=>t('status.saving'),'saved'=>t('status.saved'),
+      'save_failed'=>t('status.save_failed'),'net_error'=>t('status.net_error'),
+      'delete_failed'=>t('status.delete_failed'),
+  ], JSON_UNESCAPED_UNICODE) ?>;
   const keyOptions = ['Name','Company','Address','Mobile','Email','Country','Custom…'];
 
   function fieldRow(key='', val='') {
@@ -112,7 +120,7 @@ $slug = htmlspecialchars($vision['slug'] ?? '', ENT_QUOTES);
 
   function renderList(rows) {
     if (!Array.isArray(rows) || rows.length === 0) {
-      list.innerHTML = '<div class="muted" style="opacity:.6;">No contacts yet.</div>';
+      list.innerHTML = '<div class="muted" style="opacity:.6;">' + T.none_yet + '</div>';
       return;
     }
     list.innerHTML = rows.map(r => {
@@ -144,7 +152,7 @@ $slug = htmlspecialchars($vision['slug'] ?? '', ENT_QUOTES);
   function loadList() {
     fetch(`/api/visions/${slug}/contacts`)
       .then(r => r.json()).then(renderList)
-      .catch(() => { list.innerHTML = '<div class="error">Failed to load contacts.</div>'; });
+      .catch(() => { list.innerHTML = '<div class="error">' + T.load_failed + '</div>'; });
   }
 
   function collectFormData() {
@@ -175,19 +183,19 @@ $slug = htmlspecialchars($vision['slug'] ?? '', ENT_QUOTES);
       const url  = vcId
         ? `/api/visions/${slug}/contacts/${vcId}`
         : `/api/visions/${slug}/contacts/create`;
-      status.textContent = 'Saving…';
+      status.textContent = T.saving;
       try {
         const res = await fetch(url, { method: 'POST', body: collectFormData() });
         const j   = await res.json();
         if (j && j.success) {
           if (!vcId && j.vc_id) form.querySelector('[name="vc_id"]').value = j.vc_id;
-          status.textContent = 'Saved';
+          status.textContent = T.saved;
           loadList();
         } else {
-          status.textContent = '⚠ ' + (j?.error || 'Save failed');
+          status.textContent = '⚠ ' + (j?.error || T.save_failed);
         }
       } catch (e) {
-        status.textContent = '⚠ Network error';
+        status.textContent = '⚠ ' + T.net_error;
         console.error(e);
       }
     }, 500);
@@ -208,7 +216,7 @@ $slug = htmlspecialchars($vision['slug'] ?? '', ENT_QUOTES);
   fields.addEventListener('change', e => {
     const sel = e.target.closest('select.field-key');
     if (sel && sel.value === 'Custom…') {
-      const newKey = prompt('Enter custom key');
+      const newKey = prompt(T.custom_prompt);
       if (newKey) {
         const opt = document.createElement('option');
         opt.value = newKey; opt.textContent = newKey;
@@ -230,13 +238,13 @@ $slug = htmlspecialchars($vision['slug'] ?? '', ENT_QUOTES);
     const id = row.dataset.id;
 
     if (e.target.closest('.act-del')) {
-      if (!confirm('Delete this contact?')) return;
+      if (!confirm(T.confirm_delete)) return;
       try {
         const res = await fetch(`/api/visions/${slug}/contacts/${id}/delete`, { method: 'DELETE' });
         const j   = await res.json();
         if (j && j.success) loadList();
-        else alert(j?.error || 'Delete failed');
-      } catch { alert('Delete failed'); }
+        else alert(j?.error || T.delete_failed);
+      } catch { alert(T.delete_failed); }
       return;
     }
 

@@ -10,7 +10,7 @@ $STATUSES = [
 ?>
 
 <div class="overlay-header">
-  <h2>Documents</h2>
+  <h2><?= te('sec.documents') ?></h2>
 </div>
 
 <div id="docsWrap" data-slug="<?= $slug ?>">

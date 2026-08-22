@@ -11,11 +11,11 @@ $showTrip     = (int)($vision['show_mood_on_trip']      ?? 0);
 ?>
 
 <div class="overlay-header">
-  <h2>Relations</h2>
+  <h2><?= te('sec.relations') ?></h2>
 </div>
 
 <form id="relationsForm" class="overlay-form" data-slug="<?= $visionSlug ?>">
-  <label for="mood-search">Mood Board</label>
+  <label for="mood-search"><?= te('board.mood') ?></label>
 
   <div class="mood-picker">
     <div id="mood-chip" class="mood-chip" style="<?= $linkedMood ? '' : 'display:none' ?>">
@@ -28,7 +28,7 @@ $showTrip     = (int)($vision['show_mood_on_trip']      ?? 0);
       <button type="button" class="chip-remove" aria-label="Remove">×</button>
     </div>
 
-    <input id="mood-search" type="text" placeholder="Search by name or paste ID…"
+    <input id="mood-search" type="text" placeholder="<?= te('rel.search_placeholder') ?>"
            autocomplete="off" style="<?= $linkedMood ? 'display:none' : '' ?>">
     <input type="hidden" name="mood_id" value="<?= htmlspecialchars($currentMood, ENT_QUOTES) ?>">
     <div class="mood-suggestions" hidden></div>
@@ -37,16 +37,16 @@ $showTrip     = (int)($vision['show_mood_on_trip']      ?? 0);
     Only one mood board per vision. To change, remove the current one first.
   </p>
 
-  <h4>Visibility</h4>
+  <h4><?= te('vis.visibility') ?></h4>
 
   <label class="switch switch-row">
-    <span class="switch-label">Show on Dashboard</span>
+    <span class="switch-label"><?= te('vis.show_dashboard') ?></span>
     <input class="switch-input" type="checkbox" name="show_mood_on_dashboard" <?= $showDash ? 'checked' : '' ?>>
     <span class="knob" aria-hidden="true"></span>
   </label>
 
   <label class="switch switch-row">
-    <span class="switch-label">Show on Trip layer</span>
+    <span class="switch-label"><?= te('sec.show_on_trip') ?></span>
     <input class="switch-input" type="checkbox" name="show_mood_on_trip" <?= $showTrip ? 'checked' : '' ?>>
     <span class="knob" aria-hidden="true"></span>
   </label>

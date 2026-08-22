@@ -5,34 +5,34 @@ $slug = htmlspecialchars($vision['slug'] ?? '', ENT_QUOTES);
 ?>
 
 <div class="overlay-header">
-  <h2>Roles &amp; Permissions</h2>
+  <h2><?= te('sec.roles') ?></h2>
 </div>
 
 <div id="rolesWrap" data-slug="<?= $slug ?>">
-  <div id="rolesList" class="roles-list"><div class="muted" style="opacity:.6;">Loading…</div></div>
+  <div id="rolesList" class="roles-list"><div class="muted" style="opacity:.6;"><?= te('action.loading') ?></div></div>
 
   <div id="roleAddCard" class="card" hidden style="margin-top:1rem;">
-    <h4 style="margin:.2rem 0 .6rem;">Add collaborator</h4>
-    <input id="roleEmail" type="text" placeholder="Their account email…" autocomplete="off">
+    <h4 style="margin:.2rem 0 .6rem;"><?= te('roles.add_collab') ?></h4>
+    <input id="roleEmail" type="text" placeholder="<?= te('roles.email_placeholder') ?>" autocomplete="off">
     <select id="roleSelect">
-      <option value="viewer">Viewer — read-only</option>
-      <option value="editor">Editor — can modify content</option>
-      <option value="co_owner">Co-owner — full control incl. sharing</option>
-      <option value="delegate">Delegate — acts on behalf of the owner</option>
+      <option value="viewer"><?= te('roles.viewer') ?></option>
+      <option value="editor"><?= te('roles.editor') ?></option>
+      <option value="co_owner"><?= te('roles.co_owner') ?></option>
+      <option value="delegate"><?= te('roles.delegate') ?></option>
     </select>
     <div style="display:flex;align-items:center;gap:.6rem;margin-top:.6rem;">
-      <button type="button" class="btn btn-primary" id="btnRoleAdd">Add</button>
+      <button type="button" class="btn btn-primary" id="btnRoleAdd"><?= te('action.add') ?></button>
       <span id="roleStatus" style="opacity:.6;font-size:.85em;"></span>
     </div>
   </div>
 
   <div id="teamAddCard" class="card" hidden style="margin-top:.8rem;">
-    <h4 style="margin:.2rem 0 .6rem;">Add from your teams</h4>
+    <h4 style="margin:.2rem 0 .6rem;"><?= te('roles.add_team') ?></h4>
     <select id="teamPick"></select>
     <div style="display:flex;align-items:center;gap:.6rem;margin-top:.6rem;">
-      <button type="button" class="btn btn-primary" id="btnTeamAdd">Add</button>
+      <button type="button" class="btn btn-primary" id="btnTeamAdd"><?= te('action.add') ?></button>
       <span id="teamStatus" style="opacity:.6;font-size:.85em;"></span>
-      <a href="/teams" style="margin-left:auto;font-size:.82em;color:#8fb1d8;">Manage teams</a>
+      <a href="/teams" style="margin-left:auto;font-size:.82em;color:#8fb1d8;"><?= te('roles.manage_teams') ?></a>
     </div>
   </div>
 </div>
@@ -82,9 +82,22 @@ $slug = htmlspecialchars($vision['slug'] ?? '', ENT_QUOTES);
   const addBtn  = wrap.querySelector('#btnRoleAdd');
   const status  = wrap.querySelector('#roleStatus');
 
+  const T = <?= json_encode([
+      'owner'=>t('roles.owner'),'co_owner_s'=>t('roles.co_owner_short'),
+      'editor_s'=>t('roles.editor_short'),'viewer_s'=>t('roles.viewer_short'),
+      'delegate_s'=>t('roles.delegate_short'),
+      'no_members'=>t('roles.no_members'),'load_failed'=>t('roles.load_failed'),
+      'enter_email'=>t('roles.enter_email'),'adding'=>t('roles.adding'),
+      'added'=>t('roles.added'),'add_failed'=>t('roles.add_failed'),
+      'unknown'=>t('roles.unknown_email'),'cancelled'=>t('roles.cancelled'),
+      'confirm_remove'=>t('roles.confirm_remove'),'remove_failed'=>t('roles.remove_failed'),
+      'update_failed'=>t('roles.update_failed'),'whole_team'=>t('roles.whole_team'),
+      'already_on'=>t('roles.already_on'),'failed'=>t('status.save_failed'),
+      'net_error'=>t('status.net_error'),
+  ], JSON_UNESCAPED_UNICODE) ?>;
   const ROLE_LABELS = {
-    owner:'Owner', co_owner:'Co-owner', editor:'Editor',
-    viewer:'Viewer', delegate:'Delegate'
+    owner:T.owner, co_owner:T.co_owner_s, editor:T.editor_s,
+    viewer:T.viewer_s, delegate:T.delegate_s
   };
 
   function esc(s) {
@@ -118,7 +131,7 @@ $slug = htmlspecialchars($vision['slug'] ?? '', ENT_QUOTES);
           <div style="display:flex;align-items:center;gap:.35rem;">${control}</div>
         </div>`;
     }).join('');
-    list.innerHTML = rows || '<div class="muted" style="opacity:.6;">No members.</div>';
+    list.innerHTML = rows || '<div class="muted" style="opacity:.6;">' + T.no_members + '</div>';
   }
 
   async function load() {
@@ -126,7 +139,7 @@ $slug = htmlspecialchars($vision['slug'] ?? '', ENT_QUOTES);
       const res = await fetch(`/api/visions/${slug}/roles`);
       render(await res.json());
     } catch {
-      list.innerHTML = '<div class="error">Failed to load members.</div>';
+      list.innerHTML = '<div class="error">' + T.load_failed + '</div>';
     }
   }
 
@@ -147,28 +160,28 @@ $slug = htmlspecialchars($vision['slug'] ?? '', ENT_QUOTES);
 
   addBtn?.addEventListener('click', async () => {
     const em = email.value.trim();
-    if (!em) { status.textContent = 'Enter an email.'; return; }
-    status.textContent = 'Adding…';
+    if (!em) { status.textContent = T.enter_email; return; }
+    status.textContent = T.adding;
     try {
       let j = await postAddRole(em, false);
       if (j && j.needs_tier_ack) {
-        if (!confirm(j.message)) { status.textContent = 'Cancelled — nobody added.'; return; }
+        if (!confirm(j.message)) { status.textContent = T.cancelled; return; }
         status.textContent = 'Adding…';
         j = await postAddRole(em, true);
       }
       if (j && j.success && j.unknown) {
         // Ambiguous on purpose — never confirm whether an account exists
-        status.textContent = '⚠ If a creator with that email exists, they\'ll appear in the list above.';
+        status.textContent = '⚠ ' + T.unknown;
         email.value = '';
         load();
       } else if (j && j.success) {
-        status.textContent = 'Added';
+        status.textContent = T.added;
         email.value = '';
         load();
       } else {
-        status.textContent = '⚠ ' + (j?.error || 'Add failed');
+        status.textContent = '⚠ ' + (j?.error || T.add_failed);
       }
-    } catch { status.textContent = '⚠ Network error'; }
+    } catch { status.textContent = '⚠ ' + T.net_error; }
   });
   email?.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); addBtn.click(); } });
 
@@ -191,17 +204,17 @@ $slug = htmlspecialchars($vision['slug'] ?? '', ENT_QUOTES);
       if (!confirm(j.message)) { load(); return; }  // reload resets the select
       j = await setRole(true);
     }
-    if (!j?.success) alert(j?.error || 'Update failed');
+    if (!j?.success) alert(j?.error || T.update_failed);
   });
 
   list.addEventListener('click', async e => {
     const btn = e.target.closest('.role-remove');
     if (!btn) return;
-    if (!confirm('Remove this collaborator?')) return;
+    if (!confirm(T.confirm_remove)) return;
     const res = await fetch(`/api/visions/${slug}/roles/${btn.dataset.id}/delete`, { method:'DELETE' });
     const j = await res.json();
     if (j?.success) load();
-    else alert(j?.error || 'Remove failed');
+    else alert(j?.error || T.remove_failed);
   });
 
   // ── Teams integration: pick a member (with their default role) or a whole team ──
@@ -244,14 +257,14 @@ $slug = htmlspecialchars($vision['slug'] ?? '', ENT_QUOTES);
   teamAddBtn?.addEventListener('click', async () => {
     const v = teamPick.value;
     if (!v) return;
-    teamStatus.textContent = 'Adding…';
+    teamStatus.textContent = T.adding;
     try {
       if (v.startsWith('team:')) {
         const teamId = v.slice(5);
         let j = await postTeamAdd(teamId, false);
         if (j && j.needs_tier_ack) {
-          if (!confirm(j.message)) { teamStatus.textContent = 'Cancelled — nobody added.'; return; }
-          teamStatus.textContent = 'Adding…';
+          if (!confirm(j.message)) { teamStatus.textContent = T.cancelled; return; }
+          teamStatus.textContent = T.adding;
           j = await postTeamAdd(teamId, true);
         }
         if (j?.success) {
@@ -264,10 +277,10 @@ $slug = htmlspecialchars($vision['slug'] ?? '', ENT_QUOTES);
         if (!m) return;
         let j = await postAddRole(m.email, false, m.default_role);
         if (j && j.needs_tier_ack) {
-          if (!confirm(j.message)) { teamStatus.textContent = 'Cancelled — nobody added.'; return; }
+          if (!confirm(j.message)) { teamStatus.textContent = T.cancelled; return; }
           j = await postAddRole(m.email, true, m.default_role);
         }
-        if (j?.success) { teamStatus.textContent = 'Added'; load(); }
+        if (j?.success) { teamStatus.textContent = T.added; load(); }
         else teamStatus.textContent = '⚠ ' + (j?.error || 'Failed');
       }
     } catch { teamStatus.textContent = '⚠ Network error'; }

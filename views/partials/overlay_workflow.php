@@ -15,23 +15,23 @@ $STATUSES = [
 ?>
 
 <div class="overlay-header">
-  <h2>Workflow</h2>
+  <h2><?= te('sec.workflow') ?></h2>
 </div>
 
 <form id="workflowForm" class="overlay-form" data-slug="<?= $slug ?>">
-  <label for="wfStatus">Status</label>
+  <label for="wfStatus"><?= te('wf.status') ?></label>
   <select id="wfStatus" name="status">
     <?php foreach ($STATUSES as $key => $label): ?>
       <option value="<?= $key ?>" <?= $status === $key ? 'selected' : '' ?>><?= $label ?></option>
     <?php endforeach; ?>
   </select>
 
-  <label for="wfNotes">Notes</label>
-  <textarea id="wfNotes" name="notes" rows="4" placeholder="Anything worth tracking — blockers, next steps, decisions…"><?= htmlspecialchars($notes, ENT_QUOTES) ?></textarea>
+  <label for="wfNotes"><?= te('itin.notes') ?></label>
+  <textarea id="wfNotes" name="notes" rows="4" placeholder="<?= te('wf.notes_placeholder') ?>"><?= htmlspecialchars($notes, ENT_QUOTES) ?></textarea>
 
-  <h4>Visibility</h4>
+  <h4><?= te('vis.visibility') ?></h4>
   <label class="switch switch-row">
-    <span class="switch-label">Show section</span>
+    <span class="switch-label"><?= te('wf.show_section') ?></span>
     <input class="switch-input" type="checkbox" name="show_workflow" <?= $show ? 'checked' : '' ?>>
     <span class="knob" aria-hidden="true"></span>
   </label>

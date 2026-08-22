@@ -8,13 +8,13 @@ $showTrip = !empty($budget['show_on_trip']);
 ?>
 
 <div class="overlay-header">
-  <h2>Budget</h2>
+  <h2><?= te('sec.budget') ?></h2>
 </div>
 
 <form id="budgetForm" class="overlay-form" data-slug="<?= $slug ?>">
-  <label for="budgetCurrencySearch">Currency</label>
+  <label for="budgetCurrencySearch"><?= te('budget.currency') ?></label>
   <div class="currency-picker">
-    <input type="text" id="budgetCurrencySearch" placeholder="<?= $currency ?: 'Search currency…' ?>"
+    <input type="text" id="budgetCurrencySearch" placeholder="<?= $currency ?: t('budget.search_currency') ?>"
            autocomplete="off" value="">
     <input type="hidden" name="currency" id="budgetCurrency" value="<?= $currency ?>">
     <div id="currencyList" class="dropdown-list" hidden></div>
@@ -43,16 +43,16 @@ $showTrip = !empty($budget['show_on_trip']);
   </label>
   <input id="budgetAmount" name="amount" type="text" inputmode="decimal" placeholder="0.00" value="<?= $amount ?>">
 
-  <h4>Visibility</h4>
+  <h4><?= te('vis.visibility') ?></h4>
 
   <label class="switch switch-row">
-    <span class="switch-label">Show on Dashboard</span>
+    <span class="switch-label"><?= te('vis.show_dashboard') ?></span>
     <input class="switch-input" type="checkbox" name="show_on_dashboard" <?= $showDash ? 'checked' : '' ?>>
     <span class="knob" aria-hidden="true"></span>
   </label>
 
   <label class="switch switch-row">
-    <span class="switch-label">Show on Trip layer</span>
+    <span class="switch-label"><?= te('sec.show_on_trip') ?></span>
     <input class="switch-input" type="checkbox" name="show_on_trip" <?= $showTrip ? 'checked' : '' ?>>
     <span class="knob" aria-hidden="true"></span>
   </label>

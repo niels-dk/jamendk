@@ -55,69 +55,69 @@ $table = function (string $title, array $rows, string $labelKey, string $valueKe
 };
 ?>
 <div style="max-width:1000px;margin:2rem auto;padding:0 1rem;">
-  <h1 style="font-size:1.7rem;margin:0 0 .3rem;">Analytics</h1>
+  <h1 style="font-size:1.7rem;margin:0 0 .3rem;"><?= te('adm.analytics') ?></h1>
   <p style="color:#8593a6;font-size:.9rem;margin:0 0 1rem;">
-    First-party and cookie-free — no Google, nothing leaves this server.
-    <a href="/admin/users" style="color:#8fb1d8;">Users →</a> ·
-    <a href="/admin/pricing" style="color:#8fb1d8;">Revenue →</a> ·
-    <a href="/admin/mail" style="color:#8fb1d8;">Mail →</a> ·
-    <a href="/admin/links" style="color:#8fb1d8;">Links →</a> ·
-    <a href="/admin/backups" style="color:#8fb1d8;">Backups →</a>
+    <?= te('adm.analytics_sub') ?>
+    <a href="/admin/users" style="color:#8fb1d8;"><?= te('adm.users') ?> →</a> ·
+    <a href="/admin/pricing" style="color:#8fb1d8;"><?= te('adm.revenue') ?> →</a> ·
+    <a href="/admin/mail" style="color:#8fb1d8;"><?= te('adm.mail') ?> →</a> ·
+    <a href="/admin/links" style="color:#8fb1d8;"><?= te('adm.links') ?> →</a> ·
+    <a href="/admin/backups" style="color:#8fb1d8;"><?= te('adm.backups') ?> →</a>
   </p>
 
   <div style="margin-bottom:1.4rem;font-size:.85rem;">
-    <span style="color:#6c7d92;">Range:</span>
+    <span style="color:#6c7d92;"><?= te('adm.range') ?>:</span>
     <?php foreach ([7, 30, 90, 365] as $d): ?>
       <a href="/admin/analytics?days=<?= $d ?>"
          style="display:inline-block;margin-left:.3rem;padding:.2rem .6rem;border-radius:999px;
                 text-decoration:none;<?= $d === $days
                   ? 'background:#3a76d2;color:#fff;font-weight:700;'
                   : 'background:rgba(255,255,255,.05);color:#9bb0c5;' ?>">
-        <?= $d === 365 ? '1 year' : $d . ' days' ?>
+        <?= $d === 365 ? te('adm.one_year') : te('adm.n_days', ['n' => $d]) ?>
       </a>
     <?php endforeach; ?>
   </div>
 
   <!-- ─────────── Are people arriving? ─────────── -->
-  <h2 style="font-size:1.05rem;color:#eaf0f7;margin:0 0 .6rem;">Traffic</h2>
+  <h2 style="font-size:1.05rem;color:#eaf0f7;margin:0 0 .6rem;"><?= te('adm.traffic') ?></h2>
   <?php if (empty($traffic['has_data'])): ?>
     <div style="background:rgba(232,194,103,.12);border:1px solid rgba(232,194,103,.4);
                 color:#e8c267;padding:.8rem 1rem;border-radius:8px;font-size:.9rem;">
-      No visits recorded yet. If you've just deployed, run
-      <code>db/migrations/2026-07-18_analytics.sql</code> — and remember your own
-      admin visits are deliberately excluded, so test in a private window.
+      <?= te('adm.no_visits') ?>
+      <code>db/migrations/2026-07-18_analytics.sql</code> — <?= te('adm.no_visits_2') ?>
     </div>
   <?php else: ?>
     <div style="display:grid;gap:.7rem;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));">
       <?php
-        $card('Visitors', number_format($traffic['visitors']), "last $days days", '#7fc98d');
-        $card('Page views', number_format($traffic['views']), "last $days days");
-        $card('Today', number_format($traffic['today_visitors']),
-              $traffic['today_views'] . ' views', '#e8c889');
+        $lastN = t('adm.last_n_days', ['n' => $days]);
+        $card(t('adm.visitors'), number_format($traffic['visitors']), $lastN, '#7fc98d');
+        $card(t('adm.page_views'), number_format($traffic['views']), $lastN);
+        $card(t('time.today'), number_format($traffic['today_visitors']),
+              t('adm.n_views', ['n' => $traffic['today_views']]), '#e8c889');
         $devTop = $traffic['devices'][0] ?? null;
-        $card('Top device', $devTop ? ucfirst($devTop['device']) : '—',
-              $devTop ? $devTop['visitors'] . ' visitors' : '');
+        $card(t('adm.top_device'), $devTop ? ucfirst($devTop['device']) : '—',
+              $devTop ? t('adm.n_visitors', ['n' => $devTop['visitors']]) : '');
       ?>
     </div>
     <?php if (!empty($traffic['daily'])): ?>
       <div style="background:rgba(255,255,255,.03);border:1px solid #2b3346;border-radius:12px;
                   padding:.8rem 1rem;margin-top:.7rem;">
         <div style="font-size:.72rem;color:#8593a6;font-weight:700;text-transform:uppercase;
-                    letter-spacing:.06em;margin-bottom:.3rem;">Visitors per day</div>
+                    letter-spacing:.06em;margin-bottom:.3rem;"><?= te('adm.visitors_per_day') ?></div>
         <?= $spark($traffic['daily'], 'visitors', '#7fc98d') ?>
       </div>
     <?php endif; ?>
 
     <div style="display:grid;gap:1.2rem;grid-template-columns:1fr;margin-top:.4rem;">
       <div style="display:grid;gap:1.2rem;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));">
-        <div><?php $table('Where they came from', $traffic['referrers'], 'ref_host', 'visitors',
-              'No external referrers yet — traffic so far is direct.'); ?></div>
-        <div><?php $table('Most visited pages', $traffic['pages'], 'path', 'views',
-              'No pages recorded yet.', 'views'); ?></div>
+        <div><?php $table(t('adm.referrers'), $traffic['referrers'], 'ref_host', 'visitors',
+              t('adm.no_referrers')); ?></div>
+        <div><?php $table(t('adm.top_pages'), $traffic['pages'], 'path', 'views',
+              t('adm.no_pages'), 'views'); ?></div>
       </div>
       <?php if (!empty($traffic['campaigns'])): ?>
         <div>
-          <h2 style="font-size:1rem;color:#cfdbe8;margin:0 0 .5rem;">Campaigns (UTM)</h2>
+          <h2 style="font-size:1rem;color:#cfdbe8;margin:0 0 .5rem;"><?= te('adm.campaigns') ?></h2>
           <table style="width:100%;border-collapse:collapse;font-size:.88rem;">
             <?php foreach ($traffic['campaigns'] as $c): ?>
               <tr style="border-top:1px solid #2b3346;">
@@ -134,16 +134,14 @@ $table = function (string $title, array $rows, string $labelKey, string $valueKe
   <?php endif; ?>
 
   <!-- ─────────── Are they actually using it? ─────────── -->
-  <h2 style="font-size:1.05rem;color:#eaf0f7;margin:2.4rem 0 .3rem;">The funnel</h2>
-  <p style="color:#6c7d92;font-size:.84rem;margin:0 0 .7rem;">
-    All-time, from the real tables — not just since analytics was switched on.
-  </p>
+  <h2 style="font-size:1.05rem;color:#eaf0f7;margin:2.4rem 0 .3rem;"><?= te('adm.funnel') ?></h2>
+  <p style="color:#6c7d92;font-size:.84rem;margin:0 0 .7rem;"><?= te('adm.funnel_sub') ?></p>
   <?php
     $steps = [
-      ['Signed up',            $product['users'],     '#8fb1d8'],
-      ['Confirmed email',      $product['verified'],  '#a8c8ee'],
-      ['Made something',       $product['activated'], '#e8c889'],
-      ['Published a Trip',     $product['published'], '#7fc98d'],
+      [t('adm.step_signed_up'), $product['users'],     '#8fb1d8'],
+      [t('adm.step_confirmed'), $product['verified'],  '#a8c8ee'],
+      [t('adm.step_made'),      $product['activated'], '#e8c889'],
+      [t('adm.f_published'),    $product['published'], '#7fc98d'],
     ];
     $top = max(1, (int)$product['users']);
   ?>
@@ -164,31 +162,29 @@ $table = function (string $title, array $rows, string $labelKey, string $valueKe
 
   <div style="display:grid;gap:.7rem;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));margin-top:1rem;">
     <?php
-      $card('New signups', $product['new_users'], "last $days days", '#7fc98d');
-      $card('Signed in recently', $product['active_30'], "last $days days");
-      $card('Shots captured', number_format($product['shots_captured']),
-            'of ' . number_format($product['shots_planned']) . ' planned', '#e8c889');
+      $lastN2 = t('adm.last_n_days', ['n' => $days]);
+      $card(t('adm.new_signups'), $product['new_users'], $lastN2, '#7fc98d');
+      $card(t('adm.signed_in'), $product['active_30'], $lastN2);
+      $card(t('adm.shots_captured'), number_format($product['shots_captured']),
+            t('adm.of_n_planned', ['n' => number_format($product['shots_planned'])]), '#e8c889');
       $verifyRate = $pct((int)$product['verified'], max(1, (int)$product['users']));
-      $card('Email confirm rate', $verifyRate . '%',
-            $verifyRate < 70 ? 'low — check spam folder delivery' : 'healthy',
+      $card(t('adm.confirm_rate'), $verifyRate . '%',
+            $verifyRate < 70 ? t('adm.rate_low') : t('adm.rate_ok'),
             $verifyRate < 70 ? '#f0a0a0' : '#7fc98d');
     ?>
   </div>
 
-  <h2 style="font-size:1rem;color:#cfdbe8;margin:1.8rem 0 .5rem;">Which features get used
-    <span style="font-weight:400;color:#6c7d92;font-size:.85rem;">— accounts that used each at least once</span>
+  <h2 style="font-size:1rem;color:#cfdbe8;margin:1.8rem 0 .5rem;"><?= te('adm.features_used') ?>
+    <span style="font-weight:400;color:#6c7d92;font-size:.85rem;">— <?= te('adm.features_used_sub') ?></span>
   </h2>
   <?php
     $rows = [];
     foreach ($product['features'] as $label => $n) $rows[] = ['f' => $label, 'n' => $n];
     usort($rows, fn($a, $b) => $b['n'] <=> $a['n']);
-    $table('', $rows, 'f', 'n', 'Nothing created yet.', 'accounts');
+    $table('', $rows, 'f', 'n', t('adm.nothing_yet'), 'accounts');
   ?>
 
   <p style="color:#6c7d92;font-size:.8rem;margin-top:2rem;line-height:1.6;">
-    No cookies are set and no IP address is stored: visitors are counted with a
-    one-way hash that includes a secret salt and the date, so the same person
-    cannot be recognised on a later day. Your own admin visits are excluded.
-    Raw rows are pruned after roughly a year.
+    <?= te('adm.privacy_note') ?>
   </p>
 </div>

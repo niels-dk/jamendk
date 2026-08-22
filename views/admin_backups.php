@@ -9,51 +9,47 @@ $fmtSize = function (int $b): string {
 };
 ?>
 <div style="max-width:900px;margin:2rem auto;padding:0 1rem;">
-  <h1 style="font-size:1.7rem;margin:0 0 .3rem;">Backups</h1>
+  <h1 style="font-size:1.7rem;margin:0 0 .3rem;"><?= te('adm.backups') ?></h1>
   <p style="color:#8593a6;font-size:.9rem;margin:0 0 1.4rem;">
-    Nightly database dump, weekly file archive — written by
-    <code>scripts/backup.sh</code> via cron.
-    <a href="/admin/users" style="color:#8fb1d8;">Users →</a> &nbsp;·&nbsp;
-    <a href="/admin/pricing" style="color:#8fb1d8;">Revenue →</a> &nbsp;·&nbsp;
-    <a href="/admin/mail" style="color:#8fb1d8;">Mail →</a>
+    <?= te('adm.backups_sub') ?>
+    <a href="/admin/users" style="color:#8fb1d8;"><?= te('adm.users') ?> →</a> &nbsp;·&nbsp;
+    <a href="/admin/pricing" style="color:#8fb1d8;"><?= te('adm.revenue') ?> →</a> &nbsp;·&nbsp;
+    <a href="/admin/mail" style="color:#8fb1d8;"><?= te('adm.mail') ?> →</a>
   </p>
 
   <?php if ($isStale): ?>
     <div style="background:rgba(208,80,80,.15);border:1px solid rgba(208,80,80,.5);
                 color:#f3b3b3;padding:1rem 1.2rem;border-radius:10px;margin-bottom:1.4rem;
                 font-size:.95rem;line-height:1.6;">
-      <strong style="font-size:1.05rem;">🔴 No recent backup.</strong><br>
+      <strong style="font-size:1.05rem;">🔴 <?= te('adm.no_backup') ?></strong><br>
       <?php if (!$configured || $lastRun === null): ?>
-        The backup script hasn't completed successfully yet. Over SSH:
+        <?= te('adm.backup_never') ?>
         <ol style="margin:.6rem 0 0;padding-left:1.3rem;">
-          <li>Create <code>~/.my.cnf</code> with the database credentials
-              (template in the header of <code>scripts/backup.sh</code>), then
+          <li><?= te('adm.step_mycnf_1') ?> <code>~/.my.cnf</code> <?= te('adm.step_mycnf_2') ?>
+              <code>scripts/backup.sh</code>), <?= te('adm.step_mycnf_3') ?>
               <code>chmod 600 ~/.my.cnf</code></li>
-          <li>Test it once by hand: <code>~/merelyadream.com/scripts/backup.sh</code>
-              — silence means success, then reload this page</li>
-          <li>Add it as a daily cron job in the DreamHost panel
-              (Advanced → Cron Jobs), with email-on-output left ON</li>
+          <li><?= te('adm.step_test') ?> <code>~/merelyadream.com/scripts/backup.sh</code>
+              — <?= te('adm.step_test_2') ?></li>
+          <li><?= te('adm.step_cron') ?></li>
         </ol>
       <?php else: ?>
-        Last successful run: <strong><?= $b_e($lastRun) ?></strong>
-        (<?= number_format($staleHrs, 0) ?> hours ago — nightly cron should never
-        exceed ~30). Check the cron job in the DreamHost panel and your email
-        for a failure message from it.
+        <?= te('adm.last_run') ?> <strong><?= $b_e($lastRun) ?></strong>
+        <?= te('adm.stale_note', ['n' => number_format($staleHrs, 0)]) ?>
       <?php endif; ?>
     </div>
   <?php else: ?>
     <div style="background:rgba(127,201,141,.12);border:1px solid rgba(127,201,141,.4);
                 color:#9bd6a6;padding:.8rem 1.1rem;border-radius:10px;margin-bottom:1.4rem;
                 font-size:.95rem;">
-      🟢 Healthy — last successful run <strong><?= $b_e($lastRun) ?></strong>
-      (<?= number_format($staleHrs, 1) ?> h ago).
+      🟢 <?= te('adm.backup_ok') ?> <strong><?= $b_e($lastRun) ?></strong>
+      (<?= te('adm.h_ago', ['n' => number_format($staleHrs, 1)]) ?>).
     </div>
   <?php endif; ?>
 
   <?php
     $sections = [
-      ['Database dumps', $dbFiles, 'one per day, kept 30 days'],
-      ['File archives',  $arFiles, 'storage/ weekly, kept ~5 weeks'],
+      [t('adm.db_dumps'),    $dbFiles, t('adm.db_dumps_sub')],
+      [t('adm.file_archives'), $arFiles, t('adm.file_archives_sub')],
     ];
     foreach ($sections as [$label, $files, $sub]):
   ?>
@@ -61,7 +57,7 @@ $fmtSize = function (int $b): string {
       <span style="font-weight:400;color:#6c7d92;font-size:.85rem;">— <?= $b_e($sub) ?></span>
     </h2>
     <?php if (!$files): ?>
-      <p style="color:#6c7d92;font-size:.9rem;margin:.4rem 0 0;">None yet.</p>
+      <p style="color:#6c7d92;font-size:.9rem;margin:.4rem 0 0;"><?= te('adm.none_yet') ?></p>
     <?php else: ?>
       <table style="width:100%;border-collapse:collapse;font-size:.88rem;">
         <?php foreach ($files as $f): ?>
@@ -80,9 +76,8 @@ $fmtSize = function (int $b): string {
   <?php endforeach; ?>
 
   <p style="color:#6c7d92;font-size:.82rem;margin-top:1.8rem;line-height:1.6;">
-    Before running a migration in phpMyAdmin, take a fresh dump first:
-    SSH in and run <code>~/merelyadream.com/scripts/backup.sh</code> — it overwrites
-    today's file, so you always restore to the moment before the change.
-    Restore: <code>gunzip &lt; dump.sql.gz | mysql <?= $b_e($dbName) ?></code>.
+    <?= te('adm.before_migration') ?>
+    <code>~/merelyadream.com/scripts/backup.sh</code> — <?= te('adm.before_migration_2') ?>
+    <?= te('adm.restore') ?>: <code>gunzip &lt; dump.sql.gz | mysql <?= $b_e($dbName) ?></code>.
   </p>
 </div>

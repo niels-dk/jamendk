@@ -4,18 +4,17 @@ $e = fn($s) => htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8');
 $flash = $_SESSION['flash_admin'] ?? null;
 unset($_SESSION['flash_admin']);
 $TYPE_LABEL = [
-  'verify'       => 'Verification',
-  'reset'        => 'Password reset',
-  'reset_notice' => 'Already registered',
-  'test'         => 'Test',
+  'verify'       => t('adm.mt_verify'),
+  'reset'        => t('adm.mt_reset'),
+  'reset_notice' => t('adm.mt_notice'),
+  'test'         => t('adm.mt_test'),
 ];
 ?>
 <div style="max-width:960px;margin:2rem auto;padding:0 1rem;">
-  <h1 style="font-size:1.7rem;margin:0 0 .3rem;">Mail log</h1>
+  <h1 style="font-size:1.7rem;margin:0 0 .3rem;"><?= te('adm.mail_log') ?></h1>
   <p style="color:#8593a6;font-size:.9rem;margin:0 0 1.2rem;">
-    Every send attempt the app has made. Check here first when someone says
-    a link never arrived. <a href="/admin/users" style="color:#8fb1d8;">User management →</a>
-    &nbsp;·&nbsp; <a href="/admin/backups" style="color:#8fb1d8;">Backups →</a>
+    <?= te('adm.mail_sub') ?> <a href="/admin/users" style="color:#8fb1d8;"><?= te('adm.users') ?> →</a>
+    &nbsp;·&nbsp; <a href="/admin/backups" style="color:#8fb1d8;"><?= te('adm.backups') ?> →</a>
   </p>
 
   <?php if ($flash): ?>
@@ -28,7 +27,7 @@ $TYPE_LABEL = [
     <div style="background:rgba(232,194,103,.12);border:1px solid rgba(232,194,103,.4);
                 color:#e8c267;padding:.65rem .9rem;border-radius:8px;margin-bottom:1rem;
                 font-size:.9rem;">
-      The <code>mail_log</code> table doesn't exist yet — run
+      <?= te('adm.no_maillog_table') ?>
       <code>db/migrations/2026-07-15_email_verification.sql</code>.
     </div>
   <?php endif; ?>
@@ -37,23 +36,21 @@ $TYPE_LABEL = [
     <div style="background:rgba(208,80,80,.15);border:1px solid rgba(208,80,80,.4);
                 color:#f3b3b3;padding:.8rem 1rem;border-radius:8px;margin-bottom:1rem;
                 font-size:.9rem;line-height:1.5;">
-      <strong>MAIL_FROM is not set — sending as an invented address.</strong><br>
-      With neither <code>MAIL_FROM</code> nor <code>MAIL_USER</code> defined, mail
-      goes out from <code>noreply@</code> your site host, which isn't a real mailbox.
-      Set <code>MAIL_FROM</code> to a mailbox that exists (e.g.
-      <code>hello@merelyadream.com</code>) in <code>app/config.php</code>. This alone
-      fixes the From address and is required for DMARC to align.
+      <strong><?= te('adm.mailfrom_head') ?></strong><br>
+      <?= te('adm.mailfrom_body_1') ?> <code>MAIL_FROM</code> <?= te('adm.nor') ?>
+      <code>MAIL_USER</code>, <?= te('adm.mailfrom_body_2') ?>
+      <code>MAIL_FROM</code> <?= te('adm.mailfrom_body_3') ?>
+      <code>hello@merelyadream.com</code>) <?= te('adm.in_file') ?> <code>app/config.php</code>.
+      <?= te('adm.mailfrom_body_4') ?>
     </div>
   <?php elseif (!defined('MAIL_DRIVER') || MAIL_DRIVER !== 'smtp'): ?>
     <div style="background:rgba(232,194,103,.12);border:1px solid rgba(232,194,103,.4);
                 color:#e8c267;padding:.8rem 1rem;border-radius:8px;margin-bottom:1rem;
                 font-size:.9rem;line-height:1.5;">
-      <strong>Using PHP mail() rather than authenticated SMTP.</strong><br>
-      This is workable: the envelope sender is forced to
-      <code><?= $e(defined('MAIL_FROM') ? MAIL_FROM : MAIL_USER) ?></code>, so SPF is
-      checked against your own domain and should align with the From: header —
-      enough for DMARC to pass on SPF alone. SMTP is still preferable because it
-      adds a DKIM signature (a second, stronger proof), but it isn't required.
+      <strong><?= te('adm.phpmail_head') ?></strong><br>
+      <?= te('adm.phpmail_body_1') ?>
+      <code><?= $e(defined('MAIL_FROM') ? MAIL_FROM : MAIL_USER) ?></code>,
+      <?= te('adm.phpmail_body_2') ?>
     </div>
   <?php endif; ?>
 
@@ -61,14 +58,14 @@ $TYPE_LABEL = [
   <div style="background:rgba(255,255,255,.04);border:1px solid #2b3346;
               border-radius:10px;padding:1rem 1.1rem;margin-bottom:1.2rem;">
     <div style="display:flex;flex-wrap:wrap;gap:1.4rem;font-size:.88rem;margin-bottom:.9rem;">
-      <span><span style="opacity:.6;">Driver:</span>
+      <span><span style="opacity:.6;"><?= te('adm.driver') ?>:</span>
         <strong style="color:#eaeaea;"><?= $e($mailDriver) ?></strong></span>
-      <span><span style="opacity:.6;">From:</span>
+      <span><span style="opacity:.6;"><?= te('adm.from') ?>:</span>
         <strong style="color:#eaeaea;"><?= $e($mailFrom) ?></strong></span>
-      <span><span style="opacity:.6;">Last 7 days:</span>
-        <strong style="color:#7fc98d;"><?= (int)($stats['sent'] ?? 0) ?> sent</strong>
+      <span><span style="opacity:.6;"><?= te('adm.last_7') ?>:</span>
+        <strong style="color:#7fc98d;"><?= te('adm.n_sent', ['n' => (int)($stats['sent'] ?? 0)]) ?></strong>
         <?php if (!empty($stats['failed'])): ?>
-          · <strong style="color:#f08792;"><?= (int)$stats['failed'] ?> failed</strong>
+          · <strong style="color:#f08792;"><?= te('adm.n_failed', ['n' => (int)$stats['failed']]) ?></strong>
         <?php endif; ?>
       </span>
     </div>
@@ -82,7 +79,7 @@ $TYPE_LABEL = [
       <button type="submit"
               style="padding:.45rem 1rem;border:0;border-radius:8px;background:#3a76d2;
                      color:#fff;font-weight:600;cursor:pointer;font-size:.9rem;">
-        Send test email
+        <?= te('adm.send_test') ?>
       </button>
     </form>
 
@@ -90,7 +87,7 @@ $TYPE_LABEL = [
          is shown only as a length, which is what exposes a quoting bug. -->
     <details style="margin-top:.9rem;">
       <summary style="cursor:pointer;font-size:.84rem;color:#8fb1d8;">
-        Show mail config (no secrets)
+        <?= te('adm.show_cfg') ?>
       </summary>
       <table style="margin-top:.6rem;font-size:.82rem;border-collapse:collapse;">
         <?php foreach ($mailCfg as $k => $v): ?>
@@ -100,7 +97,7 @@ $TYPE_LABEL = [
             </td>
             <td style="padding:.2rem 0;font-family:monospace;
                        color:<?= $v === null ? '#e8c267' : '#eaeaea' ?>;">
-              <?= $v === null ? 'not set' : $e($v) ?>
+              <?= $v === null ? te('adm.not_set') : $e($v) ?>
             </td>
           </tr>
         <?php endforeach; ?>
@@ -111,11 +108,11 @@ $TYPE_LABEL = [
           <td style="padding:.2rem 0;font-family:monospace;
                      color:<?= $mailPassLen === null ? '#e8c267' : '#eaeaea' ?>;">
             <?php if ($mailPassLen === null): ?>
-              not set
+              <?= te('adm.not_set') ?>
             <?php else: ?>
-              set · <?= (int)$mailPassLen ?> characters
+              <?= te('adm.set_chars', ['n' => (int)$mailPassLen]) ?>
               <span style="color:#8593a6;">
-                — if that isn't the length you typed, PHP quoting ate part of it
+                — <?= te('adm.pass_len_hint') ?>
               </span>
             <?php endif; ?>
           </td>
@@ -126,7 +123,7 @@ $TYPE_LABEL = [
 
   <?php if (empty($rows)): ?>
     <p style="color:#8593a6;font-size:.9rem;">
-      Nothing sent yet. Use the test above to prove the transport works.
+      <?= te('adm.no_mail_yet') ?>
     </p>
   <?php else: ?>
     <div style="overflow-x:auto;">
@@ -134,10 +131,10 @@ $TYPE_LABEL = [
         <thead>
           <tr style="text-align:left;color:#8593a6;font-size:.78rem;
                      text-transform:uppercase;letter-spacing:.05em;">
-            <th style="padding:.5rem .4rem;">When</th>
-            <th style="padding:.5rem .4rem;">To</th>
-            <th style="padding:.5rem .4rem;">Type</th>
-            <th style="padding:.5rem .4rem;">Status</th>
+            <th style="padding:.5rem .4rem;"><?= te('adm.col_when') ?></th>
+            <th style="padding:.5rem .4rem;"><?= te('adm.col_to') ?></th>
+            <th style="padding:.5rem .4rem;"><?= te('adm.col_type') ?></th>
+            <th style="padding:.5rem .4rem;"><?= te('wf.status') ?></th>
           </tr>
         </thead>
         <tbody>
@@ -154,9 +151,9 @@ $TYPE_LABEL = [
               </td>
               <td style="padding:.5rem .4rem;">
                 <?php if ($r['status'] === 'sent'): ?>
-                  <span style="color:#7fc98d;font-weight:600;">✓ sent</span>
+                  <span style="color:#7fc98d;font-weight:600;">✓ <?= te('adm.sent') ?></span>
                 <?php else: ?>
-                  <span style="color:#f08792;font-weight:600;">✗ failed</span>
+                  <span style="color:#f08792;font-weight:600;">✗ <?= te('adm.failed') ?></span>
                   <?php if (!empty($r['error'])): ?>
                     <div style="color:#8593a6;font-size:.78rem;margin-top:.2rem;
                                 font-family:monospace;word-break:break-word;">

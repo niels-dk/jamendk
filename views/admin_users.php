@@ -4,10 +4,10 @@ function au_e($s){ return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
 global $currentUserId;
 ?>
 
-<h1 style="margin-bottom:.3rem;">User management</h1>
-<p style="opacity:.65;margin-top:0;">Site-level accounts. Board sharing (Editor/Viewer per vision) is managed inside each Vision under Roles &amp; Permissions.</p>
+<h1 style="margin-bottom:.3rem;"><?= te('adm.users') ?></h1>
+<p style="opacity:.65;margin-top:0;"><?= te('adm.users_sub') ?></p>
 
-<input id="auSearch" type="search" placeholder="Filter by name or email…"
+<input id="auSearch" type="search" placeholder="<?= te('adm.filter_users') ?>"
        style="width:100%;max-width:360px;box-sizing:border-box;margin-bottom:.8rem;
               padding:.55rem .8rem;border:1px solid #2b3346;background:#15161A;
               color:#ddd;border-radius:8px;">
@@ -65,13 +65,13 @@ global $currentUserId;
     <thead>
       <tr>
         <th class="au-sort" data-col="0" data-type="num">#</th>
-        <th class="au-sort" data-col="1" data-type="text">User</th>
-        <th class="au-sort" data-col="2" data-type="num">Boards</th>
-        <th class="au-sort" data-col="3" data-type="num">Email</th>
-        <th class="au-sort" data-col="4" data-type="text">Role</th>
-        <th class="au-sort" data-col="5" data-type="text">Joined</th>
-        <th class="au-sort" data-col="6" data-type="text">Last login</th>
-        <th>Actions</th>
+        <th class="au-sort" data-col="1" data-type="text"><?= te('adm.col_user') ?></th>
+        <th class="au-sort" data-col="2" data-type="num"><?= te('adm.col_boards') ?></th>
+        <th class="au-sort" data-col="3" data-type="num"><?= te('auth.email') ?></th>
+        <th class="au-sort" data-col="4" data-type="text"><?= te('adm.col_role') ?></th>
+        <th class="au-sort" data-col="5" data-type="text"><?= te('adm.col_joined') ?></th>
+        <th class="au-sort" data-col="6" data-type="text"><?= te('adm.col_last_login') ?></th>
+        <th><?= te('dash.actions') ?></th>
       </tr>
     </thead>
     <tbody>
@@ -87,16 +87,16 @@ global $currentUserId;
               data-sort="<?= (int)$u['id'] ?>"><?= (int)$u['id'] ?></td>
           <td data-sort="<?= au_e(mb_strtolower($u['name'] ?: ($u['email'] ?? ''))) ?>">
             <div class="u-name">
-              <?= au_e($u['name'] ?: '(no name)') ?>
+              <?= au_e($u['name'] ?: t('roles.no_name')) ?>
               <?php if (!empty($u['founding_creator_at'])): ?>
-                <span title="Founding Creator since <?= au_e(date('M j, Y', strtotime($u['founding_creator_at']))) ?> — free forever at their launch-day team size"
+                <span title="<?= te('adm.founder_since', ['date' => fmt_date($u['founding_creator_at'])]) ?>"
                       style="cursor:default;">✨</span>
               <?php endif; ?>
-              <?php if ($isSelf): ?><span style="opacity:.55;font-weight:400;">(you)</span><?php endif; ?>
+              <?php if ($isSelf): ?><span style="opacity:.55;font-weight:400;"><?= te('adm.you') ?></span><?php endif; ?>
               <?php if (!empty($u['deactivated_at'])): ?>
                 <span class="u-deact-tag" style="margin-left:.3rem;padding:.05rem .45rem;border-radius:999px;
                       background:rgba(224,106,106,.16);color:#f0a0a0;font-size:.7rem;font-weight:700;">
-                  Deactivated</span>
+                  <?= te('adm.deactivated') ?></span>
               <?php endif; ?>
             </div>
             <div class="u-mail" title="<?= au_e($u['email']) ?>"><?= au_e($u['email']) ?></div>
@@ -104,7 +104,7 @@ global $currentUserId;
               <div class="u-extra"><?= au_e($extra) ?></div>
             <?php endif; ?>
           </td>
-          <td class="u-boards" title="Dreams · Visions · Moods"
+          <td class="u-boards" title="<?= te('adm.boards_tip') ?>"
               data-sort="<?= (int)$u['dreams'] + (int)$u['visions'] + (int)$u['moods'] ?>">
             🔮 <?= (int)$u['dreams'] ?> &nbsp; 👁️ <?= (int)$u['visions'] ?> &nbsp; 🎭 <?= (int)$u['moods'] ?>
           </td>
@@ -115,23 +115,23 @@ global $currentUserId;
               <span style="opacity:.4;font-size:.82em;">n/a</span>
             <?php elseif (!empty($u['email_verified_at'])): ?>
               <span class="v-badge v-ok"
-                    title="Confirmed <?= au_e(date('Y-m-d H:i', strtotime($u['email_verified_at']))) ?>">
-                ✓ Verified
+                    title="<?= te('adm.confirmed_on', ['when' => date('Y-m-d H:i', strtotime($u['email_verified_at']))]) ?>">
+                ✓ <?= te('adm.verified') ?>
               </span>
             <?php else: ?>
-              <span class="v-badge v-pending" title="This account cannot sign in until the address is confirmed">
-                ⏳ Pending
+              <span class="v-badge v-pending" title="<?= te('adm.pending_tip') ?>">
+                ⏳ <?= te('adm.pending') ?>
               </span>
               <button type="button" class="btn au-verify"
-                      title="Confirm this address by hand — use when the email never arrived">
-                Verify now
+                      title="<?= te('adm.verify_now_tip') ?>">
+                <?= te('adm.verify_now') ?>
               </button>
             <?php endif; ?>
           </td>
           <td data-sort="<?= au_e($u['role'] ?? 'user') ?>">
-            <select class="au-role" <?= $isSelf ? 'disabled title="You can\'t change your own role"' : '' ?>>
-              <option value="user"  <?= $u['role']==='user'  ? 'selected':''; ?>>User</option>
-              <option value="admin" <?= $u['role']==='admin' ? 'selected':''; ?>>Admin</option>
+            <select class="au-role" <?= $isSelf ? 'disabled title="' . te('adm.own_role_tip') . '"' : '' ?>>
+              <option value="user"  <?= $u['role']==='user'  ? 'selected':''; ?>><?= te('adm.role_user') ?></option>
+              <option value="admin" <?= $u['role']==='admin' ? 'selected':''; ?>><?= te('adm.role_admin') ?></option>
             </select>
           </td>
           <td class="u-date" data-sort="<?= $u['created_at'] ? date('Y-m-d H:i:s', strtotime($u['created_at'])) : '' ?>"><?= $u['created_at'] ? date('Y-m-d', strtotime($u['created_at'])) : '' ?></td>
@@ -139,19 +139,19 @@ global $currentUserId;
           <td class="u-actions">
             <?php if (!$isSelf): ?>
               <a class="btn" href="/admin/users/<?= (int)$u['id'] ?>/impersonate"
-                 title="Browse the site as this user (support). Use the Return button to come back.">👁 View as</a>
+                 title="<?= te('adm.view_as_tip') ?>">👁 <?= te('adm.view_as') ?></a>
             <?php endif; ?>
-            <button type="button" class="btn au-pass" title="Set a new password for this account">Reset password</button>
+            <button type="button" class="btn au-pass" title="<?= te('adm.reset_pass_tip') ?>"><?= te('adm.reset_pass') ?></button>
             <?php if (!$isSelf): ?>
               <button type="button" class="btn au-transfer"
-                      title="Move everything this account owns to another creator">Transfer</button>
+                      title="<?= te('adm.transfer_tip') ?>"><?= te('adm.transfer') ?></button>
               <?php $isDeact = !empty($u['deactivated_at']); ?>
               <button type="button" class="btn au-deact" data-on="<?= $isDeact ? '1' : '0' ?>"
-                      title="<?= $isDeact ? 'Allow this account to sign in again' : 'Block this account from signing in' ?>"
+                      title="<?= $isDeact ? te('adm.reactivate_tip') : te('adm.deactivate_tip') ?>"
                       style="color:<?= $isDeact ? '#7fc98d' : '#e8c889' ?>;">
-                <?= $isDeact ? 'Reactivate' : 'Deactivate' ?>
+                <?= $isDeact ? te('adm.reactivate') : te('adm.deactivate') ?>
               </button>
-              <button type="button" class="btn au-del" style="color:#f08792;">Delete</button>
+              <button type="button" class="btn au-del" style="color:#f08792;"><?= te('action.delete') ?></button>
             <?php endif; ?>
           </td>
         </tr>
@@ -166,6 +166,23 @@ global $currentUserId;
   const table  = document.getElementById('adminUsers');
   const status = document.getElementById('auStatus');
   if (!table) return;
+  const T = <?= json_encode([
+    'sort_by'       => t('adm.sort_by'),
+    'saving'        => t('status.saving'),
+    'saved'         => t('status.saved'),
+    'failed'        => t('common.failed'),
+    'net_error'     => t('status.net_error'),
+    'this_account'  => t('adm.this_account'),
+    'confirm_verify'=> t('adm.confirm_verify'),
+    'verified'      => t('adm.verified'),
+    'pass_prompt'   => t('adm.pass_prompt'),
+    'transfer_ask'  => t('adm.transfer_ask'),
+    'transfer_deact'=> t('adm.transfer_deact'),
+    'transfer_done' => t('adm.transfer_done'),
+    'transfer_old'  => t('adm.transfer_old'),
+    'confirm_block' => t('adm.confirm_block'),
+    'confirm_del'   => t('adm.confirm_del'),
+  ], JSON_UNESCAPED_UNICODE) ?>;
 
   // ── Column sorting ────────────────────────────────────────────────
   // Sorts on each cell's data-sort value rather than its rendered text, so
@@ -200,7 +217,7 @@ global $currentUserId;
       .forEach(tr => tbody.appendChild(tr));  // re-append = reorder, keeps listeners
   }
   table.querySelectorAll('th.au-sort').forEach(th => {
-    th.title = 'Sort by ' + th.textContent.trim();
+    th.title = T.sort_by + ' ' + th.textContent.trim();
     th.addEventListener('click', () => sortBy(th));
   });
 
@@ -216,7 +233,7 @@ global $currentUserId;
   });
 
   async function post(url, params) {
-    status.textContent = 'Saving…';
+    status.textContent = T.saving;
     try {
       const res = await fetch(url, {
         method: 'POST',
@@ -224,11 +241,11 @@ global $currentUserId;
         body: new URLSearchParams(params).toString()
       });
       const j = await res.json();
-      if (j && j.success) { status.textContent = 'Saved'; return true; }
-      status.textContent = '⚠ ' + (j?.error || 'Failed');
+      if (j && j.success) { status.textContent = T.saved; return true; }
+      status.textContent = '⚠ ' + (j?.error || T.failed);
       return false;
     } catch {
-      status.textContent = '⚠ Network error';
+      status.textContent = '⚠ ' + T.net_error;
       return false;
     }
   }
@@ -247,28 +264,29 @@ global $currentUserId;
     const id = row.dataset.id;
 
     if (e.target.closest('.au-verify')) {
-      const email = row.querySelector('.u-mail')?.textContent?.trim() || 'this account';
-      if (!confirm(`Confirm ${email} by hand?\n\nOnly do this if you know the address is real — it lets the account sign in without clicking the emailed link.`)) return;
+      const email = row.querySelector('.u-mail')?.textContent?.trim() || T.this_account;
+      if (!confirm(T.confirm_verify.replace(':who', email))) return;
       if (await post(`/admin/users/${id}/verify`, {})) {
         row.querySelector('.u-verified').innerHTML =
-          '<span class="v-badge v-ok">✓ Verified</span>';
+          '<span class="v-badge v-ok">✓ ' + T.verified + '</span>';
       }
       return;
     }
     if (e.target.closest('.au-pass')) {
-      const pass = prompt('New password (min 6 characters):');
+      const pass = prompt(T.pass_prompt);
       if (pass === null) return;
       await post(`/admin/users/${id}/password`, { password: pass });
       return;
     }
     if (e.target.closest('.au-transfer')) {
-      const who = row.querySelector('.u-mail')?.textContent?.trim() || 'this account';
-      const toEmail = prompt(`Transfer everything ${who} owns to which creator?\n\nEnter the recipient's account email. This moves all their dreams, visions, moods and teams and cannot be undone.`);
+      const who = row.querySelector('.u-mail')?.textContent?.trim() || T.this_account;
+      const toEmail = prompt(T.transfer_ask.replace(':who', who));
       if (!toEmail) return;
-      const deact = confirm(`Also block ${who} from signing in?\n\nOK = deactivate their login (they've left).\nCancel = leave their login active.`);
+      const deact = confirm(T.transfer_deact.replace(':who', who));
       const j = await post(`/admin/users/${id}/transfer`, { to_email: toEmail.trim(), deactivate: deact ? 1 : 0 });
       if (j && j.success) {
-        alert(`Moved ${j.moved} to ${j.to}.` + (j.deactivated ? '\nOld login deactivated.' : ''));
+        alert(T.transfer_done.replace(':n', j.moved).replace(':to', j.to)
+              + (j.deactivated ? '\n' + T.transfer_old : ''));
         location.reload();
       }
       return;
@@ -276,15 +294,15 @@ global $currentUserId;
     if (e.target.closest('.au-deact')) {
       const btn = e.target.closest('.au-deact');
       const turningOn = btn.dataset.on !== '1';   // on = deactivated
-      const who = row.querySelector('.u-mail')?.textContent?.trim() || 'this account';
-      if (turningOn && !confirm(`Block ${who} from signing in?\n\nThey keep their data and history — they just can't log in until reactivated.`)) return;
+      const who = row.querySelector('.u-mail')?.textContent?.trim() || T.this_account;
+      if (turningOn && !confirm(T.confirm_block.replace(':who', who))) return;
       const j = await post(`/admin/users/${id}/deactivate`, { on: turningOn ? 1 : 0 });
       if (j && j.success) location.reload();
       return;
     }
     if (e.target.closest('.au-del')) {
-      const email = row.querySelector('.u-mail')?.textContent?.trim() || 'this user';
-      if (!confirm(`Delete ${email}?\n\nTheir boards stay in the database but become orphaned. This cannot be undone.`)) return;
+      const email = row.querySelector('.u-mail')?.textContent?.trim() || T.this_account;
+      if (!confirm(T.confirm_del.replace(':who', email))) return;
       if (await post(`/admin/users/${id}/delete`, {})) row.remove();
     }
   });

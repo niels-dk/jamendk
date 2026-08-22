@@ -236,17 +236,17 @@ class Analytics
 
         // "Feature used by N accounts" — breadth of adoption, not raw volume.
         $featureUsers = [
-            'Dreams caught'      => "SELECT COUNT(DISTINCT user_id) FROM dream_boards WHERE deleted_at IS NULL",
-            'Visions created'    => "SELECT COUNT(DISTINCT user_id) FROM visions WHERE deleted_at IS NULL",
-            'Mood boards'        => "SELECT COUNT(DISTINCT user_id) FROM mood_boards WHERE deleted_at IS NULL",
-            'Shot lists'         => "SELECT COUNT(DISTINCT v.user_id) FROM vision_shots s JOIN visions v ON v.id=s.vision_id",
-            'Itineraries'        => "SELECT COUNT(DISTINCT v.user_id) FROM vision_itinerary i JOIN visions v ON v.id=i.vision_id",
-            'Budgets'            => "SELECT COUNT(DISTINCT v.user_id) FROM vision_budget b JOIN visions v ON v.id=b.vision_id",
-            'Contacts'           => "SELECT COUNT(DISTINCT v.user_id) FROM vision_contacts c JOIN visions v ON v.id=c.vision_id",
-            'Documents'          => "SELECT COUNT(DISTINCT v.user_id) FROM vision_documents d JOIN visions v ON v.id=d.vision_id",
-            'Published a Trip'   => "SELECT COUNT(DISTINCT user_id) FROM visions WHERE trip_enabled=1 AND deleted_at IS NULL",
-            'Shared with others' => "SELECT COUNT(DISTINCT v.user_id) FROM vision_roles r JOIN visions v ON v.id=r.vision_id",
-            'Built a team'       => "SELECT COUNT(DISTINCT owner_user_id) FROM teams",
+            t('adm.f_dreams')      => "SELECT COUNT(DISTINCT user_id) FROM dream_boards WHERE deleted_at IS NULL",
+            t('adm.f_visions')     => "SELECT COUNT(DISTINCT user_id) FROM visions WHERE deleted_at IS NULL",
+            t('adm.f_moods')       => "SELECT COUNT(DISTINCT user_id) FROM mood_boards WHERE deleted_at IS NULL",
+            t('adm.f_shots')       => "SELECT COUNT(DISTINCT v.user_id) FROM vision_shots s JOIN visions v ON v.id=s.vision_id",
+            t('adm.f_itineraries') => "SELECT COUNT(DISTINCT v.user_id) FROM vision_itinerary i JOIN visions v ON v.id=i.vision_id",
+            t('adm.f_budgets')     => "SELECT COUNT(DISTINCT v.user_id) FROM vision_budget b JOIN visions v ON v.id=b.vision_id",
+            t('adm.f_contacts')    => "SELECT COUNT(DISTINCT v.user_id) FROM vision_contacts c JOIN visions v ON v.id=c.vision_id",
+            t('adm.f_documents')   => "SELECT COUNT(DISTINCT v.user_id) FROM vision_documents d JOIN visions v ON v.id=d.vision_id",
+            t('adm.f_published')   => "SELECT COUNT(DISTINCT user_id) FROM visions WHERE trip_enabled=1 AND deleted_at IS NULL",
+            t('adm.f_shared')      => "SELECT COUNT(DISTINCT v.user_id) FROM vision_roles r JOIN visions v ON v.id=r.vision_id",
+            t('adm.f_team')        => "SELECT COUNT(DISTINCT owner_user_id) FROM teams",
         ];
         $features = [];
         foreach ($featureUsers as $label => $sql) {

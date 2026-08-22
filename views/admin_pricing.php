@@ -10,19 +10,17 @@ foreach (Pricing::TIERS as [$k, $label, $min, $max, $mc]) {
 }
 ?>
 <div style="max-width:1000px;margin:2rem auto;padding:0 1rem;">
-  <h1 style="font-size:1.7rem;margin:0 0 .3rem;">Shadow revenue</h1>
+  <h1 style="font-size:1.7rem;margin:0 0 .3rem;"><?= te('adm.revenue') ?></h1>
   <p style="color:#8593a6;font-size:.9rem;margin:0 0 1.4rem;">
-    What the base would bill <em>if</em> we charged today. Everything is free
-    while we're getting started — this is the number that says when payments are worth
-    building. <a href="/admin/users" style="color:#8fb1d8;">Users →</a>
-    &nbsp;·&nbsp; <a href="/admin/mail" style="color:#8fb1d8;">Mail log →</a>
-    &nbsp;·&nbsp; <a href="/admin/backups" style="color:#8fb1d8;">Backups →</a>
+    <?= te('adm.revenue_sub') ?> <a href="/admin/users" style="color:#8fb1d8;"><?= te('adm.users') ?> →</a>
+    &nbsp;·&nbsp; <a href="/admin/mail" style="color:#8fb1d8;"><?= te('adm.mail_log') ?> →</a>
+    &nbsp;·&nbsp; <a href="/admin/backups" style="color:#8fb1d8;"><?= te('adm.backups') ?> →</a>
   </p>
 
   <?php if (!empty($stats['error'])): ?>
     <div style="background:rgba(232,194,103,.12);border:1px solid rgba(232,194,103,.4);
                 color:#e8c267;padding:.7rem 1rem;border-radius:8px;font-size:.9rem;">
-      Couldn't read accounts — is the database reachable?
+      <?= te('adm.db_unreachable') ?>
     </div>
   <?php else: ?>
 
@@ -31,9 +29,9 @@ foreach (Pricing::TIERS as [$k, $label, $min, $max, $mc]) {
               margin-bottom:1.6rem;">
     <?php
       $cards = [
-        ['Shadow MRR',  Pricing::money((int)($stats['total_monthly_cents'] ?? 0)), '#7fc98d', 'per month'],
-        ['Shadow ARR',  Pricing::money((int)($stats['total_yearly_cents'] ?? 0)),  '#8fb1d8', 'per year'],
-        ['Would pay',   (int)($stats['paying'] ?? 0),                                '#e8c889', 'of ' . (int)($stats['accounts'] ?? 0) . ' accounts'],
+        [t('adm.shadow_mrr'), Pricing::money((int)($stats['total_monthly_cents'] ?? 0)), '#7fc98d', t('adm.per_month')],
+        [t('adm.shadow_arr'), Pricing::money((int)($stats['total_yearly_cents'] ?? 0)),  '#8fb1d8', t('adm.per_year')],
+        [t('adm.would_pay'),  (int)($stats['paying'] ?? 0),                             '#e8c889', t('adm.of_n_accounts', ['n' => (int)($stats['accounts'] ?? 0)])],
       ];
       foreach ($cards as [$label, $val, $col, $sub]):
     ?>
@@ -50,7 +48,7 @@ foreach (Pricing::TIERS as [$k, $label, $min, $max, $mc]) {
   </div>
 
   <!-- Distribution across tiers -->
-  <h2 style="font-size:1rem;color:#cfdbe8;margin:0 0 .7rem;">How teams cluster</h2>
+  <h2 style="font-size:1rem;color:#cfdbe8;margin:0 0 .7rem;"><?= te('adm.how_cluster') ?></h2>
   <div style="display:flex;flex-wrap:wrap;gap:.5rem;margin-bottom:1.8rem;">
     <?php foreach ($tierMeta as $k => $m): $n = (int)($dist[$k] ?? 0); ?>
       <div style="flex:1;min-width:120px;background:rgba(255,255,255,.03);
@@ -58,25 +56,25 @@ foreach (Pricing::TIERS as [$k, $label, $min, $max, $mc]) {
         <div style="font-weight:700;color:#eaf0f7;font-size:.9rem;"><?= $a_e($m['label']) ?></div>
         <div style="font-size:1.4rem;font-weight:800;color:#8fb1d8;"><?= $n ?></div>
         <div style="font-size:.74rem;color:#6c7d92;">
-          <?= $m['monthly'] > 0 ? $a_e(Pricing::money($m['monthly'])) . '/mo' : 'free' ?>
+          <?= $m['monthly'] > 0 ? $a_e(Pricing::money($m['monthly'])) . '/mo' : te('adm.free') ?>
         </div>
       </div>
     <?php endforeach; ?>
   </div>
 
   <!-- Per-account table -->
-  <h2 style="font-size:1rem;color:#cfdbe8;margin:0 0 .7rem;">By account
-    <span style="font-weight:400;color:#6c7d92;font-size:.85rem;">— biggest would-be bills first</span>
+  <h2 style="font-size:1rem;color:#cfdbe8;margin:0 0 .7rem;"><?= te('adm.by_account') ?>
+    <span style="font-weight:400;color:#6c7d92;font-size:.85rem;">— <?= te('adm.by_account_sub') ?></span>
   </h2>
   <div style="overflow-x:auto;">
     <table style="width:100%;border-collapse:collapse;font-size:.88rem;">
       <thead>
         <tr style="text-align:left;color:#8593a6;font-size:.75rem;
                    text-transform:uppercase;letter-spacing:.05em;">
-          <th style="padding:.5rem .5rem;">Account</th>
-          <th style="padding:.5rem .5rem;">People</th>
-          <th style="padding:.5rem .5rem;">Tier</th>
-          <th style="padding:.5rem .5rem;">Would bill</th>
+          <th style="padding:.5rem .5rem;"><?= te('adm.col_account') ?></th>
+          <th style="padding:.5rem .5rem;"><?= te('adm.col_people') ?></th>
+          <th style="padding:.5rem .5rem;"><?= te('adm.col_tier') ?></th>
+          <th style="padding:.5rem .5rem;"><?= te('adm.col_would_bill') ?></th>
           <th style="padding:.5rem .5rem;"></th>
         </tr>
       </thead>
@@ -97,14 +95,14 @@ foreach (Pricing::TIERS as [$k, $label, $min, $max, $mc]) {
             </td>
             <td style="padding:.5rem .5rem;">
               <?php if (!empty($r['near_boundary'])): ?>
-                <span title="One teammate away from a paid band — a future customer"
+                <span title="<?= te('adm.near_paid_tip') ?>"
                       style="background:rgba(232,176,74,.16);color:#e8c889;
                              padding:.1rem .5rem;border-radius:999px;font-size:.72rem;font-weight:700;">
-                  near paid
+                  <?= te('adm.near_paid') ?>
                 </span>
               <?php endif; ?>
               <?php if (!empty($r['is_founder'])): ?>
-                <span title="Founding Creator — free forever at this size"
+                <span title="<?= te('adm.founder_tip') ?>"
                       style="color:#e8c889;font-size:.8rem;">✨</span>
               <?php endif; ?>
             </td>

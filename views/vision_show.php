@@ -15,12 +15,16 @@ $created = !empty($vision['created_at']) ? date('Y-m-d H:i:s', strtotime($vision
 $updated = !empty($vision['updated_at']) ? date('Y-m-d H:i:s', strtotime($vision['updated_at'])) : '';
 $anchors = $anchors ?? [];
 ?>
-<h1><?= e($vision['title'] ?? 'Vision') ?></h1>
+<h1><?= e($vision['title'] ?? t('board.vision')) ?></h1>
 
 <?php if (!empty($myTasks)): ?>
   <?php
     $taskToday = date('Y-m-d');
-    $STATUS_LB = ['not_started'=>'Not started','in_progress'=>'In progress','awaiting'=>'Awaiting'];
+    $STATUS_LB = [
+      'not_started' => t('goals.not_started'),
+      'in_progress' => t('goals.in_progress'),
+      'awaiting'    => t('goals.awaiting'),
+    ];
   ?>
   <div class="card" style="padding:1.1rem 1.25rem; max-width:1200px; margin-bottom:1rem;
               border:1px solid rgba(58,118,210,.45);">
@@ -45,12 +49,12 @@ $anchors = $anchors ?? [];
                 </span>
                 <?php if (!empty($t['due_date'])): ?>
                   <span style="font-family:monospace;<?= $overdue ? 'color:#f08792;' : 'opacity:.7;' ?>">
-                    📅 <?= e($t['due_date']) ?><?= $overdue ? ' — overdue' : '' ?>
+                    📅 <?= e($t['due_date']) ?><?= $overdue ? ' — ' . te('vision.overdue') : '' ?>
                   </span>
                 <?php endif; ?>
                 <?php if ($returned): ?>
                   <span style="padding:.05rem .45rem;border-radius:999px;background:#3a2310;color:#e8b067;border:1px solid #5a3818;">
-                    ↩ Sent back — waiting for the owner
+                    ↩ <?= te('vision.sent_back_waiting') ?>
                   </span>
                 <?php endif; ?>
               </div>
@@ -77,9 +81,9 @@ $anchors = $anchors ?? [];
               <div style="display:flex;gap:.4rem;flex-shrink:0;">
                 <button type="button" class="btn task-resolve"
                         style="padding:.35rem .7rem;font-size:.85em;background:#15351f;
-                               border:1px solid #1e5530;color:#7ed99a;">✓ Resolve</button>
+                               border:1px solid #1e5530;color:#7ed99a;">✓ <?= te('vision.resolve') ?></button>
                 <button type="button" class="btn task-return"
-                        style="padding:.35rem .7rem;font-size:.85em;">↩ Send back</button>
+                        style="padding:.35rem .7rem;font-size:.85em;">↩ <?= te('vision.send_back_short') ?></button>
               </div>
             <?php endif; ?>
           </div>
@@ -100,13 +104,13 @@ $anchors = $anchors ?? [];
                 box-shadow:0 18px 50px rgba(0,0,0,.5);padding:1.2rem 1.3rem;">
       <h3 id="taskNoteTitle" style="margin:0 0 .3rem;"><?= te('vision.resolve_task') ?></h3>
       <p style="margin:0 0 .8rem;opacity:.65;font-size:.9em;">
-        Whoever assigned it will see your note on their next dashboard visit.
+        <?= te('vision.note_seen_by_assigner') ?>
       </p>
       <textarea id="taskNote" rows="4" placeholder="<?= te('vision.note_placeholder') ?>"
                 style="width:100%;box-sizing:border-box;background:#0f1014;border:1px solid #2b3346;
                        color:#ddd;border-radius:8px;padding:.6rem .7rem;resize:vertical;"></textarea>
       <div style="display:flex;align-items:center;gap:.6rem;margin-top:.8rem;">
-        <button type="button" class="btn primary" id="taskNoteSend">Send</button>
+        <button type="button" class="btn primary" id="taskNoteSend"><?= te('goals.send') ?></button>
         <button type="button" class="btn" data-close><?= te('action.cancel') ?></button>
         <span id="taskNoteStatus" style="opacity:.6;font-size:.85em;"></span>
       </div>
@@ -120,6 +124,14 @@ $anchors = $anchors ?? [];
     const sendB  = document.getElementById('taskNoteSend');
     const status = document.getElementById('taskNoteStatus');
     let action = 'resolve', goalId = null;
+    const T = <?= json_encode([
+      'resolve_task'  => t('vision.resolve_task'),
+      'send_task_back'=> t('vision.send_task_back'),
+      'sending'       => t('vision.sending'),
+      'sent'          => t('vision.sent'),
+      'failed'        => t('common.failed'),
+      'network_error' => t('common.network_error'),
+    ], JSON_UNESCAPED_UNICODE) ?>;
 
     const open  = () => { modal.classList.add('is-open'); note.focus(); };
     const close = () => { modal.classList.remove('is-open'); note.value = ''; status.textContent = ''; };
@@ -131,7 +143,7 @@ $anchors = $anchors ?? [];
         if (!r && !b) return;
         goalId = card.dataset.goalId;
         action = r ? 'resolve' : 'return';
-        title.textContent = r ? 'Resolve task' : 'Send task back';
+        title.textContent = r ? T.resolve_task : T.send_task_back;
         open();
       });
     });
@@ -141,7 +153,7 @@ $anchors = $anchors ?? [];
 
     sendB.addEventListener('click', async () => {
       if (!goalId) return;
-      status.textContent = 'Sending…';
+      status.textContent = T.sending;
       sendB.disabled = true;
       try {
         const p = new URLSearchParams();
@@ -152,9 +164,9 @@ $anchors = $anchors ?? [];
           body: p.toString()
         });
         const j = await res.json();
-        if (j && j.success) { status.textContent = '✅ Sent'; setTimeout(() => location.reload(), 700); }
-        else { status.textContent = '⚠ ' + (j?.error || 'Failed'); sendB.disabled = false; }
-      } catch { status.textContent = '⚠ Network error'; sendB.disabled = false; }
+        if (j && j.success) { status.textContent = '✅ ' + T.sent; setTimeout(() => location.reload(), 700); }
+        else { status.textContent = '⚠ ' + (j?.error || T.failed); sendB.disabled = false; }
+      } catch { status.textContent = '⚠ ' + T.network_error; sendB.disabled = false; }
     });
   })();
   </script>
@@ -166,9 +178,9 @@ $anchors = $anchors ?? [];
     <div style="margin-bottom:.9rem; padding:.5rem .8rem; border-radius:8px;
                 background:rgba(58,118,210,.1); border:1px solid rgba(58,118,210,.3);
                 font-size:.9em; opacity:.95;">
-      🌕 From Dream:
+      🌕 <?= te('vision.from_dream') ?>
       <a href="/dreams/<?= htmlspecialchars($sourceDream['slug']) ?>" style="margin-left:.25rem;">
-        <?= htmlspecialchars($sourceDream['title'] ?: 'Untitled') ?>
+        <?= htmlspecialchars($sourceDream['title'] ?: t('common.untitled')) ?>
       </a>
     </div>
   <?php endif; ?>
@@ -177,7 +189,7 @@ $anchors = $anchors ?? [];
     <?php if (!empty($vision['description'])): ?>
       <?= $vision['description'] ?>
     <?php else: ?>
-      <p><?= htmlspecialchars($vision['description'] ?? 'This Vision board is under construction.') ?></p>
+      <p><?= htmlspecialchars($vision['description'] ?? t('vision.under_construction')) ?></p>
     <?php endif; ?>
   </div>
 
@@ -186,7 +198,7 @@ $anchors = $anchors ?? [];
 
       <?php if (!empty($anchors['locations'])): ?>
         <section class="anchor-block-view">
-          <h3><?= icon('pin') ?> Locations</h3>
+          <h3><?= icon('pin') ?> <?= te('anchor.locations') ?></h3>
           <?php foreach ($anchors['locations'] as $l): ?>
             <span class="chip"><?= htmlspecialchars($l) ?></span>
           <?php endforeach; ?>
@@ -195,7 +207,7 @@ $anchors = $anchors ?? [];
 
       <?php if (!empty($anchors['brands'])): ?>
         <section class="anchor-block-view">
-          <h3><?= icon('bag') ?> Brands</h3>
+          <h3><?= icon('bag') ?> <?= te('anchor.brands') ?></h3>
           <?php foreach ($anchors['brands'] as $b): ?>
             <span class="chip"><?= htmlspecialchars($b) ?></span>
           <?php endforeach; ?>
@@ -204,7 +216,7 @@ $anchors = $anchors ?? [];
 
       <?php if (!empty($anchors['people'])): ?>
         <section class="anchor-block-view">
-          <h3><?= icon('user') ?> People</h3>
+          <h3><?= icon('user') ?> <?= te('anchor.people') ?></h3>
           <?php foreach ($anchors['people'] as $p): ?>
             <span class="chip"><?= htmlspecialchars($p) ?></span>
           <?php endforeach; ?>
@@ -213,7 +225,7 @@ $anchors = $anchors ?? [];
 
       <?php if (!empty($anchors['seasons'])): ?>
         <section class="anchor-block-view">
-          <h3><?= icon('calendar') ?> Seasons / Time</h3>
+          <h3><?= icon('calendar') ?> <?= te('anchor.seasons_time') ?></h3>
           <?php foreach ($anchors['seasons'] as $s): ?>
             <span class="chip"><?= htmlspecialchars($s) ?></span>
           <?php endforeach; ?>
@@ -224,8 +236,8 @@ $anchors = $anchors ?? [];
   <?php endif; ?>
 
   <div style="opacity:.8; margin-bottom:1rem;">
-    <?php if ($created): ?>Created <?= e($created) ?><?php endif; ?>
-    <?php if ($updated): ?> · Updated <?= e($updated) ?><?php endif; ?>
+    <?php if ($created): ?><?= te('vision.created') ?> <?= e($created) ?><?php endif; ?>
+    <?php if ($updated): ?> · <?= te('home.updated') ?> <?= e($updated) ?><?php endif; ?>
   </div>
 
   <?php
@@ -239,8 +251,8 @@ $anchors = $anchors ?? [];
     <?php endif; ?>
     <?php if ($isCollab): ?>
       <button type="button" class="btn" id="btnHandoff"
-              title="Tell the owner you're done — they get a note on their next visit">
-        📤 Send back to owner
+              title="<?= te('vision.handoff_tip') ?>">
+        📤 <?= te('vision.send_back') ?>
       </button>
     <?php endif; ?>
     <a class="btn" href="/dashboard/vision"><?= te('vision.back_dash') ?></a>
@@ -259,14 +271,14 @@ $anchors = $anchors ?? [];
                   box-shadow:0 18px 50px rgba(0,0,0,.5);padding:1.2rem 1.3rem;">
         <h3 style="margin:0 0 .3rem;"><?= te('vision.send_back') ?></h3>
         <p style="margin:0 0 .8rem;opacity:.65;font-size:.9em;">
-          The owner will see your note the next time they open their dashboard.
+          <?= te('vision.owner_sees_note') ?>
         </p>
-        <textarea id="handoffNote" rows="4" placeholder="Optional note — what did you do, what's left, anything to look at…"
+        <textarea id="handoffNote" rows="4" placeholder="<?= te('vision.handoff_placeholder') ?>"
                   style="width:100%;box-sizing:border-box;background:#0f1014;border:1px solid #2b3346;
                          color:#ddd;border-radius:8px;padding:.6rem .7rem;resize:vertical;"></textarea>
         <div style="display:flex;align-items:center;gap:.6rem;margin-top:.8rem;">
-          <button type="button" class="btn primary" id="handoffSend">Send</button>
-          <button type="button" class="btn" data-close>Cancel</button>
+          <button type="button" class="btn primary" id="handoffSend"><?= te('goals.send') ?></button>
+          <button type="button" class="btn" data-close><?= te('action.cancel') ?></button>
           <span id="handoffStatus" style="opacity:.6;font-size:.85em;"></span>
         </div>
       </div>
@@ -279,6 +291,12 @@ $anchors = $anchors ?? [];
       const note   = document.getElementById('handoffNote');
       const status = document.getElementById('handoffStatus');
       if (!modal || !openB) return;
+      const T = <?= json_encode([
+        'sending'       => t('vision.sending'),
+        'sent'          => t('vision.sent'),
+        'failed'        => t('common.failed'),
+        'network_error' => t('common.network_error'),
+      ], JSON_UNESCAPED_UNICODE) ?>;
       const open  = () => { modal.classList.add('is-open'); note.focus(); };
       const close = () => { modal.classList.remove('is-open'); };
       openB.addEventListener('click', open);
@@ -287,7 +305,7 @@ $anchors = $anchors ?? [];
       });
       document.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
       sendB.addEventListener('click', async () => {
-        status.textContent = 'Sending…';
+        status.textContent = T.sending;
         sendB.disabled = true;
         try {
           const p = new URLSearchParams();
@@ -299,14 +317,14 @@ $anchors = $anchors ?? [];
           });
           const j = await res.json();
           if (j && j.success) {
-            status.textContent = '✅ Sent';
+            status.textContent = '✅ ' + T.sent;
             setTimeout(() => { close(); status.textContent = ''; note.value = ''; sendB.disabled = false; }, 900);
           } else {
-            status.textContent = '⚠ ' + (j?.error || 'Failed');
+            status.textContent = '⚠ ' + (j?.error || T.failed);
             sendB.disabled = false;
           }
         } catch {
-          status.textContent = '⚠ Network error';
+          status.textContent = '⚠ ' + T.network_error;
           sendB.disabled = false;
         }
       });

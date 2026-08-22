@@ -513,4 +513,27 @@ return [
     'footer.terms'        => 'Betingelser',
     'footer.made_in'      => 'Lavet i Danmark',
 
+
+    'footer.tested_in'    => 'testet i Brasilien',
+
+    'common.failed'        => 'Mislykkedes',
+    'common.network_error' => 'Netværksfejl',
+
+    /* ── Vision show page ── */
+    'anchor.seasons_time'          => 'Sæsoner / Tid',
+    'vision.overdue'               => 'overskredet',
+    'vision.sent_back_waiting'     => 'Sendt tilbage — venter på ejeren',
+    'vision.resolve'               => 'Afslut',
+    'vision.send_back_short'       => 'Send tilbage',
+    'vision.send_task_back'        => 'Send opgave tilbage',
+    'vision.note_seen_by_assigner' => 'Den, der tildelte opgaven, ser din note næste gang de åbner oversigten.',
+    'vision.sending'               => 'Sender…',
+    'vision.sent'                  => 'Sendt',
+    'vision.from_dream'            => 'Fra Dream:',
+    'vision.under_construction'    => 'Dette Vision-board er under opbygning.',
+    'vision.created'               => 'Oprettet',
+    'vision.handoff_tip'           => 'Fortæl ejeren at du er færdig — de får en note næste gang de kigger forbi',
+    'vision.owner_sees_note'       => 'Ejeren ser din note næste gang de åbner oversigten.',
+    'vision.handoff_placeholder'   => 'Valgfri note — hvad lavede du, hvad mangler, noget der skal kigges på…',
+
 ];

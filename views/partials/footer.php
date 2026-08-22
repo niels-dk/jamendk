@@ -50,6 +50,12 @@ $f_in      = function_exists('is_logged_in') && is_logged_in();
     align-items: center; justify-content: space-between;
     color: #6c7d92; font-size: .82rem;
   }
+  /* Inline SVG flags, not emoji — Windows ships no glyph for 🇩🇰/🇧🇷 and
+     renders them as the bare letters "DK" / "BR". Same reason as the
+     language picker. inline-flex keeps them on the text's centre line. */
+  .sf-made { display: inline-flex; align-items: center; gap: .3rem; }
+  .sf-made .sf-dot { opacity: .4; margin: 0 .15rem; }
+  .sf-made .lang-flag { display: block; }
 </style>
 
 <footer class="site-footer">
@@ -101,6 +107,10 @@ $f_in      = function_exists('is_logged_in') && is_logged_in();
 
   <div class="sf-bottom">
     <span>&copy; <?= date('Y') ?> <?= $f_e($siteName) ?></span>
-    <span><?= te('footer.made_in') ?> 🇩🇰</span>
+    <span class="sf-made">
+      <?= te('footer.made_in') ?> <?= I18n::flag('dk', 14) ?>
+      <span class="sf-dot">·</span>
+      <?= te('footer.tested_in') ?> <?= I18n::flag('br', 14) ?>
+    </span>
   </div>
 </footer>

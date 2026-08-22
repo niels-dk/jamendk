@@ -502,4 +502,27 @@ return [
     'footer.terms'        => 'Terms',
     'footer.made_in'      => 'Made in Denmark',
 
+
+    'footer.tested_in'    => 'tested in Brazil',
+
+    'common.failed'        => 'Failed',
+    'common.network_error' => 'Network error',
+
+    /* ── Vision show page ── */
+    'anchor.seasons_time'          => 'Seasons / Time',
+    'vision.overdue'               => 'overdue',
+    'vision.sent_back_waiting'     => 'Sent back — waiting for the owner',
+    'vision.resolve'               => 'Resolve',
+    'vision.send_back_short'       => 'Send back',
+    'vision.send_task_back'        => 'Send task back',
+    'vision.note_seen_by_assigner' => 'Whoever assigned it will see your note on their next dashboard visit.',
+    'vision.sending'               => 'Sending…',
+    'vision.sent'                  => 'Sent',
+    'vision.from_dream'            => 'From Dream:',
+    'vision.under_construction'    => 'This Vision board is under construction.',
+    'vision.created'               => 'Created',
+    'vision.handoff_tip'           => "Tell the owner you're done — they get a note on their next visit",
+    'vision.owner_sees_note'       => 'The owner will see your note the next time they open their dashboard.',
+    'vision.handoff_placeholder'   => "Optional note — what did you do, what's left, anything to look at…",
+
 ];

@@ -79,6 +79,13 @@ window.CANVAS_T = <?= json_encode([
   'media'          => t('canvas.media'),
   'select_frame'   => t('canvas.select_frame'),
   'select_frame_media' => t('canvas.select_frame_media'),
+  'search_media'    => t('canvas.search_media'),
+  'board_files'     => t('mood.board_files'),
+  'all_media'       => t('mood.all_media'),
+  'loading'         => t('action.loading'),
+  'load_failed'     => t('canvas.media_load_failed'),
+  'no_media'        => t('canvas.no_media'),
+  'no_board_media'  => t('canvas.no_board_media'),
 ], JSON_UNESCAPED_UNICODE) ?>;
 //console.log(window.boardSlug);
 </script>
@@ -86,6 +93,6 @@ window.CANVAS_T = <?= json_encode([
 <script src="/public/js/mood-canvas.js?v=16"></script>
 
 <script src="/public/js/mood-canvas-highlight.js"></script>
-<script src="/public/js/mood-canvas-media.js?v=2"></script>
+<script src="/public/js/mood-canvas-media.js?v=3"></script>
 <script src="/public/js/mood-canvas-input.js"></script>
 

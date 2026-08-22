@@ -1218,4 +1218,9 @@ return [
     'lib.no_files'       => 'No files yet.',
 
     'sec.in_use'         => 'In use',
+
+    'canvas.search_media'      => 'Search filename, provider, tags…',
+    'canvas.media_load_failed' => 'Could not load media.',
+    'canvas.no_media'          => 'No media found.',
+    'canvas.no_board_media'    => 'No media on this board yet — try All Media Files.',
 ];

@@ -1229,4 +1229,9 @@ return [
     'lib.no_files'       => 'Ingen filer endnu.',
 
     'sec.in_use'         => 'I brug',
+
+    'canvas.search_media'      => 'Søg på filnavn, udbyder, tags…',
+    'canvas.media_load_failed' => 'Kunne ikke indlæse medier.',
+    'canvas.no_media'          => 'Ingen medier fundet.',
+    'canvas.no_board_media'    => 'Ingen medier på dette board endnu — prøv Alle mediefiler.',
 ];

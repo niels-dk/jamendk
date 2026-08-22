@@ -5,7 +5,13 @@
   // -------------------------
   // Config – tweak to your API & thumb URLs
   // -------------------------
-  var API_MEDIA_SEARCH = '/api/media?limit=40';    // <- adjust path if different
+  var API_MEDIA_SEARCH = '/api/media?limit=40';    // every media file on the account
+  var BOARD_LIMIT = 60;
+
+  // Which set the picker is showing. Starts on this board's own media: when you
+  // are placing images on a canvas you almost always want the ones already
+  // attached to it, and the whole account can be hundreds of files.
+  var currentScope = 'board';
   function getMediaThumbUrl(m){
     // You can route by UUID on your server (recommended):
     // return '/media/thumb/' + m.uuid + '?w=320&h=200&fit=crop';
@@ -47,6 +53,11 @@
 	  + '.mc-thumb img.is-loaded{opacity:1;}'
 	  + '.mc-meta{padding:8px 10px;font:12px/1.3 system-ui;color:#cbd5e1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}'
 	  + '.mc-empty{padding:24px;text-align:center;color:#94a3b8;}'
+	  + '#mc-media-scope{display:flex;gap:6px;flex-shrink:0;}'
+	  + '#mc-media-scope button{background:#1f2937;color:#cbd5e1;border:1px solid #374151;'
+	  +   'border-radius:10px;padding:6px 12px;cursor:pointer;font:600 13px/1.2 system-ui;}'
+	  + '#mc-media-scope button:hover{background:#273244;}'
+	  + '#mc-media-scope button.is-active{background:#2563eb;border-color:#2563eb;color:#fff;}'
 	  ;
     var s = document.createElement('style'); s.id='mc-media-style'; s.textContent = css;
     document.head.appendChild(s);
@@ -62,14 +73,40 @@
     var CT = (window.CANVAS_T || {});
     var title = document.createElement('h3');
     title.textContent = CT.media_library || 'Media Library';
-    var search = document.createElement('input'); search.type='search'; search.placeholder='Search filename, provider, tags…';
-    var close = document.createElement('button'); close.id='mc-media-close'; close.type='button'; close.textContent='✕';
+    var search = document.createElement('input'); search.type='search';
+    search.placeholder = CT.search_media || 'Search filename, provider, tags…';
 
     var body = document.createElement('div'); body.id='mc-media-body';
     var grid = document.createElement('div'); grid.id='mc-media-grid';
     body.appendChild(grid);
 
-    head.appendChild(title); head.appendChild(search); head.appendChild(close);
+    // Board / All toggle — same two choices, same order as the media page.
+    var scopeWrap = document.createElement('div'); scopeWrap.id = 'mc-media-scope';
+    var btnBoard = document.createElement('button'); btnBoard.type = 'button';
+    btnBoard.dataset.scope = 'board';
+    btnBoard.textContent = CT.board_files || 'Board Files';
+    var btnAll = document.createElement('button'); btnAll.type = 'button';
+    btnAll.dataset.scope = 'all';
+    btnAll.textContent = CT.all_media || 'All Media Files';
+    scopeWrap.appendChild(btnBoard); scopeWrap.appendChild(btnAll);
+
+    function paintScope(){
+      btnBoard.classList.toggle('is-active', currentScope === 'board');
+      btnAll.classList.toggle('is-active',   currentScope === 'all');
+    }
+    scopeWrap.addEventListener('click', function(e){
+      var b = e.target.closest('button[data-scope]');
+      if (!b || b.dataset.scope === currentScope) return;
+      currentScope = b.dataset.scope;
+      paintScope();
+      fetchAndRender(grid, search.value.trim());
+    });
+    paintScope();
+
+    var close = document.createElement('button'); close.id='mc-media-close'; close.type='button'; close.textContent='✕';
+
+    head.appendChild(title); head.appendChild(search);
+    head.appendChild(scopeWrap); head.appendChild(close);
     win.appendChild(head); win.appendChild(body); ov.appendChild(win);
     document.body.appendChild(ov);
 
@@ -97,23 +134,41 @@
   // Data fetch + render grid
   // -------------------------
   async function fetchAndRender(grid, q){
-    grid.innerHTML = '<div class="mc-empty">Loading…</div>';
+    var CT = (window.CANVAS_T || {});
+    grid.innerHTML = '<div class="mc-empty">' + (CT.loading || 'Loading…') + '</div>';
+
+    var slug = window.boardSlug || '';
+    var url;
+    if (currentScope === 'board' && slug) {
+      url = '/api/moods/' + encodeURIComponent(slug) + '/media?limit=' + BOARD_LIMIT
+          + (q ? ('&q=' + encodeURIComponent(q)) : '');
+    } else {
+      url = API_MEDIA_SEARCH + (q ? ('&q=' + encodeURIComponent(q)) : '');
+    }
+
     try {
-      var url = API_MEDIA_SEARCH + (q ? ('&q=' + encodeURIComponent(q)) : '');
-      var res = await fetch(url, { headers:{'Accept':'application/json'} });
+      var res = await fetch(url, { headers:{'Accept':'application/json'}, credentials:'same-origin' });
       if (!res.ok) throw new Error('HTTP ' + res.status);
       var data = await res.json();
-      renderGrid(grid, Array.isArray(data) ? data : []);
+      // /api/media returns a bare array; /api/moods/{slug}/media returns {items:[...]}
+      var items = Array.isArray(data) ? data : (data && Array.isArray(data.items) ? data.items : []);
+      renderGrid(grid, items);
     } catch (e) {
       console.warn('[media] fetch error', e);
-      grid.innerHTML = '<div class="mc-empty">Could not load media.</div>';
+      grid.innerHTML = '<div class="mc-empty">' + (CT.load_failed || 'Could not load media.') + '</div>';
     }
   }
 
   function renderGrid(grid, items){
+	  var CT = (window.CANVAS_T || {});
 	  grid.innerHTML = '';
 	  if (!items.length) {
-		grid.innerHTML = '<div class="mc-empty">No media found.</div>';
+		// On the board tab an empty result usually means "nothing attached yet",
+		// not "nothing exists" — say which, so the fix is obvious.
+		var msg = (currentScope === 'board')
+		  ? (CT.no_board_media || 'No media on this board yet \u2014 try All Media Files.')
+		  : (CT.no_media || 'No media found.');
+		grid.innerHTML = '<div class="mc-empty">' + msg + '</div>';
 		return;
 	  }
 

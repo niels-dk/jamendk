@@ -24,7 +24,7 @@ $anchors = $anchors ?? [];
   ?>
   <div class="card" style="padding:1.1rem 1.25rem; max-width:1200px; margin-bottom:1rem;
               border:1px solid rgba(58,118,210,.45);">
-    <h3 style="margin:0 0 .6rem;">📋 Your tasks on this board</h3>
+    <h3 style="margin:0 0 .6rem;">📋 <?= te('vision.your_tasks') ?></h3>
     <div style="display:flex;flex-direction:column;gap:.55rem;">
       <?php foreach ($myTasks as $t): ?>
         <?php
@@ -98,16 +98,16 @@ $anchors = $anchors ?? [];
     <div style="position:relative;max-width:440px;width:calc(100% - 2rem);
                 background:#15161A;border:1px solid #2b3346;border-radius:14px;
                 box-shadow:0 18px 50px rgba(0,0,0,.5);padding:1.2rem 1.3rem;">
-      <h3 id="taskNoteTitle" style="margin:0 0 .3rem;">Resolve task</h3>
+      <h3 id="taskNoteTitle" style="margin:0 0 .3rem;"><?= te('vision.resolve_task') ?></h3>
       <p style="margin:0 0 .8rem;opacity:.65;font-size:.9em;">
         Whoever assigned it will see your note on their next dashboard visit.
       </p>
-      <textarea id="taskNote" rows="4" placeholder="Optional note…"
+      <textarea id="taskNote" rows="4" placeholder="<?= te('vision.note_placeholder') ?>"
                 style="width:100%;box-sizing:border-box;background:#0f1014;border:1px solid #2b3346;
                        color:#ddd;border-radius:8px;padding:.6rem .7rem;resize:vertical;"></textarea>
       <div style="display:flex;align-items:center;gap:.6rem;margin-top:.8rem;">
         <button type="button" class="btn primary" id="taskNoteSend">Send</button>
-        <button type="button" class="btn" data-close>Cancel</button>
+        <button type="button" class="btn" data-close><?= te('action.cancel') ?></button>
         <span id="taskNoteStatus" style="opacity:.6;font-size:.85em;"></span>
       </div>
     </div>
@@ -235,7 +235,7 @@ $anchors = $anchors ?? [];
   ?>
   <div class="btn-group">
     <?php if (function_exists('vision_can') && vision_can($db, $vision, 'edit')): ?>
-      <a class="btn primary" href="/visions/<?= e($vision['slug']) ?>/edit">Edit Vision</a>
+      <a class="btn primary" href="/visions/<?= e($vision['slug']) ?>/edit"><?= te('vision.edit') ?></a>
     <?php endif; ?>
     <?php if ($isCollab): ?>
       <button type="button" class="btn" id="btnHandoff"
@@ -243,7 +243,7 @@ $anchors = $anchors ?? [];
         📤 Send back to owner
       </button>
     <?php endif; ?>
-    <a class="btn" href="/dashboard/vision">Back to dashboard</a>
+    <a class="btn" href="/dashboard/vision"><?= te('vision.back_dash') ?></a>
   </div>
 
   <?php if ($isCollab): ?>
@@ -257,7 +257,7 @@ $anchors = $anchors ?? [];
       <div style="position:relative;max-width:440px;width:calc(100% - 2rem);
                   background:#15161A;border:1px solid #2b3346;border-radius:14px;
                   box-shadow:0 18px 50px rgba(0,0,0,.5);padding:1.2rem 1.3rem;">
-        <h3 style="margin:0 0 .3rem;">Send back to owner</h3>
+        <h3 style="margin:0 0 .3rem;"><?= te('vision.send_back') ?></h3>
         <p style="margin:0 0 .8rem;opacity:.65;font-size:.9em;">
           The owner will see your note the next time they open their dashboard.
         </p>

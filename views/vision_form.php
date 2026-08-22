@@ -21,11 +21,11 @@ $titleText = $isEdit ? 'Edit Vision' : 'Create a Vision';
   <?php endif; ?> 
 
   <label>Vision Name
-    <input name="title" type="text" placeholder="Vision title"
+    <input name="title" type="text" placeholder="<?= te('vision.title_placeholder') ?>"
            value="<?= $isEdit ? htmlspecialchars($vision['title'] ?? '', ENT_QUOTES) : '' ?>">
   </label> 
 
-  <label>Project Scope</label>
+  <label><?= te('vision.scope') ?></label>
   <input id="vision-desc" type="hidden" name="description"
          value="<?= $isEdit ? htmlspecialchars($vision['description'] ?? '', ENT_QUOTES) : '' ?>">
   <trix-editor input="vision-desc" class="trix-vision"></trix-editor>
@@ -56,7 +56,7 @@ $titleText = $isEdit ? 'Edit Vision' : 'Create a Vision';
 		?>
 		  <div class="anchors-row" style="display:flex;align-items:center;gap:.5rem;width:100%;">
 			<select class="anchor-key" name="anchors[<?= $i ?>][key]">
-			  <option value="">Choose…</option>
+			  <option value=""><?= te('vision.choose') ?></option>
 			  <option <?= $rowKey === 'locations' ? 'selected' : '' ?>>locations</option>
 			  <option <?= $rowKey === 'brands'    ? 'selected' : '' ?>>brands</option>
 			  <option <?= $rowKey === 'people'    ? 'selected' : '' ?>>people</option>
@@ -84,12 +84,12 @@ $titleText = $isEdit ? 'Edit Vision' : 'Create a Vision';
 
 
   <div class="btn-group" style="margin-top:1rem">
-    <button class="btn primary">Save Vision</button>
+    <button class="btn primary"><?= te('vision.save') ?></button>
     <button type="button" class="btn split" id="visionMoreBtn">▾</button>
     <div class="split-menu" id="visionMoreMenu" style="display:none">
-      <button type="button" data-go="stay">Save &amp; stay</button>
-      <button type="button" data-go="view">Save &amp; close</button>
-      <button type="button" data-go="dash">Save &amp; dashboard</button>
+      <button type="button" data-go="stay"><?= te('vision.save_stay') ?></button>
+      <button type="button" data-go="view"><?= te('vision.save_close') ?></button>
+      <button type="button" data-go="dash"><?= te('vision.save_dash') ?></button>
     </div>
   </div>
 </form>

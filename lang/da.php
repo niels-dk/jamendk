@@ -354,4 +354,43 @@ return [
     'goals.ms_assign'         => 'Tildel denne milepæl',
     'goals.load_one_failed'   => 'Kunne ikke hente målet',
 
+
+    /* ── Teams page ── */
+    'teams.im_on'          => 'Teams jeg er på',
+    'teams.new_placeholder'=> 'Nyt teamnavn… (fx Filmhold)',
+    'teams.add_placeholder'=> 'Tilføj et medlem med konto-e-mail…',
+    'teams.member_email'   => 'Medlemmets konto-e-mail…',
+    'teams.add_member'     => 'Tilføj medlem',
+    'teams.rename'         => 'Omdøb',
+    'teams.delete'         => 'Slet team',
+    'teams.leave'          => 'Forlad team',
+    'teams.default_role'   => 'Standardrolle',
+    'teams.role_on_team'   => 'Rolle på dette team',
+    'teams.member'         => 'Medlem',
+    'teams.last_active'    => 'Sidst aktiv',
+    'teams.no_members'     => 'Ingen medlemmer endnu — tilføj en herunder.',
+    'teams.no_boards'      => 'Ingen boards endnu',
+    'teams.owner'          => 'Ejer',
+    'teams.enter_name'     => 'Skriv først et teamnavn.',
+    'teams.rename_prompt'  => 'Nyt teamnavn:',
+    'teams.confirm_delete' => 'Slet dette team? Adgang der allerede er givet til boards bliver — kun selve gruppen fjernes.',
+    'teams.confirm_leave'  => 'Forlad dette team? Den board-adgang du allerede har, bevares.',
+    'teams.enter_email'    => 'Skriv medlemmets konto-e-mail.',
+    'teams.confirm_remove' => 'Fjern dette medlem fra teamet? Deres nuværende board-adgang bevares.',
+
+    /* ── Vision show / form ── */
+    'vision.back_dash'        => 'Tilbage til oversigten',
+    'vision.edit'             => 'Redigér vision',
+    'vision.your_tasks'       => 'Dine opgaver på dette board',
+    'vision.resolve_task'     => 'Afslut opgave',
+    'vision.send_back'        => 'Send tilbage til ejeren',
+    'vision.note_placeholder' => 'Valgfri note…',
+    'vision.title_placeholder'=> 'Visionens titel',
+    'vision.scope'            => 'Projektets omfang',
+    'vision.choose'           => 'Vælg…',
+    'vision.save'             => 'Gem vision',
+    'vision.save_stay'        => 'Gem & bliv',
+    'vision.save_close'       => 'Gem & luk',
+    'vision.save_dash'        => 'Gem & oversigt',
+
 ];

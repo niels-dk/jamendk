@@ -343,4 +343,43 @@ return [
     'goals.ms_assign'         => 'Assign this milestone',
     'goals.load_one_failed'   => 'Failed to load goal',
 
+
+    /* ── Teams page ── */
+    'teams.im_on'          => "Teams I'm on",
+    'teams.new_placeholder'=> 'New team name… (e.g. Film crew)',
+    'teams.add_placeholder'=> 'Add a member by account email…',
+    'teams.member_email'   => "Member's account email…",
+    'teams.add_member'     => 'Add member',
+    'teams.rename'         => 'Rename',
+    'teams.delete'         => 'Delete team',
+    'teams.leave'          => 'Leave team',
+    'teams.default_role'   => 'Default role',
+    'teams.role_on_team'   => 'Role on this team',
+    'teams.member'         => 'Member',
+    'teams.last_active'    => 'Last active',
+    'teams.no_members'     => 'No members yet — add someone below.',
+    'teams.no_boards'      => 'No boards yet',
+    'teams.owner'          => 'Owner',
+    'teams.enter_name'     => 'Enter a team name first.',
+    'teams.rename_prompt'  => 'New team name:',
+    'teams.confirm_delete' => 'Delete this team? Board access already granted stays in place — only the group itself is removed.',
+    'teams.confirm_leave'  => 'Leave this team? Any board access you already have stays.',
+    'teams.enter_email'    => "Enter the member's account email.",
+    'teams.confirm_remove' => 'Remove this member from the team? Their existing board access stays.',
+
+    /* ── Vision show / form ── */
+    'vision.back_dash'        => 'Back to dashboard',
+    'vision.edit'             => 'Edit Vision',
+    'vision.your_tasks'       => 'Your tasks on this board',
+    'vision.resolve_task'     => 'Resolve task',
+    'vision.send_back'        => 'Send back to owner',
+    'vision.note_placeholder' => 'Optional note…',
+    'vision.title_placeholder'=> 'Vision title',
+    'vision.scope'            => 'Project Scope',
+    'vision.choose'           => 'Choose…',
+    'vision.save'             => 'Save Vision',
+    'vision.save_stay'        => 'Save & stay',
+    'vision.save_close'       => 'Save & close',
+    'vision.save_dash'        => 'Save & dashboard',
+
 ];

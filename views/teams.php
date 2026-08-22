@@ -85,7 +85,7 @@ $isAdminView = function_exists('is_admin') && is_admin();
 <!-- Create team -->
 <div class="card" style="padding:1rem 1.2rem;margin-bottom:1.2rem;">
   <div class="team-inline-form" style="margin-top:0;">
-    <input type="text" id="newTeamName" placeholder="New team name… (e.g. Film crew)">
+    <input type="text" id="newTeamName" placeholder="<?= te('teams.new_placeholder') ?>">
     <button type="button" class="btn btn-primary" id="btnCreateTeam">＋ Create team</button>
     <span id="teamsStatus" style="opacity:.6;font-size:.85em;"></span>
   </div>
@@ -112,25 +112,25 @@ $isAdminView = function_exists('is_admin') && is_admin();
         <span>👥 <?= tm_e($team['name']) ?></span>
         <span class="t-meta">· <?= tm_e($meta) ?></span>
       </button>
-      <button type="button" class="btn t-rename" style="padding:.3rem .6rem;font-size:.82em;">Rename</button>
-      <button type="button" class="btn t-delete" style="padding:.3rem .6rem;font-size:.82em;color:#f08792;">Delete team</button>
+      <button type="button" class="btn t-rename" style="padding:.3rem .6rem;font-size:.82em;"><?= te('teams.rename') ?></button>
+      <button type="button" class="btn t-delete" style="padding:.3rem .6rem;font-size:.82em;color:#f08792;"><?= te('teams.delete') ?></button>
     </div>
 
     <div class="team-body" hidden>
       <?php if (!$isMine && !empty($team['owner_name'])): ?>
-        <div class="team-owner">Owner: <?= tm_e($team['owner_name']) ?> — <?= tm_e($team['owner_email']) ?></div>
+        <div class="team-owner"><?= te('teams.owner') ?>: <?= tm_e($team['owner_name']) ?> — <?= tm_e($team['owner_email']) ?></div>
       <?php endif; ?>
 
       <?php if (empty($team['members'])): ?>
-        <p class="none" style="margin:.2rem 0 .4rem;">No members yet — add someone below.</p>
+        <p class="none" style="margin:.2rem 0 .4rem;"><?= te('teams.no_members') ?></p>
       <?php else: ?>
         <div style="overflow-x:auto;">
         <table>
           <thead>
             <tr>
-              <th>Member</th>
-              <th>Last active</th>
-              <th>Default role</th>
+              <th><?= te('teams.member') ?></th>
+              <th><?= te('teams.last_active') ?></th>
+              <th><?= te('teams.default_role') ?></th>
               <th>On <?= $isMine ? 'my' : "the owner's" ?> boards</th>
               <th></th>
             </tr>
@@ -168,7 +168,7 @@ $isAdminView = function_exists('is_admin') && is_admin();
                       <?php endforeach; ?>
                     </div>
                   <?php else: ?>
-                    <span class="none">No boards yet</span>
+                    <span class="none"><?= te('teams.no_boards') ?></span>
                   <?php endif; ?>
                 </td>
                 <td class="row-actions">
@@ -182,21 +182,21 @@ $isAdminView = function_exists('is_admin') && is_admin();
       <?php endif; ?>
 
       <div class="team-inline-form">
-        <input type="text" class="t-add-email" placeholder="Member's account email…">
+        <input type="text" class="t-add-email" placeholder="<?= te('teams.member_email') ?>">
         <select class="t-add-role">
-          <option value="viewer">Viewer — read-only</option>
-          <option value="editor">Editor — can modify content</option>
-          <option value="co_owner">Co-owner — full control incl. sharing</option>
-          <option value="delegate">Delegate — acts on behalf of the owner</option>
+          <option value="viewer"><?= te('roles.viewer') ?></option>
+          <option value="editor"><?= te('roles.editor') ?></option>
+          <option value="co_owner"><?= te('roles.co_owner') ?></option>
+          <option value="delegate"><?= te('roles.delegate') ?></option>
         </select>
-        <button type="button" class="btn t-add-member">Add member</button>
+        <button type="button" class="btn t-add-member"><?= te('teams.add_member') ?></button>
       </div>
     </div>
   </div>
 <?php endforeach; ?>
 
 <?php if (!empty($memberTeams)): ?>
-  <h2 class="section-title">Teams I'm on</h2>
+  <h2 class="section-title"><?= te('teams.im_on') ?></h2>
   <?php foreach ($memberTeams as $team): ?>
     <?php
       $count = count($team['members'] ?? []);
@@ -210,7 +210,7 @@ $isAdminView = function_exists('is_admin') && is_admin();
           <span>👥 <?= tm_e($team['name']) ?></span>
           <span class="t-meta">· <?= tm_e($meta) ?></span>
         </button>
-        <button type="button" class="btn t-leave" style="padding:.3rem .6rem;font-size:.82em;color:#f08792;">Leave team</button>
+        <button type="button" class="btn t-leave" style="padding:.3rem .6rem;font-size:.82em;color:#f08792;"><?= te('teams.leave') ?></button>
       </div>
 
       <div class="team-body" hidden>
@@ -223,7 +223,7 @@ $isAdminView = function_exists('is_admin') && is_admin();
               <tr>
                 <th>Member</th>
                 <th>Last active</th>
-                <th>Role on this team</th>
+                <th><?= te('teams.role_on_team') ?></th>
               </tr>
             </thead>
             <tbody>
@@ -253,7 +253,7 @@ $isAdminView = function_exists('is_admin') && is_admin();
 
         <!-- Any member may add people to the team -->
         <div class="team-inline-form">
-          <input type="text" class="t-add-email" placeholder="Add a member by account email…">
+          <input type="text" class="t-add-email" placeholder="<?= te('teams.add_placeholder') ?>">
           <select class="t-add-role">
             <option value="viewer">Viewer — read-only</option>
             <option value="editor">Editor — can modify content</option>
@@ -271,8 +271,15 @@ $isAdminView = function_exists('is_admin') && is_admin();
 (() => {
   const status = document.getElementById('teamsStatus');
 
+  const T = <?= json_encode([
+      'net_error'=>t('status.net_error'),'failed'=>t('status.save_failed'),
+      'enter_team'=>t('teams.enter_name'),'rename_prompt'=>t('teams.rename_prompt'),
+      'confirm_delete'=>t('teams.confirm_delete'),'confirm_leave'=>t('teams.confirm_leave'),
+      'enter_email'=>t('teams.enter_email'),'confirm_remove'=>t('teams.confirm_remove'),
+      'saving'=>t('status.saving'),
+  ], JSON_UNESCAPED_UNICODE) ?>;
   async function post(url, params) {
-    if (status) status.textContent = 'Saving…';
+    if (status) status.textContent = T.saving;
     try {
       const res = await fetch(url, {
         method: 'POST',
@@ -283,11 +290,11 @@ $isAdminView = function_exists('is_admin') && is_admin();
       if (j && j.success) { if (status) status.textContent = ''; return j; }
       // Tier heads-up isn't an error — hand it back for the caller to confirm.
       if (j && j.needs_tier_ack) { if (status) status.textContent = ''; return j; }
-      alert(j?.error || 'Failed');
+      alert(j?.error || T.failed);
       if (status) status.textContent = '';
       return null;
     } catch {
-      alert('Network error');
+      alert(T.net_error);
       if (status) status.textContent = '';
       return null;
     }
@@ -296,7 +303,7 @@ $isAdminView = function_exists('is_admin') && is_admin();
   // Create team
   document.getElementById('btnCreateTeam')?.addEventListener('click', async () => {
     const name = document.getElementById('newTeamName').value.trim();
-    if (!name) return alert('Enter a team name first.');
+    if (!name) return alert(T.enter_team);
     if (await post('/api/teams/create', { name })) location.reload();
   });
 
@@ -314,24 +321,24 @@ $isAdminView = function_exists('is_admin') && is_admin();
     card.addEventListener('click', async e => {
       if (e.target.closest('.t-rename')) {
         const current = card.querySelector('.team-toggle span:nth-child(2)')?.textContent.replace('👥','').trim();
-        const name = prompt('New team name:', current);
+        const name = prompt(T.rename_prompt, current);
         if (name && await post(`/api/teams/${teamId}/rename`, { name })) location.reload();
         return;
       }
       if (e.target.closest('.t-delete')) {
-        if (!confirm('Delete this team? Board access already granted stays in place — only the group itself is removed.')) return;
+        if (!confirm(T.confirm_delete)) return;
         if (await post(`/api/teams/${teamId}/delete`, {})) location.reload();
         return;
       }
       if (e.target.closest('.t-leave')) {
-        if (!confirm('Leave this team? Any board access you already have stays.')) return;
+        if (!confirm(T.confirm_leave)) return;
         if (await post(`/api/teams/${teamId}/leave`, {})) location.reload();
         return;
       }
       if (e.target.closest('.t-add-member')) {
         const email = card.querySelector('.t-add-email').value.trim();
         const role  = card.querySelector('.t-add-role').value;
-        if (!email) return alert('Enter the member\'s account email.');
+        if (!email) return alert(T.enter_email);
         let j = await post(`/api/teams/${teamId}/members/add`, { email, role });
         if (j && j.needs_tier_ack) {
           if (!confirm(j.message)) return;            // free anyway — just informing
@@ -343,7 +350,7 @@ $isAdminView = function_exists('is_admin') && is_admin();
       const rm = e.target.closest('.m-remove');
       if (rm) {
         const row = rm.closest('tr');
-        if (!confirm('Remove this member from the team? Their existing board access stays.')) return;
+        if (!confirm(T.confirm_remove)) return;
         if (await post(`/api/teams/${teamId}/members/${row.dataset.memberId}/delete`, {})) row.remove();
       }
     });

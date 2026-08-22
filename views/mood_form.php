@@ -140,4 +140,4 @@
 </div>
 
 <!-- Page script includes (ensure this file is loaded after the DOM above) -->
-<script src="/public/js/mood-board-library.js"></script>
+<script src="/public/js/mood-board-library.js?v=2"></script>

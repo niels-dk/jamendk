@@ -271,7 +271,10 @@ html, body { overflow-x: hidden; }
 /* --- Media Library overlay --- */
 .ml-overlay[hidden] { display:none; }
 .ml-overlay {
-  position: fixed; inset: 0; z-index: 1000;
+  /* Above .media-card.menu-open (10000), which lifts a card so its kebab menu
+     clears its neighbours. Without this the modal opens behind the card you
+     just opened the menu on. */
+  position: fixed; inset: 0; z-index: 10050;
   background: rgba(0,0,0,.55);
   display: grid; place-items: center;
 }

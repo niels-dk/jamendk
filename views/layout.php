@@ -286,7 +286,7 @@
 <script defer src="/public/js/overlay_budget.js?v=3"></script>
 <script defer src="/public/js/overlay-documents.js"></script>
 <!-- Include the JS -->
-<script src="/public/js/mood-board-library.js" defer></script>
+<script src="/public/js/mood-board-library.js?v=2" defer></script>
 
 
 <?php

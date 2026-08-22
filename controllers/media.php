@@ -195,6 +195,42 @@ class media_controller
     }
 	
 	// controllers/media.php
+	/**
+	 * ORDER BY for the media grid's "View sort" control.
+	 *
+	 * Whitelisted rather than interpolated: the value arrives straight from a
+	 * query string, and anything reaching ORDER BY cannot be a bound parameter.
+	 *
+	 * @param string $prefix table alias, with trailing dot, or ''
+	 */
+	private static function mediaOrderBy(string $sort, string $prefix = 'vm.'): string
+	{
+		switch ($sort) {
+			case 'name': return $prefix . 'file_name ASC';
+			case 'type': return $prefix . 'mime_type ASC, ' . $prefix . 'file_name ASC';
+			case 'size': return $prefix . 'file_size DESC';
+			case 'date':
+			default:     return $prefix . 'created_at DESC, ' . $prefix . 'id DESC';
+		}
+	}
+
+	/**
+	 * Comma-separated tag filter. vision_media.tags is a flat string, so each
+	 * term is matched with LIKE and ALL terms must be present (AND, not OR) —
+	 * typing two tags should narrow the list, not widen it.
+	 *
+	 * @return array{0:string[],1:array} [sql fragments, bound values]
+	 */
+	private static function tagFilter(string $tags, string $prefix = 'vm.'): array
+	{
+		$sql = []; $vals = [];
+		foreach (array_filter(array_map('trim', explode(',', $tags))) as $t) {
+			$sql[]  = $prefix . 'tags LIKE ?';
+			$vals[] = '%' . $t . '%';
+		}
+		return [$sql, $vals];
+	}
+
 	public static function listForMood(string $slug): void
 	{
 		global $db, $currentUserId;
@@ -223,6 +259,8 @@ class media_controller
 		$q       = isset($_GET['q']) ? trim($_GET['q']) : '';
 		$type    = isset($_GET['type']) ? trim($_GET['type']) : '';
 		$groupId = isset($_GET['group_id']) ? (int)$_GET['group_id'] : 0;
+		$tags    = isset($_GET['tags']) ? trim($_GET['tags']) : '';
+		$sort    = isset($_GET['sort']) ? trim($_GET['sort']) : '';
 		$limit   = isset($_GET['limit']) ? max(1, min(100, (int)$_GET['limit'])) : 50;
 		$offset  = isset($_GET['offset']) ? max(0, (int)$_GET['offset']) : 0;
 
@@ -237,6 +275,14 @@ class media_controller
 		if ($groupId > 0) {
 			$where[]         = "vm.group_id = :gid";
 			$params[':gid']  = $groupId;
+		}
+		// Named placeholders throughout — PDO will not mix named and positional
+		// in one statement, and the rest of this query is named.
+		$ti = 0;
+		foreach (array_filter(array_map('trim', explode(',', $tags))) as $t) {
+			$where[] = "vm.tags LIKE :tag$ti";
+			$params[":tag$ti"] = '%' . $t . '%';
+			$ti++;
 		}
 
 		// Map type filter to real columns (mime_type or provider)
@@ -300,7 +346,7 @@ class media_controller
 			JOIN vision_media vm ON vm.id = mbm.media_id
 			WHERE $whereSql
 			$typeSql
-			ORDER BY vm.created_at DESC
+			ORDER BY " . self::mediaOrderBy($sort) . "
 			LIMIT $limit OFFSET $offset
 		";
 		$itemsStmt = $db->prepare($itemsSql);
@@ -438,6 +484,9 @@ class media_controller
         $limit  = isset($_GET['limit']) ? max(1, min(100, (int)$_GET['limit'])) : 40;
         $offset = isset($_GET['offset']) ? max(0, (int)$_GET['offset']) : 0;
         $type   = isset($_GET['type']) ? $_GET['type'] : 'all';
+        $groupId = isset($_GET['group_id']) ? (int)$_GET['group_id'] : 0;
+        $tags    = isset($_GET['tags']) ? trim($_GET['tags']) : '';
+        $sort    = isset($_GET['sort']) ? trim($_GET['sort']) : '';
 
         // Filter to media that's attached to any of the current user's mood boards.
         // This matches the user-visible promise of the "All Media Files" tab:
@@ -458,14 +507,24 @@ class media_controller
         } elseif ($type === 'pdf') {
             $where[] = "vm.mime_type = 'application/pdf'";
         }
+        if ($groupId > 0) {
+            $where[] = 'vm.group_id = ?';
+            $args[]  = $groupId;
+        }
+        [$tagSql, $tagVals] = self::tagFilter($tags);
+        foreach ($tagSql as $frag) { $where[] = $frag; }
+        foreach ($tagVals as $v)   { $args[]  = $v; }
 
+        // group_id and file_size were missing from the SELECT, so the grid could
+        // not show a file's group and the size sort had nothing to sort on.
         $sql = "SELECT DISTINCT vm.id, vm.uuid, vm.file_name, vm.mime_type,
-                                vm.provider, vm.provider_id, vm.created_at, vm.tags
+                                vm.provider, vm.provider_id, vm.created_at, vm.tags,
+                                vm.group_id, vm.file_size
                   FROM vision_media vm
                   INNER JOIN mood_board_media mbm ON mbm.media_id = vm.id
                   INNER JOIN mood_boards     mb  ON mb.id = mbm.board_id
                  WHERE " . implode(' AND ', $where) . "
-                 ORDER BY vm.id DESC
+                 ORDER BY " . self::mediaOrderBy($sort) . "
                  LIMIT ? OFFSET ?";
 
         $st = $db->prepare($sql);

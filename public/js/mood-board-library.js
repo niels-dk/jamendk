@@ -119,12 +119,14 @@
 	}
 	
   // Build a stable key for deduping identical requests
-	function makeKey({ source, slug, q, type, offset }) {
+	function makeKey({ source, slug, q, type, group, tags, sort, offset }) {
+	  // Every filter has to be in here. When it only covered q and type, changing
+	  // the group or the tags produced an identical key and the request was
+	  // dropped as a duplicate — which is most of why the filters looked dead.
 	  return [
 		source,
 		slug || 'all',
-		q || '',
-		type || '',
+		q || '', type || '', group || '', tags || '', sort || '',
 		String(offset || 0)
 	  ].join('|');
 	}
@@ -145,16 +147,14 @@
   }
 
   function getFilters() {
-    const qVal = (search && search.value) ? search.value.trim() : '';
-    const typeVal =
-        (typeof typeSel !== 'undefined' && typeSel && typeSel.value)
-            ? typeSel.value
-            : '';
-    const groupVal =
-        (typeof groupSel !== 'undefined' && groupSel && groupSel.value)
-            ? groupSel.value
-            : '';
-    return { q: qVal, type: typeVal, group: groupVal };
+    const val = (el) => (el && el.value) ? String(el.value).trim() : '';
+    return {
+      q:     val(search) || val(qInput),
+      type:  val(typeSel),
+      group: val(groupSel),
+      tags:  val(tagsFilter),
+      sort:  val(sortSel),
+    };
   }
 
 
@@ -213,7 +213,9 @@
       if (groupSel) {
         const cur = groupSel.value;
         groupSel.innerHTML = `<option value="">${lt('all_groups', 'All groups')}</option>` + GROUPS_CACHE.map(g => `<option value="${g.id}">${g.name}</option>`).join('');
-        if (cur && GROUPS_CACHE.some(g => g.id === cur)) groupSel.value = cur;
+        // g.id is a number from JSON, cur is a string from the DOM — comparing
+        // them with === was never true, so the selection was lost on every reload.
+        if (cur && GROUPS_CACHE.some(g => String(g.id) === String(cur))) groupSel.value = cur;
       }
     } catch {
       GROUPS_CACHE = [];
@@ -244,11 +246,11 @@
 	}
 		  
     async function loadBoardFiles() {
-	  const { q, type, group } = getFilters();
+	  const { q, type, group, tags, sort } = getFilters();
 	  const slug = resolveMoodSlug();
 	  if (!slug) { setActive('all'); return loadAllFiles(); }
 
-	  const key = makeKey({ source: 'board', slug, q, type, offset });
+	  const key = makeKey({ source: 'board', slug, q, type, group, tags, sort, offset });
 	  if (key === lastRequestKey || isLoading) return;
 	  lastRequestKey = key;
 
@@ -257,7 +259,9 @@
 		`?limit=${limit}&offset=${offset}` +
 		(q ? `&q=${encodeURIComponent(q)}` : '') +
 		(type ? `&type=${encodeURIComponent(type)}` : '') +
-		(group ? `&group_id=${encodeURIComponent(group)}` : '');
+		(group ? `&group_id=${encodeURIComponent(group)}` : '') +
+		(tags ? `&tags=${encodeURIComponent(tags)}` : '') +
+		(sort ? `&sort=${encodeURIComponent(sort)}` : '');
 
 	  try {
 		isLoading = true;
@@ -279,9 +283,9 @@
 	}
 
 	async function loadAllFiles() {
-	  const { q, type, group } = getFilters();
+	  const { q, type, group, tags, sort } = getFilters();
 
-	  const key = makeKey({ source: 'all', slug: '', q, type, offset });
+	  const key = makeKey({ source: 'all', slug: '', q, type, group, tags, sort, offset });
 	  if (key === lastRequestKey || isLoading) return;
 	  lastRequestKey = key;
 
@@ -289,7 +293,9 @@
 		`/api/media?limit=${limit}&offset=${offset}` +
 		(q ? `&q=${encodeURIComponent(q)}` : '') +
 		(type ? `&type=${encodeURIComponent(type)}` : '') +
-		(group ? `&group_id=${encodeURIComponent(group)}` : '');
+		(group ? `&group_id=${encodeURIComponent(group)}` : '') +
+		(tags ? `&tags=${encodeURIComponent(tags)}` : '') +
+		(sort ? `&sort=${encodeURIComponent(sort)}` : '');
 
 	  try {
 		isLoading = true;
@@ -340,8 +346,20 @@
   // -----------------------------
   // Overlay / Sheet
   // -----------------------------
+  // Any card whose kebab menu is open is sitting at z-index 10000 (the
+  // .menu-open booster that lifts it above its neighbours). The menu-item
+  // handlers stopPropagation(), so the document-level close listener never
+  // fires — drop the booster here, or the modal opens behind that card.
+  function closeCardMenus() {
+    document.querySelectorAll('.media-card .card-menu.open')
+      .forEach(m => m.classList.remove('open'));
+    document.querySelectorAll('.media-card.menu-open')
+      .forEach(c => c.classList.remove('menu-open'));
+  }
+
   function openSheet(title, bodyHTML, actionsHTML) {
     if (!overlay || !sheet) return false;
+    closeCardMenus();
 
     sheet.innerHTML = `
       <div class="ml-head">
@@ -766,15 +784,10 @@
 	});
 
 
-  if (typeSel) typeSel.addEventListener('change', fetchList);
-  if (sortSel) sortSel.addEventListener('change', fetchList);
-  if (qInput)  qInput.addEventListener('input', () => {
-    clearTimeout(qInput._t); qInput._t = setTimeout(fetchList, 250);
-  });
-  if (groupSel)   groupSel.addEventListener('change', fetchList);
-  if (tagsFilter) tagsFilter.addEventListener('input', () => {
-    clearTimeout(tagsFilter._t); tagsFilter._t = setTimeout(fetchList, 300);
-  });
+  // NOTE: the filter controls are wired ONCE, in the onFilterChange block
+  // further up. They used to be bound here as well, so every change fired two
+  // competing requests against two different endpoints and whichever landed
+  // last won.
 
   // Add Link → overlay
   if (linkBtn) linkBtn.addEventListener('click', openLinkModal);
@@ -1125,31 +1138,15 @@
   // -----------------------------
   // Library list fetch
   // -----------------------------
+  // fetchList() used to build its own request against
+  // /api/visions/{slug}/media. On a mood board page apiBaseSlug() falls back to
+  // the BOARD slug, so that was a vision lookup with a board's slug: it failed,
+  // and every "refresh after save" that called it silently did nothing — which
+  // is why changing a group looked like it never saved. It is called from a
+  // dozen places, so rather than chase each one it now delegates to the same
+  // loader the tabs use, which knows which endpoint belongs to which tab.
   function fetchList() {
-	  const qs = new URLSearchParams();
-	  qs.set('scope', currentScope || 'board');
-
-	  if ((currentScope || 'board') === 'board' && boardId) {
-		qs.set('board_id', String(boardId));
-	  }
-	  if (typeSel && typeSel.value)      qs.set('type', typeSel.value);
-	  if (sortSel && sortSel.value)      qs.set('sort', sortSel.value);
-	  if (qInput && qInput.value.trim()) qs.set('q', qInput.value.trim());
-	  if (groupSel && groupSel.value)    qs.set('group_id', groupSel.value);
-	  if (tagsFilter && tagsFilter.value.trim()) qs.set('tags', tagsFilter.value.trim());
-
-	  const url = `/api/visions/${encodeURIComponent(apiBaseSlug())}/media?` + qs.toString();
-
-	  setStatus('Loading…');
-	  return fetch(url, { credentials:'same-origin' })
-		.then(r => r.json())
-		.then(j => {
-		  if (!j.success) throw new Error(j.error || 'Failed');
-		  items = j.media || [];
-		  render();
-		  setStatus('');
-		})
-		.catch(e => { setStatus(e.message || 'Load failed', true); });
+	  return reloadMedia();
 	}
 
   // -----------------------------

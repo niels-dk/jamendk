@@ -41,4 +41,4 @@ if ('serviceWorker' in navigator) {
 }
 </script>
 <link rel="stylesheet" href="/public/css/style.css?v=10">
-<link rel="stylesheet" href="/public/css/app.css?v=2">
+<link rel="stylesheet" href="/public/css/app.css?v=3">

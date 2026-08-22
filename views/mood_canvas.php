@@ -5,20 +5,20 @@
  */
 ?>
 <div class="card">
-  <h1><?= htmlspecialchars($board['title'] ?? 'Untitled Mood Board') ?></h1>
+  <h1><?= htmlspecialchars($board['title'] ?? t('mood.untitled')) ?></h1>
   <div id="canvas-toolbar" class="canvas-toolbar">
 	  <div id="tool-pill" aria-live="polite"></div>
-    <button data-action="select">Select</button>
-    <button data-action="pan">Pan</button>
-	<button data-action="zoom-out">Zoom −</button>
-	<button data-action="zoom-in">Zoom +</button>
-	<button data-action="reset-view">Reset</button>
-    <button data-action="text">Text</button>
-    <button data-action="frame">Frame</button>
-	<button data-action="resize">Resize</button>
-    <button data-action="connector">Connector</button>
-    <button data-action="delete">Delete</button>
-    <button data-action="snap">Snap</button>
+    <button data-action="select"><?= te('canvas.select') ?></button>
+    <button data-action="pan"><?= te('canvas.pan') ?></button>
+	<button data-action="zoom-out"><?= te('canvas.zoom_out') ?> −</button>
+	<button data-action="zoom-in"><?= te('canvas.zoom_in') ?> +</button>
+	<button data-action="reset-view"><?= te('canvas.reset') ?></button>
+    <button data-action="text"><?= te('canvas.text') ?></button>
+    <button data-action="frame"><?= te('canvas.frame') ?></button>
+	<button data-action="resize"><?= te('canvas.resize') ?></button>
+    <button data-action="connector"><?= te('canvas.connector') ?></button>
+    <button data-action="delete"><?= te('action.delete') ?></button>
+    <button data-action="snap"><?= te('canvas.snap') ?></button>
   </div>
   <div id="canvasStage" class="canvas-stage"
 		 style="width:100%; height:600px; border:1px solid #ccc; position:relative; overflow:hidden;">

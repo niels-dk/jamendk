@@ -17,14 +17,14 @@
       <!--button class="tab-btn active" data-scope="board" type="button">Board Files</button-->
       <!--button class="tab-btn" data-scope="vision" type="button">All Media Files</button-->
 		
-		<button data-tab="board" class="btn active">Board Files</button>
-<button data-tab="all"   class="btn">All Media Files</button>
+		<button data-tab="board" class="btn active"><?= te('mood.board_files') ?></button>
+<button data-tab="all"   class="btn"><?= te('mood.all_media') ?></button>
     </div>
 
     <div class="library-actions">
-      <button id="uploadBtn" type="button" class="lib-btn">Upload</button>
+      <button id="uploadBtn" type="button" class="lib-btn"><?= te('docs.upload') ?></button>
       <input id="mediaUploadInput" type="file" name="file[]" multiple style="display:none">
-      <button id="linkBtn" type="button" class="lib-btn">Add Link</button>
+      <button id="linkBtn" type="button" class="lib-btn"><?= te('mood.add_link') ?></button>
       <!-- Optional extra actions; keep for layout parity (can hide via CSS if not needed) -->
       <!--button id="addNoteBtn" type="button" class="lib-btn ghost" title="Add a sticky note to the canvas">Add Note</button-->
       <!--button id="addConnectorBtn" type="button" class="lib-btn ghost" title="Add a connector/arrow">Add Connector</button-->
@@ -41,14 +41,14 @@
 			d="M19.5 18.1l-4.6-4.6a7.5 7.5 0 10-1.4 1.4l4.6 4.6a1 1 0 001.4-1.4zM8.5 14a5.5 5.5 0 110-11 5.5 5.5 0 010 11z"></path>
 		</svg>
 		<!-- Search input (id unchanged) -->
-		<input id="mediaSearch" type="search" placeholder="Search files…" aria-label="Search files">
+		<input id="mediaSearch" type="search" placeholder="<?= te('mood.search_files') ?>" aria-label="<?= te('mood.search_files') ?>">
 		<!-- Type select (id unchanged) -->
-		<select id="mediaTypeFilter" aria-label="Type">
-		  <option value="">All Types</option>
-		  <option value="image">Images</option>
-		  <option value="gif">GIFs</option>
-		  <option value="video">Videos</option>
-		  <option value="doc">Docs</option>
+		<select id="mediaTypeFilter" aria-label="<?= te('mood.type') ?>">
+		  <option value=""><?= te('mood.all_types') ?></option>
+		  <option value="image"><?= te('mood.t_images') ?></option>
+		  <option value="gif"><?= te('mood.t_gifs') ?></option>
+		  <option value="video"><?= te('mood.t_videos') ?></option>
+		  <option value="doc"><?= te('mood.t_docs') ?></option>
 		</select>
 	  </label>
 
@@ -58,8 +58,8 @@
 		  <path fill="currentColor"
 			d="M12 14a5 5 0 11-10 0 5 5 0 0110 0zm7-5.5V16a4 4 0 01-4 4h-3v-2h3a2 2 0 002-2V8.5h2z"></path>
 		</svg-->
-		<select id="groupFilterSelect" aria-label="Groups">
-		  <option value="">All groups</option>
+		<select id="groupFilterSelect" aria-label="<?= te('mood.groups') ?>">
+		  <option value=""><?= te('mood.all_groups') ?></option>
 		  <!-- existing group options will populate here via PHP -->
 		</select>
 	  </label>
@@ -70,16 +70,16 @@
 		  <path fill="currentColor"
 			d="M19.5 18.1l-4.6-4.6a7.5 7.5 0 10-1.4 1.4l4.6 4.6a1 1 0 001.4-1.4zM8.5 14a5.5 5.5 0 110-11 5.5 5.5 0 010 11z"></path>
 		</svg>
-		<input id="tagFilterInput" type="text" placeholder="Filter by tags" aria-label="Filter by tags">
+		<input id="tagFilterInput" type="text" placeholder="<?= te('mood.filter_tags') ?>" aria-label="<?= te('mood.filter_tags') ?>">
 	  </label>
 
 	  <!-- Sort (View) select -->
-	  <label class="pill" for="mediaSort">View sort:
-		<select id="mediaSort" aria-label="Sort">
-		  <option value="date">Newest</option>
-		  <option value="name">Name</option>
-		  <option value="type">Type</option>
-		  <option value="size">Size</option>
+	  <label class="pill" for="mediaSort"><?= te('mood.view_sort') ?>
+		<select id="mediaSort" aria-label="<?= te('mood.sort') ?>">
+		  <option value="date"><?= te('mood.s_newest') ?></option>
+		  <option value="name"><?= te('mood.s_name') ?></option>
+		  <option value="type"><?= te('mood.s_type') ?></option>
+		  <option value="size"><?= te('mood.s_size') ?></option>
 		</select>
 	  </label>
 	</div>
@@ -89,8 +89,8 @@
 
     <!-- Global upload pill -->
     <div id="uploadQueuePill" class="upl-pill" hidden>
-      <span class="upl-text">Uploading…</span>
-      <button class="upl-cancel" title="Cancel all" type="button">✕</button>
+      <span class="upl-text"><?= te('docs.uploading') ?></span>
+      <button class="upl-cancel" title="<?= te('mood.cancel_all') ?>" type="button">✕</button>
     </div>
 
     <!-- Hidden input for file picker -->

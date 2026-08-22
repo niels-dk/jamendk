@@ -27,7 +27,7 @@ ob_start();
 
       <?php if (!empty($anchors['locations'])): ?>
         <section class="anchor-block-view">
-          <h3><?= icon('pin') ?> Locations</h3>
+          <h3><?= icon('pin') ?> <?= te('anchor.locations') ?></h3>
           <?php foreach ($anchors['locations'] as $l): ?>
             <span class="chip"><?= htmlspecialchars($l) ?></span>
           <?php endforeach; ?>
@@ -36,7 +36,7 @@ ob_start();
 
       <?php if (!empty($anchors['brands'])): ?>
         <section class="anchor-block-view">
-          <h3><?= icon('bag') ?> Brands</h3>
+          <h3><?= icon('bag') ?> <?= te('anchor.brands') ?></h3>
           <?php foreach ($anchors['brands'] as $b): ?>
             <span class="chip"><?= htmlspecialchars($b) ?></span>
           <?php endforeach; ?>
@@ -45,7 +45,7 @@ ob_start();
 
       <?php if (!empty($anchors['people'])): ?>
         <section class="anchor-block-view">
-          <h3><?= icon('user') ?> People</h3>
+          <h3><?= icon('user') ?> <?= te('anchor.people') ?></h3>
           <?php foreach ($anchors['people'] as $p): ?>
             <span class="chip"><?= htmlspecialchars($p) ?></span>
           <?php endforeach; ?>
@@ -54,7 +54,7 @@ ob_start();
 
       <?php if (!empty($anchors['seasons'])): ?>
         <section class="anchor-block-view">
-          <h3><?= icon('calendar') ?> Seasons / Time</h3>
+          <h3><?= icon('calendar') ?> <?= te('anchor.seasons_time') ?></h3>
           <?php foreach ($anchors['seasons'] as $s): ?>
             <span class="chip"><?= htmlspecialchars($s) ?></span>
           <?php endforeach; ?>
@@ -64,29 +64,29 @@ ob_start();
     </div><!-- /grid -->
   <?php endif; ?>
 
-  <p style="margin-top:1.4rem"><small>Created <?= $dream['created_at'] ?></small></p>
+  <p style="margin-top:1.4rem"><small><?= te('vision.created') ?> <?= $dream['created_at'] ?></small></p>
 
   <?php if (!empty($linkedVision)): ?>
     <div style="margin:.9rem 0; padding:.7rem .9rem; border-radius:8px;
                 background:rgba(58,118,210,.12); border:1px solid rgba(58,118,210,.35);">
-      <strong>✨ Promoted to Vision</strong>
+      <strong>✨ <?= te('dream.promoted') ?></strong>
       <a href="/visions/<?= htmlspecialchars($linkedVision['slug']) ?>" style="margin-left:.4rem;">
-        <?= htmlspecialchars($linkedVision['title'] ?: 'Untitled vision') ?>
+        <?= htmlspecialchars($linkedVision['title'] ?: t('home.untitled_vision')) ?>
       </a>
     </div>
-    <a class="btn primary" href="/visions/<?= htmlspecialchars($linkedVision['slug']) ?>/edit">Open Vision</a>
+    <a class="btn primary" href="/visions/<?= htmlspecialchars($linkedVision['slug']) ?>/edit"><?= te('dream.open_vision') ?></a>
   <?php else: ?>
     <form method="post" action="/dreams/<?= htmlspecialchars($dream['slug']) ?>/promote"
           style="display:inline-block; margin:0 .6rem 0 0;">
       <button class="btn primary" type="submit"
-              title="Create a Vision from this Dream, copying title, description and anchors">
-        ✨ Promote to Vision
+              title="<?= te('dream.promote_tip') ?>">
+        ✨ <?= te('dream.promote') ?>
       </button>
     </form>
   <?php endif; ?>
 
-  <a class="btn" href="/dreams/<?= $dream['slug'] ?>/edit">Edit Dream</a>
-  <a class="btn" href="/dashboard/dream" style="margin-left:.6rem">Back to dashboard</a>
+  <a class="btn" href="/dreams/<?= $dream['slug'] ?>/edit"><?= te('dream.edit') ?></a>
+  <a class="btn" href="/dashboard/dream" style="margin-left:.6rem"><?= te('vision.back_dash') ?></a>
 </div>
 
 <?php

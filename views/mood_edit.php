@@ -9,11 +9,11 @@
 
 ?>
 
-<h1>Edit Mood Board</h1>
+<h1><?= te('mood.edit_board') ?></h1>
 
 <form method="post" action="/moods/<?= htmlspecialchars($board['slug']) ?>/edit" class="form">
     <div class="form-group">
-        <label for="title">Title</label>
+        <label for="title"><?= te('mood.title_label') ?></label>
         <input id="title"
                name="title"
                type="text"
@@ -23,7 +23,7 @@
     </div>
 
     <div class="form-group">
-        <label for="description">Description</label>
+        <label for="description"><?= te('mood.description') ?></label>
         <textarea id="description"
                   name="description"
                   rows="5"
@@ -32,6 +32,6 @@
         </textarea>
     </div>
 
-    <button type="submit" class="btn btn-primary">Save</button>
-    <a href="/moods/<?= htmlspecialchars($board['slug']) ?>" class="btn btn-secondary">Cancel</a>
+    <button type="submit" class="btn btn-primary"><?= te('action.save') ?></button>
+    <a href="/moods/<?= htmlspecialchars($board['slug']) ?>" class="btn btn-secondary"><?= te('action.cancel') ?></a>
 </form>

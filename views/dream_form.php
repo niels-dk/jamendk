@@ -1,10 +1,10 @@
 <?php
-$pageTitle = $dream['title'] ?? 'Dream Detail';
+$pageTitle = $dream['title'] ?? t('dream.detail');
 ob_start();
 
 $isEdit = isset($dream);
 ?>
-<h1><?= $isEdit ? 'Edit Dream' : 'Create a Dream' ?></h1>
+<h1><?= $isEdit ? te('dream.edit') : te('dream.create') ?></h1>
 
 <form id="dreamForm" class="card">
   <?php if ($isEdit): ?>
@@ -12,16 +12,16 @@ $isEdit = isset($dream);
     <input type="hidden" name="slug"     value="<?= $dream['slug'] ?>">
   <?php endif; ?>
 
-  <label>Dream Name<br>
+  <label><?= te('dream.name') ?><br>
     <input name="title" type="text" style="width:100%"
            value="<?= $isEdit ? htmlspecialchars($dream['title']) : '' ?>" required>
   </label><br><br>
 
-  <label>Inspiration<br>
+  <label><?= te('dream.inspiration') ?><br>
     <textarea name="description" rows="6" style="width:100%"><?= $isEdit ? htmlspecialchars($dream['description']) : '' ?></textarea>
   </label><br><br>
 
-  <h3>Anchors</h3>
+  <h3><?= te('vision.anchors') ?></h3>
 
 <?php
 function repeatInputs($name, $list) {
@@ -33,30 +33,30 @@ function repeatInputs($name, $list) {
 }
 ?>
 
-  <fieldset class="anchor-block"><legend>Locations</legend>
+  <fieldset class="anchor-block"><legend><?= te('anchor.locations') ?></legend>
     <?php repeatInputs('location', $anchors['locations'] ?? []); ?>
   </fieldset>
 
-  <fieldset class="anchor-block"><legend>Brands</legend>
+  <fieldset class="anchor-block"><legend><?= te('anchor.brands') ?></legend>
     <?php repeatInputs('brand', $anchors['brands'] ?? []); ?>
   </fieldset>
 
-  <fieldset class="anchor-block"><legend>People</legend>
+  <fieldset class="anchor-block"><legend><?= te('anchor.people') ?></legend>
     <?php repeatInputs('person', $anchors['people'] ?? []); ?>
   </fieldset>
 
-  <fieldset class="anchor-block"><legend>Seasons / Time</legend>
+  <fieldset class="anchor-block"><legend><?= te('anchor.seasons_time') ?></legend>
     <?php repeatInputs('season', $anchors['seasons'] ?? []); ?>
   </fieldset>
 
   <br>
 <div class="btn-group">
-  <button class="btn primary">Save Dream</button>
+  <button class="btn primary"><?= te('dream.save') ?></button>
   <button type="button" class="btn split" id="moreBtn">▾</button>
   <div class="split-menu" id="moreMenu">
-    <button type="button" data-go="stay">Save & stay</button>
-    <button type="button" data-go="view">Save & view board</button>
-    <button type="button" data-go="dash">Save & dashboard</button>
+    <button type="button" data-go="stay"><?= te('vision.save_stay') ?></button>
+    <button type="button" data-go="view"><?= te('dream.save_view') ?></button>
+    <button type="button" data-go="dash"><?= te('vision.save_dash') ?></button>
   </div>
 </div>
 </form>
@@ -66,7 +66,7 @@ function repeatInputs($name, $list) {
 
 <?php
 	$content = ob_get_clean();
-$pageTitle = $dream['title'] ?? 'Dream Detail';
+$pageTitle = $dream['title'] ?? t('dream.detail');
 if($isEdit){
 	include __DIR__ . '/layout.php';
 	}

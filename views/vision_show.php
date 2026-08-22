@@ -130,7 +130,7 @@ $anchors = $anchors ?? [];
       'sending'       => t('vision.sending'),
       'sent'          => t('vision.sent'),
       'failed'        => t('common.failed'),
-      'network_error' => t('common.network_error'),
+      'network_error' => t('status.net_error'),
     ], JSON_UNESCAPED_UNICODE) ?>;
 
     const open  = () => { modal.classList.add('is-open'); note.focus(); };
@@ -295,7 +295,7 @@ $anchors = $anchors ?? [];
         'sending'       => t('vision.sending'),
         'sent'          => t('vision.sent'),
         'failed'        => t('common.failed'),
-        'network_error' => t('common.network_error'),
+        'network_error' => t('status.net_error'),
       ], JSON_UNESCAPED_UNICODE) ?>;
       const open  = () => { modal.classList.add('is-open'); note.focus(); };
       const close = () => { modal.classList.remove('is-open'); };

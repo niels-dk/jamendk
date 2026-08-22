@@ -37,11 +37,11 @@ $shareUrl    = $tripToken
 
   <h4 style="margin-top:1.2rem;"><?= te('basics.publishing') ?></h4>
 
-  <label class="switch switch-row" title="Master switch — when off, the trip page is not available.">
+  <label class="switch switch-row" title="<?= te('basics.trip_master_tip') ?>">
     <span class="switch-label">
       <strong><?= te('basics.publish') ?></strong>
       <span style="display:block;opacity:.6;font-size:.8em;margin-top:.1rem;">
-        Master switch — when off, /trips/<?= $visionSlug ?> shows "not published".
+        <?= te('basics.trip_master_help', ['slug' => $visionSlug]) ?>
       </span>
     </span>
     <input class="switch-input" type="checkbox" name="trip_enabled" <?= $tripEnabled ? 'checked' : '' ?>>
@@ -70,10 +70,10 @@ $shareUrl    = $tripToken
         <option value="30"><?= te('basics.exp30') ?></option>
       </select>
       <button type="button" class="btn" id="tripShareRegen"
-              title="Mint a fresh link — the old one stops working"
+              title="<?= te('basics.mint_tip') ?>"
               style="padding:.3rem .7rem;font-size:.85em;">↻ <?= te('basics.new_link') ?></button>
       <span id="tripShareStatus" style="opacity:.65;font-size:.8em;">
-        <?= $tripExpires ? 'Expires ' . htmlspecialchars(date('M j, Y', strtotime($tripExpires)), ENT_QUOTES) : '' ?>
+        <?= $tripExpires ? te('basics.expires', ['date' => fmt_date($tripExpires)]) : '' ?>
       </span>
     </div>
   </div>
@@ -128,6 +128,15 @@ $shareUrl    = $tripToken
   const shareBox    = document.getElementById('tripShareBox');
   const shareUrl    = document.getElementById('tripShareUrl');
   const shareCopy   = document.getElementById('tripShareCopy');
+  // t() with no vars leaves the ':date' placeholder in the string, so the
+  // same key serves the PHP render above and this runtime one.
+  const T = <?= json_encode([
+    'expires'      => t('basics.expires'),
+    'copy'         => t('basics.copy'),
+    'copied'       => t('basics.copied'),
+    'confirm_mint' => t('basics.confirm_mint'),
+    'net_error'    => t('status.net_error'),
+  ], JSON_UNESCAPED_UNICODE) ?>;
   const shareRegen  = document.getElementById('tripShareRegen');
   const shareExpiry = document.getElementById('tripShareExpiry');
   const shareStatus = document.getElementById('tripShareStatus');
@@ -137,7 +146,7 @@ $shareUrl    = $tripToken
     if (s.url) shareUrl.value = s.url;
     if (shareStatus) {
       shareStatus.textContent = s.expires_at
-        ? 'Expires ' + new Date(s.expires_at.replace(' ', 'T')).toLocaleDateString()
+        ? T.expires.replace(':date', new Date(s.expires_at.replace(' ', 'T')).toLocaleDateString())
         : '';
     }
   }
@@ -152,20 +161,20 @@ $shareUrl    = $tripToken
       if (j?.success) applyShare(j);
       else if (shareStatus) shareStatus.textContent = '⚠ ' + (j?.error || 'Failed');
       return j;
-    } catch { if (shareStatus) shareStatus.textContent = '⚠ Network error'; }
+    } catch { if (shareStatus) shareStatus.textContent = '⚠ ' + T.net_error; }
   }
   shareCopy?.addEventListener('click', async () => {
     if (!shareUrl.value) return;
     try {
       await navigator.clipboard.writeText(shareUrl.value);
-      shareCopy.textContent = '✓ Copied';
-      setTimeout(() => shareCopy.textContent = 'Copy', 1200);
+      shareCopy.textContent = '✓ ' + T.copied;
+      setTimeout(() => shareCopy.textContent = T.copy, 1200);
     } catch {
       shareUrl.select(); document.execCommand('copy');
     }
   });
   shareRegen?.addEventListener('click', async () => {
-    if (!confirm('Mint a new link? The current one stops working immediately.')) return;
+    if (!confirm(T.confirm_mint)) return;
     await shareAction({ action: 'regenerate' });
   });
   shareExpiry?.addEventListener('change', () => {

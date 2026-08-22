@@ -93,6 +93,8 @@ $slug = htmlspecialchars($vision['slug'] ?? '', ENT_QUOTES);
       'confirm_remove'=>t('roles.confirm_remove'),'remove_failed'=>t('roles.remove_failed'),
       'update_failed'=>t('roles.update_failed'),'whole_team'=>t('roles.whole_team'),
       'already_on'=>t('roles.already_on'),'failed'=>t('status.save_failed'),
+      'no_name'=>t('roles.no_name'),'remove'=>t('action.remove'),
+      'net_error'=>t('status.net_error'),
       'net_error'=>t('status.net_error'),
   ], JSON_UNESCAPED_UNICODE) ?>;
   const ROLE_LABELS = {
@@ -117,15 +119,15 @@ $slug = htmlspecialchars($vision['slug'] ?? '', ENT_QUOTES);
     if (canManage) loadTeams();
     const rows = (data.members || []).map(m => {
       const control = m.role === 'owner'
-        ? `<span class="owner-pill">Owner</span>`
+        ? `<span class="owner-pill">${T.owner}</span>`
         : canManage
           ? `<select class="role-set" data-id="${m.id}">${roleOptions(m.role)}</select>
-             <button type="button" class="role-remove" data-id="${m.id}" title="Remove">×</button>`
+             <button type="button" class="role-remove" data-id="${m.id}" title="${T.remove}">×</button>`
           : `<span class="owner-pill" style="background:#2a2d35;color:#bbb;">${ROLE_LABELS[m.role] || m.role}</span>`;
       return `
         <div class="role-row">
           <div class="who">
-            <div class="name">${esc(m.name || '(no name)')}</div>
+            <div class="name">${esc(m.name || T.no_name)}</div>
             <div class="mail">${esc(m.email || '')}</div>
           </div>
           <div style="display:flex;align-items:center;gap:.35rem;">${control}</div>
@@ -166,7 +168,7 @@ $slug = htmlspecialchars($vision['slug'] ?? '', ENT_QUOTES);
       let j = await postAddRole(em, false);
       if (j && j.needs_tier_ack) {
         if (!confirm(j.message)) { status.textContent = T.cancelled; return; }
-        status.textContent = 'Adding…';
+        status.textContent = T.adding;
         j = await postAddRole(em, true);
       }
       if (j && j.success && j.unknown) {
@@ -283,7 +285,7 @@ $slug = htmlspecialchars($vision['slug'] ?? '', ENT_QUOTES);
         if (j?.success) { teamStatus.textContent = T.added; load(); }
         else teamStatus.textContent = '⚠ ' + (j?.error || 'Failed');
       }
-    } catch { teamStatus.textContent = '⚠ Network error'; }
+    } catch { teamStatus.textContent = '⚠ ' + T.net_error; }
   });
 
   load();

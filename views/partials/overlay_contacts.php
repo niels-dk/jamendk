@@ -91,19 +91,37 @@ $slug = htmlspecialchars($vision['slug'] ?? '', ENT_QUOTES);
       'saving'=>t('status.saving'),'saved'=>t('status.saved'),
       'save_failed'=>t('status.save_failed'),'net_error'=>t('status.net_error'),
       'delete_failed'=>t('status.delete_failed'),
+      'load_one_failed'=>t('contacts.load_one_failed'),
+      'main'=>t('contacts.main'),'current'=>t('contacts.current'),
+      'edit'=>t('action.edit'),'delete'=>t('action.delete'),'remove'=>t('action.remove'),
   ], JSON_UNESCAPED_UNICODE) ?>;
-  const keyOptions = ['Name','Company','Address','Mobile','Email','Country','Custom…'];
+
+  // The option VALUE is the field_key stored in vision_contact_fields, and
+  // controllers/trip.php + controllers/vision.php pivot on it in SQL
+  // (MAX(CASE WHEN f.field_key='Name' ...)). So the value stays English in
+  // every language and only the label translates — same rule as the vision
+  // anchors, where a translated value would have silently broken the trip page.
+  const keyOptions = <?= json_encode([
+      ['v'=>'Name',    'l'=>t('contacts.f_name')],
+      ['v'=>'Company', 'l'=>t('contacts.f_company')],
+      ['v'=>'Address', 'l'=>t('contacts.f_address')],
+      ['v'=>'Mobile',  'l'=>t('contacts.f_mobile')],
+      ['v'=>'Email',   'l'=>t('contacts.f_email')],
+      ['v'=>'Country', 'l'=>t('contacts.f_country')],
+      ['v'=>'Custom…', 'l'=>t('contacts.custom')],
+  ], JSON_UNESCAPED_UNICODE) ?>;
+  const keyValues = keyOptions.map(o => o.v);
 
   function fieldRow(key='', val='') {
-    const opts = keyOptions.map(op => `<option value="${op}" ${op===key?'selected':''}>${op}</option>`).join('');
-    const customOpt = (key && !keyOptions.includes(key))
+    const opts = keyOptions.map(o => `<option value="${o.v}" ${o.v===key?'selected':''}>${o.l}</option>`).join('');
+    const customOpt = (key && !keyValues.includes(key))
       ? `<option value="${key}" selected>${key}</option>`
       : '';
     return `
       <div class="field-row">
         <select class="field-key">${customOpt}${opts}</select>
         <input type="text" class="field-value" value="${val.replace(/"/g,'&quot;')}">
-        <button type="button" class="btn-remove-field" aria-label="Remove">×</button>
+        <button type="button" class="btn-remove-field" aria-label="${T.remove}">×</button>
       </div>`;
   }
   function addFieldRow(k='', v='') { fields.insertAdjacentHTML('beforeend', fieldRow(k, v)); }
@@ -132,8 +150,8 @@ $slug = htmlspecialchars($vision['slug'] ?? '', ENT_QUOTES);
         ? [cmp, email].filter(Boolean).join(' — ')
         : (primary === email ? cmp : [cmp, email].filter(v => v && v !== primary).join(' — '));
       const flags = [];
-      if (r.is_main)    flags.push('Main');
-      if (r.is_current) flags.push('Current');
+      if (r.is_main)    flags.push(T.main);
+      if (r.is_current) flags.push(T.current);
       const flagTxt = flags.length ? `<small class="badge">${flags.join(', ')}</small>` : '';
       return `
         <div class="contact-item" data-id="${r.vc_id}">
@@ -142,8 +160,8 @@ $slug = htmlspecialchars($vision['slug'] ?? '', ENT_QUOTES);
             ${secondary ? `<div class="small">${secondary}</div>` : ''}
           </div>
           <div class="actions">
-            <button type="button" class="btn act-edit">Edit</button>
-            <button type="button" class="btn act-del">Delete</button>
+            <button type="button" class="btn act-edit">${T.edit}</button>
+            <button type="button" class="btn act-del">${T.delete}</button>
           </div>
         </div>`;
     }).join('');
@@ -261,7 +279,7 @@ $slug = htmlspecialchars($vision['slug'] ?? '', ENT_QUOTES);
         form.show_on_dashboard.checked = !!j.flags?.show_on_dashboard;
         form.show_on_trip.checked      = !!j.flags?.show_on_trip;
         showForm();
-      } catch { alert('Failed to load contact'); }
+      } catch { alert(T.load_one_failed); }
     }
   });
 

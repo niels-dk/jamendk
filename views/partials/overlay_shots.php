@@ -146,7 +146,7 @@ $refMediaJson = htmlspecialchars(json_encode($shotRefMedia ?? []), ENT_QUOTES);
     max-height:150px; overflow-y:auto;
   }
   .shot-ref-picker:empty::after {
-    content:"No mood board linked yet — link one under Relations to pick reference images.";
+    content:<?= json_encode(t('shots.no_mood_linked'), JSON_UNESCAPED_UNICODE) ?>;
     opacity:.45; font-size:.8em;
   }
   .shot-ref-picker img {
@@ -189,6 +189,7 @@ $refMediaJson = htmlspecialchars(json_encode($shotRefMedia ?? []), ENT_QUOTES);
       'net_error'=>t('status.net_error'),'load_failed'=>t('shots.load_failed'),
       'confirm_delete'=>t('shots.confirm_delete'),'delete_failed'=>t('status.delete_failed'),
       'migration'=>t('shots.migration'),
+      'reopen'=>t('shots.reopen'),'mark_captured'=>t('shots.mark_captured'),
   ], JSON_UNESCAPED_UNICODE) ?>;
   const TYPE_LABEL = { drone:'🚁 '+T.type_drone, broll:'🎥 '+T.type_broll,
                        interview:'🎤 '+T.type_interview, timelapse:'⏱ '+T.type_timelapse,
@@ -245,7 +246,7 @@ $refMediaJson = htmlspecialchars(json_encode($shotRefMedia ?? []), ENT_QUOTES);
       html += `
         <div class="shot-row ${captured ? 'is-captured' : ''} ${!+s.show_on_trip ? 'is-hidden-on-trip' : ''}" data-id="${s.id}">
           <input type="checkbox" class="shot-check" ${captured ? 'checked' : ''}
-                 title="${captured ? 'Reopen' : 'Mark captured'}">
+                 title="${captured ? T.reopen : T.mark_captured}">
           <span class="shot-main">
             <span class="shot-title">${+s.priority ? '<span class="must-star" title="'+esc(T.must)+'">★</span> ' : ''}${esc(s.title)}</span>
             ${sub ? `<span class="shot-sub">${esc(sub)}</span>` : ''}

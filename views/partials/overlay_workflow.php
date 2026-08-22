@@ -58,21 +58,27 @@ $STATUSES = [
   const notes    = form.querySelector('#wfNotes');
   const showCb   = form.querySelector('[name="show_workflow"]');
   const msg      = form.querySelector('#wfStatusMsg');
+  const T = <?= json_encode([
+    'saving'      => t('status.saving'),
+    'saved'       => t('status.saved'),
+    'save_failed' => t('status.save_failed'),
+    'net_error'   => t('status.net_error'),
+  ], JSON_UNESCAPED_UNICODE) ?>;
 
   function save() {
     const p = new URLSearchParams();
     p.set('status', status.value);
     p.set('notes', notes.value);
     p.set('show_workflow', showCb.checked ? '1' : '0');
-    msg.textContent = 'Saving…';
+    msg.textContent = T.saving;
     fetch(`/api/visions/${slug}/workflow`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: p.toString()
     }).then(r => r.json()).then(j => {
-      msg.textContent = j.success ? 'Saved' : ('⚠ ' + (j.error || 'Save failed'));
+      msg.textContent = j.success ? T.saved : ('⚠ ' + (j.error || T.save_failed));
     }).catch(e => {
-      msg.textContent = '⚠ Network error';
+      msg.textContent = '⚠ ' + T.net_error;
       console.error(e);
     });
   }

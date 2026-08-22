@@ -32,14 +32,14 @@ $showTrip = !empty($budget['show_on_trip']);
           <input type="checkbox" <?= !empty($bi['paid']) ? 'checked' : '' ?>>
           <span class="bi-paid-lbl">paid</span>
         </label>
-        <button type="button" class="bi-remove" aria-label="Remove">×</button>
+        <button type="button" class="bi-remove" aria-label="<?= te('action.remove') ?>">×</button>
       </div>
     <?php endforeach; ?>
   </div>
   <button type="button" class="btn btn-secondary" id="btnAddBudgetItem">+ <?= te('budget.add_line') ?></button>
 
   <label for="budgetAmount" style="margin-top:.8rem;display:block;">
-    Total <span id="budgetTotalHint" style="opacity:.5;font-size:.85em;"></span>
+    <?= te('budget.total') ?> <span id="budgetTotalHint" style="opacity:.5;font-size:.85em;"></span>
   </label>
   <input id="budgetAmount" name="amount" type="text" inputmode="decimal" placeholder="0.00" value="<?= $amount ?>">
 
@@ -111,6 +111,13 @@ $showTrip = !empty($budget['show_on_trip']);
   const hidden  = form.querySelector('#budgetCurrency');
   const list    = form.querySelector('#currencyList');
   const amount  = form.querySelector('#budgetAmount');
+  const T = <?= json_encode([
+    'remove'       => t('action.remove'),
+    'sum_of_lines' => t('budget.sum_of_lines'),
+    'lines'        => t('budget.lines'),
+    'remaining'    => t('budget.remaining'),
+    'over_by'      => t('budget.over_by'),
+  ], JSON_UNESCAPED_UNICODE) ?>;
 
   function toCents(val) {
     const n = parseFloat((val || '').replace(',', '.'));
@@ -133,7 +140,7 @@ $showTrip = !empty($budget['show_on_trip']);
       <label class="bi-paid" title="Paid?">
         <input type="checkbox"><span class="bi-paid-lbl">paid</span>
       </label>
-      <button type="button" class="bi-remove" aria-label="Remove">×</button>`;
+      <button type="button" class="bi-remove" aria-label="${T.remove}">×</button>`;
     div.querySelector('.bi-label').value = label;
     div.querySelector('.bi-amount').value = amt;
     div.querySelector('.bi-paid input').checked = paid;
@@ -149,12 +156,12 @@ $showTrip = !empty($budget['show_on_trip']);
       // No overall budget set → the lines define the total
       // (don't clobber the field while the user is typing in it)
       if (document.activeElement !== amount) amount.value = (sum / 100).toFixed(2);
-      if (totalHint) totalHint.textContent = '= sum of line items';
+      if (totalHint) totalHint.textContent = T.sum_of_lines;
     } else {
       const left = total - sum;
       if (totalHint) {
         totalHint.textContent =
-          `· lines ${(sum / 100).toFixed(2)} · ${left >= 0 ? 'remaining' : 'OVER by'} ${(Math.abs(left) / 100).toFixed(2)}`;
+          `· ${T.lines} ${(sum / 100).toFixed(2)} · ${left >= 0 ? T.remaining : T.over_by} ${(Math.abs(left) / 100).toFixed(2)}`;
         totalHint.style.color = left < 0 ? '#f08792' : '';
       }
     }

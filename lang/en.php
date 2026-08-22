@@ -506,7 +506,6 @@ return [
     'footer.tested_in'    => 'tested in Brazil',
 
     'common.failed'        => 'Failed',
-    'common.network_error' => 'Network error',
 
     /* ── Vision show page ── */
     'anchor.seasons_time'          => 'Seasons / Time',
@@ -524,5 +523,64 @@ return [
     'vision.handoff_tip'           => "Tell the owner you're done — they get a note on their next visit",
     'vision.owner_sees_note'       => 'The owner will see your note the next time they open their dashboard.',
     'vision.handoff_placeholder'   => "Optional note — what did you do, what's left, anything to look at…",
+
+
+    'action.remove' => 'Remove',
+
+    /* ── Basics: trip publishing ── */
+    'basics.trip_master_tip'  => 'Master switch — when off, the trip page is not available.',
+    'basics.trip_master_help' => 'Master switch — when off, /trips/:slug shows "not published".',
+    'basics.mint_tip'         => 'Mint a fresh link — the old one stops working',
+    'basics.expires'          => 'Expires :date',
+    'basics.copied'           => 'Copied',
+    'basics.confirm_mint'     => 'Mint a new link? The current one stops working immediately.',
+
+    /* ── Budget totals ── */
+    'budget.total'        => 'Total',
+    'budget.sum_of_lines' => '= sum of line items',
+    'budget.lines'        => 'lines',
+    'budget.remaining'    => 'remaining',
+    'budget.over_by'      => 'OVER by',
+
+    /* ── Contact field labels (values stay English — see overlay_contacts.php) ── */
+    'contacts.f_name'    => 'Name',
+    'contacts.f_company' => 'Company',
+    'contacts.f_address' => 'Address',
+    'contacts.f_mobile'  => 'Mobile',
+    'contacts.f_email'   => 'Email',
+    'contacts.f_country' => 'Country',
+    'contacts.load_one_failed' => 'Failed to load contact',
+
+    /* ── Documents ── */
+    'docs.no_group'         => '— No group —',
+    'docs.new_group'        => 'New group…',
+    'docs.new_group_prompt' => 'New group name:',
+    'docs.trip_toggle_tip'  => 'Click to toggle visibility on the Trip layer',
+    'docs.on_trip'          => 'On trip',
+    'docs.off_trip'         => 'Off trip',
+    'docs.update_failed'    => 'Update failed',
+    'docs.status_failed'    => 'Failed to update status',
+    'docs.create_failed'    => 'Create failed',
+    'docs.choose_file'      => 'Choose a file first.',
+    'docs.uploading'        => 'Uploading…',
+    'docs.uploaded'         => 'Uploaded',
+    'docs.upload_failed'    => 'Upload failed',
+
+    /* ── Goals ── */
+    'goals.off_board'   => 'not on board yet',
+    'goals.user'        => 'User',
+    'goals.returned'    => 'Returned',
+    'goals.resolved'    => 'Resolved',
+    'goals.load_failed' => 'Failed to load goals.',
+
+    /* ── Relations ── */
+    'rel.one_mood_hint' => 'Only one mood board per vision. To change, remove the current one first.',
+
+    /* ── Roles ── */
+    'roles.no_name' => '(no name)',
+
+    /* ── Shots ── */
+    'shots.mark_captured'  => 'Mark captured',
+    'shots.no_mood_linked' => 'No mood board linked yet — link one under Relations to pick reference images.',
 
 ];

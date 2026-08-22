@@ -25,7 +25,7 @@ $showTrip     = (int)($vision['show_mood_on_trip']      ?? 0);
           <span class="chip-id"><?= htmlspecialchars($linkedMood['slug']) ?></span>
         <?php endif; ?>
       </span>
-      <button type="button" class="chip-remove" aria-label="Remove">×</button>
+      <button type="button" class="chip-remove" aria-label="<?= te('action.remove') ?>">×</button>
     </div>
 
     <input id="mood-search" type="text" placeholder="<?= te('rel.search_placeholder') ?>"
@@ -34,7 +34,7 @@ $showTrip     = (int)($vision['show_mood_on_trip']      ?? 0);
     <div class="mood-suggestions" hidden></div>
   </div>
   <p class="hint" style="opacity:.6;font-size:.85em;margin:.25rem 0 1rem;">
-    Only one mood board per vision. To change, remove the current one first.
+    <?= te('rel.one_mood_hint') ?>
   </p>
 
   <h4><?= te('vis.visibility') ?></h4>

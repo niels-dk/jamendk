@@ -215,6 +215,9 @@ $goalsUid = (int)($currentUserId ?? ($GLOBALS['currentUserId'] ?? 0));
       'delete_failed'=>t('status.delete_failed'),
       'no_team'=>t('goals.no_team'),'ms_due'=>t('goals.ms_due'),
       'ms_assign'=>t('goals.ms_assign'),'load_one_failed'=>t('goals.load_one_failed'),
+      'off_board'=>t('goals.off_board'),'user'=>t('goals.user'),
+      'returned'=>t('goals.returned'),'resolved'=>t('goals.resolved'),
+      'load_failed'=>t('goals.load_failed'),'remove'=>t('action.remove'),
   ], JSON_UNESCAPED_UNICODE) ?>;
   const STATUS_LABELS = {
     not_started: T.not_started, in_progress: T.in_progress,
@@ -251,7 +254,7 @@ $goalsUid = (int)($currentUserId ?? ($GLOBALS['currentUserId'] ?? 0));
     });
     const opt = m =>
       `<option value="${m.user_id}" ${String(m.user_id) === sel ? 'selected' : ''}>` +
-      `${escapeHtml(memberLabel(m))}${m.offBoard ? ' · not on board yet' : ''}</option>`;
+      `${escapeHtml(memberLabel(m))}${m.offBoard ? ' · ' + T.off_board : ''}</option>`;
     let html = `<option value="">${placeholder}</option>`;
     Object.keys(groups).sort().forEach(tn => {
       html += `<optgroup label="👥 ${escapeHtml(tn)}">${groups[tn].map(opt).join('')}</optgroup>`;
@@ -294,7 +297,7 @@ $goalsUid = (int)($currentUserId ?? ($GLOBALS['currentUserId'] ?? 0));
         <input type="text" class="ms-text" value="${escapeHtml(text)}" placeholder="${T.milestone_placeholder}">
         <input type="date" class="ms-due" value="${escapeHtml(due || '')}" title="${T.ms_due}">
         <select class="ms-assignee" title="${T.ms_assign}">${memberOptions(assignee)}</select>
-        <button type="button" class="ms-remove" aria-label="Remove">×</button>
+        <button type="button" class="ms-remove" aria-label="${T.remove}">×</button>
       </div>`;
   }
   function addMsRow(t='', d=false, due='', assignee='') { msWrap.insertAdjacentHTML('beforeend', msRow(t, d, due, assignee)); }
@@ -325,7 +328,7 @@ $goalsUid = (int)($currentUserId ?? ($GLOBALS['currentUserId'] ?? 0));
                     background:${mine ? 'rgba(58,118,210,.14)' : 'rgba(255,255,255,.04)'};
                     border:1px solid ${mine ? 'rgba(58,118,210,.35)' : '#2b3346'};">
           <div style="font-size:.75em;opacity:.6;margin-bottom:.15rem;">
-            ${escapeHtml(c.author || 'User')} · ${escapeHtml(when)}
+            ${escapeHtml(c.author || T.user)} · ${escapeHtml(when)}
           </div>
           <div style="font-size:.9em;white-space:pre-wrap;">${escapeHtml(c.body || '')}</div>
         </div>`;
@@ -419,10 +422,10 @@ $goalsUid = (int)($currentUserId ?? ($GLOBALS['currentUserId'] ?? 0));
         ? `<span class="assignee-pill" title="${escapeHtml(g.assignee_email || '')}">👤 ${escapeHtml(g.assignee_name)}</span>`
         : '';
       const returned = (g.assignment_status === 'returned' && active)
-        ? `<span class="returned-pill">↩ Returned</span>`
+        ? `<span class="returned-pill">↩ ${T.returned}</span>`
         : '';
       const resolved = (g.assignment_status === 'resolved')
-        ? `<span class="assignee-pill" style="background:#15351f;color:#7ed99a;border-color:#1e5530;">✓ Resolved</span>`
+        ? `<span class="assignee-pill" style="background:#15351f;color:#7ed99a;border-color:#1e5530;">✓ ${T.resolved}</span>`
         : '';
       return `
         <div class="goal-row ${cls}" data-id="${g.id}">
@@ -446,7 +449,7 @@ $goalsUid = (int)($currentUserId ?? ($GLOBALS['currentUserId'] ?? 0));
   function loadList() {
     fetch(`/api/visions/${slug}/goals`)
       .then(r => r.json()).then(renderList)
-      .catch(() => list.innerHTML = '<div class="error">Failed to load goals.</div>');
+      .catch(() => list.innerHTML = `<div class="error">${T.load_failed}</div>`);
   }
 
   function collectFormData() {
@@ -489,7 +492,7 @@ $goalsUid = (int)($currentUserId ?? ($GLOBALS['currentUserId'] ?? 0));
         status.textContent = '⚠ ' + (j?.error || T.save_failed);
       }
     } catch (e) {
-      status.textContent = '⚠ Network error';
+      status.textContent = '⚠ ' + T.net_error;
       console.error(e);
     }
   }

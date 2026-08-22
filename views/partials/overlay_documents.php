@@ -37,12 +37,12 @@ $STATUSES = [
               <?= htmlspecialchars($statusLabel) ?>
             </span>
             <span class="group-pill js-group" data-current="<?= isset($doc['group_id']) ? (int)$doc['group_id'] : '' ?>">
-              <?= !empty($doc['group_name']) ? htmlspecialchars($doc['group_name']) : '— No group —' ?>
+              <?= !empty($doc['group_name']) ? htmlspecialchars($doc['group_name']) : te('docs.no_group') ?>
             </span>
             <button type="button" class="trip-pill js-trip"
                     data-on="<?= $onTrip ? '1' : '0' ?>"
-                    title="Click to toggle visibility on the Trip layer">
-              <?= $onTrip ? '👁 On trip' : '🚫 Off trip' ?>
+                    title="<?= te('docs.trip_toggle_tip') ?>">
+              <?= $onTrip ? '👁 ' . te('docs.on_trip') : '🚫 ' . te('docs.off_trip') ?>
             </button>
             <span class="doc-date"><?= date('Y-m-d H:i', strtotime($doc['created_at'])) ?></span>
           </div>
@@ -144,12 +144,32 @@ $STATUSES = [
   const menu   = wrap.querySelector('#docMenu');
   const form   = wrap.querySelector('#documentUploadForm');
   const statusEl = wrap.querySelector('#uploadStatus');
+  const T = <?= json_encode([
+    'draft'         => t('docs.draft'),
+    'waiting_brand' => t('docs.waiting_brand'),
+    'final'         => t('docs.final'),
+    'signed'        => t('docs.signed'),
+    'no_group'      => t('docs.no_group'),
+    'new_group'     => t('docs.new_group'),
+    'new_group_prompt' => t('docs.new_group_prompt'),
+    'on_trip'       => t('docs.on_trip'),
+    'off_trip'      => t('docs.off_trip'),
+    'download'      => t('docs.download'),
+    'update_failed' => t('docs.update_failed'),
+    'status_failed' => t('docs.status_failed'),
+    'create_failed' => t('docs.create_failed'),
+    'choose_file'   => t('docs.choose_file'),
+    'uploaded'      => t('docs.uploaded'),
+    'upload_failed' => t('docs.upload_failed'),
+    'net_error'     => t('status.net_error'),
+    'uploading'     => t('docs.uploading'),
+  ], JSON_UNESCAPED_UNICODE) ?>;
 
   const STATUSES = [
-    { key:'draft',         label:'Draft' },
-    { key:'waiting_brand', label:'Waiting Brand' },
-    { key:'final',         label:'Final' },
-    { key:'signed',        label:'Signed' },
+    { key:'draft',         label:T.draft },
+    { key:'waiting_brand', label:T.waiting_brand },
+    { key:'final',         label:T.final },
+    { key:'signed',        label:T.signed },
   ];
 
   let groupsCache = null;
@@ -216,10 +236,10 @@ $STATUSES = [
           body: fd.toString()
         });
         const j = await res.json();
-        if (!res.ok || !j.success) { alert(j.error || 'Update failed'); return; }
+        if (!res.ok || !j.success) { alert(j.error || T.update_failed); return; }
         tPill.dataset.on = String(next);
-        tPill.textContent = next ? '👁 On trip' : '🚫 Off trip';
-      } catch { alert('Network error'); }
+        tPill.textContent = next ? '👁 ' + T.on_trip : '🚫 ' + T.off_trip;
+      } catch { alert(T.net_error); }
       return;
     }
 
@@ -234,7 +254,7 @@ $STATUSES = [
           method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body: fd.toString()
         });
         const j = await res.json();
-        if (!res.ok || !j.success) { alert(j.error || 'Failed to update status'); return; }
+        if (!res.ok || !j.success) { alert(j.error || T.status_failed); return; }
         const found = STATUSES.find(s => s.key === key);
         sPill.dataset.status = key;
         sPill.textContent = found ? found.label : key;
@@ -246,19 +266,19 @@ $STATUSES = [
       const groups = await loadGroups();
       const current = gPill.dataset.current || '';
       const items = [
-        `<button type="button" data-id="" class="${current===''?'is-active':''}">— No group —</button>`,
+        `<button type="button" data-id="" class="${current===''?'is-active':''}">${T.no_group}</button>`,
         ...groups.map(g => `<button type="button" data-id="${g.id}" class="${String(g.id)===String(current)?'is-active':''}">${g.name}</button>`),
         `<div class="menu-sep"></div>`,
-        `<button type="button" data-id="__create__">+ New group…</button>`
+        `<button type="button" data-id="__create__">+ ${T.new_group}</button>`
       ].join('');
       openMenuAt(gPill, items, async (id) => {
         if (id === '__create__') {
-          const name = prompt('New group name:');
+          const name = prompt(T.new_group_prompt);
           if (!name) return;
           const fd = new FormData(); fd.append('name', name);
           const r1 = await fetch(`/api/visions/${slug}/groups:create`, { method:'POST', body: fd });
           const j1 = await r1.json();
-          if (!r1.ok || !j1.success) { alert(j1.error || 'Create failed'); return; }
+          if (!r1.ok || !j1.success) { alert(j1.error || T.create_failed); return; }
           groupsCache.push(j1.group);
           id = String(j1.group.id);
         }
@@ -267,10 +287,10 @@ $STATUSES = [
           method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body: fd.toString()
         });
         const j2 = await r2.json();
-        if (!r2.ok || !j2.success) { alert(j2.error || 'Update failed'); return; }
+        if (!r2.ok || !j2.success) { alert(j2.error || T.update_failed); return; }
         const g = (groupsCache || []).find(x => String(x.id) === String(id));
         gPill.dataset.current = id;
-        gPill.textContent = g ? g.name : '— No group —';
+        gPill.textContent = g ? g.name : T.no_group;
       });
     }
   });
@@ -288,12 +308,12 @@ $STATUSES = [
     e.preventDefault();
     const fd = new FormData(form);
     const files = fd.getAll('file[]');
-    if (!files.length) { statusEl.textContent = 'Choose a file first.'; return; }
-    statusEl.textContent = 'Uploading…';
+    if (!files.length) { statusEl.textContent = T.choose_file; return; }
+    statusEl.textContent = T.uploading;
     try {
       const res = await fetch(`/api/visions/${slug}/documents`, { method:'POST', body: fd });
       const j   = await res.json();
-      if (!res.ok || !j.success) { statusEl.textContent = '⚠ ' + (j.error || 'Upload failed'); return; }
+      if (!res.ok || !j.success) { statusEl.textContent = '⚠ ' + (j.error || T.upload_failed); return; }
       (j.files || []).forEach(f => {
         const uploaded = (f.created_at || new Date().toISOString()).replace('T',' ').slice(0,16);
         const statusKey   = f.status || 'draft';
@@ -306,17 +326,17 @@ $STATUSES = [
             <div class="doc-name" title="${f.file_name}">${f.file_name}</div>
             <div class="doc-meta">
               <span class="status-pill js-status" data-status="${statusKey}">${statusLabel}</span>
-              <span class="group-pill js-group" data-current="">— No group —</span>
+              <span class="group-pill js-group" data-current="">${T.no_group}</span>
               <span class="doc-date">${uploaded}</span>
             </div>
           </div>
-          <div class="doc-actions"><a class="action-link" href="${f.download_url}">Download</a></div>`;
+          <div class="doc-actions"><a class="action-link" href="${f.download_url}">${T.download}</a></div>`;
         list.prepend(row);
       });
-      statusEl.textContent = '✅ Uploaded';
+      statusEl.textContent = '✅ ' + T.uploaded;
       form.reset();
     } catch (err) {
-      statusEl.textContent = '⚠ Upload failed';
+      statusEl.textContent = '⚠ ' + T.upload_failed;
       console.error(err);
     }
   });

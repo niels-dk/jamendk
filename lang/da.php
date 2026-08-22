@@ -517,7 +517,6 @@ return [
     'footer.tested_in'    => 'testet i Brasilien',
 
     'common.failed'        => 'Mislykkedes',
-    'common.network_error' => 'Netværksfejl',
 
     /* ── Vision show page ── */
     'anchor.seasons_time'          => 'Sæsoner / Tid',
@@ -535,5 +534,64 @@ return [
     'vision.handoff_tip'           => 'Fortæl ejeren at du er færdig — de får en note næste gang de kigger forbi',
     'vision.owner_sees_note'       => 'Ejeren ser din note næste gang de åbner oversigten.',
     'vision.handoff_placeholder'   => 'Valgfri note — hvad lavede du, hvad mangler, noget der skal kigges på…',
+
+
+    'action.remove' => 'Fjern',
+
+    /* ── Basics: trip publishing ── */
+    'basics.trip_master_tip'  => 'Hovedkontakt — når den er slået fra, er trip-siden ikke tilgængelig.',
+    'basics.trip_master_help' => 'Hovedkontakt — når den er slået fra, viser /trips/:slug "ikke udgivet".',
+    'basics.mint_tip'         => 'Lav et nyt link — det gamle holder op med at virke',
+    'basics.expires'          => 'Udløber :date',
+    'basics.copied'           => 'Kopieret',
+    'basics.confirm_mint'     => 'Lav et nyt link? Det nuværende holder op med at virke med det samme.',
+
+    /* ── Budget totals ── */
+    'budget.total'        => 'I alt',
+    'budget.sum_of_lines' => '= summen af posterne',
+    'budget.lines'        => 'poster',
+    'budget.remaining'    => 'tilbage',
+    'budget.over_by'      => 'OVER med',
+
+    /* ── Contact field labels (values stay English — see overlay_contacts.php) ── */
+    'contacts.f_name'    => 'Navn',
+    'contacts.f_company' => 'Firma',
+    'contacts.f_address' => 'Adresse',
+    'contacts.f_mobile'  => 'Mobil',
+    'contacts.f_email'   => 'E-mail',
+    'contacts.f_country' => 'Land',
+    'contacts.load_one_failed' => 'Kunne ikke indlæse kontakten',
+
+    /* ── Documents ── */
+    'docs.no_group'         => '— Ingen gruppe —',
+    'docs.new_group'        => 'Ny gruppe…',
+    'docs.new_group_prompt' => 'Navn på ny gruppe:',
+    'docs.trip_toggle_tip'  => 'Klik for at slå synlighed på trip-laget til eller fra',
+    'docs.on_trip'          => 'På trip',
+    'docs.off_trip'         => 'Ikke på trip',
+    'docs.update_failed'    => 'Opdatering mislykkedes',
+    'docs.status_failed'    => 'Kunne ikke opdatere status',
+    'docs.create_failed'    => 'Oprettelse mislykkedes',
+    'docs.choose_file'      => 'Vælg en fil først.',
+    'docs.uploading'        => 'Uploader…',
+    'docs.uploaded'         => 'Uploadet',
+    'docs.upload_failed'    => 'Upload mislykkedes',
+
+    /* ── Goals ── */
+    'goals.off_board'   => 'ikke på boardet endnu',
+    'goals.user'        => 'Bruger',
+    'goals.returned'    => 'Sendt tilbage',
+    'goals.resolved'    => 'Løst',
+    'goals.load_failed' => 'Kunne ikke indlæse mål.',
+
+    /* ── Relations ── */
+    'rel.one_mood_hint' => 'Kun ét mood board pr. vision. Vil du skifte, så fjern det nuværende først.',
+
+    /* ── Roles ── */
+    'roles.no_name' => '(uden navn)',
+
+    /* ── Shots ── */
+    'shots.mark_captured'  => 'Markér som fanget',
+    'shots.no_mood_linked' => 'Intet mood board tilknyttet endnu — tilknyt et under Relations for at vælge referencebilleder.',
 
 ];

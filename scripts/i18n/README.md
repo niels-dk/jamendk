@@ -33,6 +33,18 @@ machine: it tokenises each language file and checks strings close and brackets
 balance. A parse error in a language file is a white screen on every page for
 that language only.
 
+`php_balance.py` does the same for any *other* PHP file — useful after a
+scripted edit, which is how most changes here get made:
+
+```
+python scripts/i18n/php_balance.py controllers/media.php views/login.php
+```
+
+It examines only what is inside `<?php … ?>`. That is deliberate: an earlier
+version checked whole files and reported phantom errors on any view containing
+CSS or a URL, because `#12161f` reads as a PHP `#` comment and `https://` as a
+`//` comment — each swallowing the rest of its line, closing brace included.
+
 ## Regenerating pt-BR
 
 `lang/pt-BR.php` is **generated** from `lang/en.php` so the key order and

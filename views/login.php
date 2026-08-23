@@ -27,6 +27,14 @@ ob_start();
     </div>
   <?php endif; ?>
 
+  <?php if (!empty($signedOut)): ?>
+    <div style="background:rgba(58,118,210,.14);border:1px solid rgba(58,118,210,.4);
+                color:#a8c8ee;padding:.6rem .9rem;border-radius:8px;margin-bottom:1rem;
+                font-size:.9rem;">
+      <?= te('auth.signed_out_return') ?>
+    </div>
+  <?php endif; ?>
+
   <form method="post" style="display:flex;flex-direction:column;gap:.8rem;">
     <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
     <?php if (!empty($next)): ?>

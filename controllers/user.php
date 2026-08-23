@@ -21,6 +21,8 @@ class user_controller
 
         // Remember where the user was trying to go (set as ?next=)
         $next = self::safeNext($_REQUEST['next'] ?? '');
+        // Arrived here from Logout with somewhere to return to.
+        $signedOut = !empty($_GET['out']) && $next !== '';
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!csrf_check($_POST['csrf_token'] ?? null)) {
                 $error = t('auth.err_expired');
@@ -380,6 +382,11 @@ class user_controller
 
     public static function logout(): void
     {
+        // Read this BEFORE the session is destroyed and capture it in a local:
+        // it has to ride in the redirect URL, because there will be no session
+        // left to stash it in.
+        $back = self::safeNext($_GET['next'] ?? '');
+
         // Clear PHP session entirely so the auth.php fallback kicks in again on next request.
         $_SESSION = [];
         if (ini_get('session.use_cookies')) {
@@ -389,6 +396,12 @@ class user_controller
                 $params['secure'], $params['httponly']);
         }
         session_destroy();
+
+        // With a page to come back to, land on the sign-in form primed to
+        // return there. Without one, the home page as before.
+        if ($back !== '') {
+            redirect('/login?next=' . urlencode($back) . '&out=1');
+        }
         redirect('');
     }
 

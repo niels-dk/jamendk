@@ -1223,4 +1223,5 @@ return [
     'canvas.media_load_failed' => 'Could not load media.',
     'canvas.no_media'          => 'No media found.',
     'canvas.no_board_media'    => 'No media on this board yet — try All Media Files.',
+    'auth.signed_out_return' => "You're signed out. Sign in again to go straight back to the page you were on.",
 ];

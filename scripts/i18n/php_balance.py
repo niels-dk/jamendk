@@ -1,26 +1,55 @@
 # -*- coding: utf-8 -*-
 """Structural check for any PHP file, since there is no `php -l` on the dev box.
 
-Tokenises properly — tracks quoted strings with backslash escapes and skips
-comments — then verifies strings close and brackets/braces balance. Catches the
-class of mistake a scripted edit makes: a splice that lands inside a string, or
-a replacement that drops a closing brace.
+Only what is INSIDE <?php … ?> is examined. That matters: a first version of
+this checked the whole file and reported false errors on any view containing
+CSS or a URL, because `#12161f` looks like a PHP `#` comment and `https://`
+looks like a `//` comment — both swallow the rest of the line, taking a closing
+brace with them. HTML, CSS and JS braces are not PHP's to balance anyway.
 
-    python scripts/i18n/php_balance.py controllers/media.php [...]
+Within PHP it tracks quoted strings with backslash escapes, skips comments, and
+verifies strings close and brackets/braces balance. Catches the class of
+mistake a scripted edit makes: a splice landing inside a string, or a
+replacement dropping a closing brace.
+
+    python scripts/i18n/php_balance.py controllers/media.php views/login.php
 """
 import io, sys
 
 def check(path):
     src = io.open(path, encoding='utf-8').read()
-    i, n, line = 0, len(src), 1
+    n = len(src)
+    i = line = 0
+    line = 1
     depth = brace = 0
     errs = []
+    in_php = False
+
     while i < n:
+        if not in_php:
+            # Outside PHP: find the next opening tag, counting newlines on the way.
+            j = src.find('<?', i)
+            if j < 0:
+                line += src.count('\n', i, n)
+                break
+            line += src.count('\n', i, j)
+            i = j + (5 if src.startswith('<?php', j) else (3 if src.startswith('<?=', j) else 2))
+            in_php = True
+            continue
+
         c = src[i]
         if c == '\n':
             line += 1; i += 1; continue
+        if src.startswith('?>', i):
+            in_php = False; i += 2; continue
         if src.startswith('//', i) or (c == '#' and not src.startswith('#[', i)):
-            j = src.find('\n', i); i = n if j < 0 else j; continue
+            # Runs to end of line OR to ?>, whichever comes first — PHP ends a
+            # one-line comment at the closing tag.
+            nl = src.find('\n', i)
+            cl = src.find('?>', i)
+            j = min(x for x in (nl, cl, n) if x >= 0)
+            i = j
+            continue
         if src.startswith('/*', i):
             j = src.find('*/', i + 2)
             if j < 0:
@@ -50,6 +79,7 @@ def check(path):
         elif c == '}':
             brace -= 1
         i += 1
+
     if depth:
         errs.append((line, 'brackets unbalanced at EOF (%d)' % depth))
     if brace:

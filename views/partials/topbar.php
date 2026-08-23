@@ -44,7 +44,13 @@ $brandName = defined('SITE_NAME') ? SITE_NAME : 'Merely a Dream';
         <a class="btn btn-ghost" href="/admin/pricing" title="<?= te('adm.revenue') ?>">📈 <?= te('nav.revenue') ?></a>
       <?php endif; ?>
       <?php include __DIR__ . '/lang-picker.php'; ?>
-      <a class="btn btn-ghost" href="/logout"><?= te('nav.logout') ?></a>
+      <?php
+        // Hand the current page to /logout so signing back in can return here.
+        // safeNext() on the other side rejects anything that is not a same-site
+        // relative path, so this cannot be used to bounce a sign-in elsewhere.
+        $logoutHref = '/logout?next=' . urlencode($_SERVER['REQUEST_URI'] ?? '/');
+      ?>
+      <a class="btn btn-ghost" href="<?= htmlspecialchars($logoutHref, ENT_QUOTES) ?>"><?= te('nav.logout') ?></a>
     <?php else: ?>
       <a class="btn btn-ghost" href="/pricing"><?= te('nav.pricing') ?></a>
       <?php include __DIR__ . '/lang-picker.php'; ?>

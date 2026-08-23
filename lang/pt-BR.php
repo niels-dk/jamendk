@@ -1235,4 +1235,5 @@ return [
     'canvas.media_load_failed' => 'Não foi possível carregar as mídias.',
     'canvas.no_media'          => 'Nenhuma mídia encontrada.',
     'canvas.no_board_media'    => 'Nenhuma mídia neste board ainda — tente Todos os arquivos de mídia.',
+    'auth.signed_out_return' => 'Você saiu da conta. Entre novamente para voltar direto para a página em que estava.',
 ];

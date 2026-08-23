@@ -1234,4 +1234,5 @@ return [
     'canvas.media_load_failed' => 'Kunne ikke indlæse medier.',
     'canvas.no_media'          => 'Ingen medier fundet.',
     'canvas.no_board_media'    => 'Ingen medier på dette board endnu — prøv Alle mediefiler.',
+    'auth.signed_out_return' => 'Du er logget ud. Log ind igen for at komme direkte tilbage til den side, du var på.',
 ];

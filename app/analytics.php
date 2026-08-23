@@ -87,6 +87,30 @@ class Analytics
      * Record one page view. Call once per request, before rendering.
      * Silently does nothing if the migration hasn't run.
      */
+    /**
+     * Queue a page view, to be written only if the request turns out to have
+     * resolved to a real page.
+     *
+     * record() used to run before routing, which meant a scanner walking
+     * /wp-login.php, /.env and /config.yaml was counted exactly like a reader.
+     * Deferring to shutdown lets us look at the status code that was actually
+     * produced. That covers more than a route-table lookup would: a controller
+     * answering 404 itself — an expired share token, a missing board — is not
+     * a pageview either.
+     *
+     * Shutdown functions run after exit(), so redirect() is unaffected and 3xx
+     * still counts.
+     */
+    public static function recordWhenResolved(string $path): void
+    {
+        register_shutdown_function(static function () use ($path) {
+            $code = http_response_code();
+            if ($code === false) $code = 200;          // CLI or never set
+            if ($code >= 400) return;                  // 404, 403, 500 — not a page
+            self::record($path);
+        });
+    }
+
     public static function record(string $path): void
     {
         global $db, $currentUserId;

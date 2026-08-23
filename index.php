@@ -38,9 +38,12 @@ require_once __DIR__.'/app/routes.php';
 $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 
 // First-party page-view record. Runs after auth (so it knows logged-in vs
-// anonymous) and before routing. Cookie-free, never throws, skips bots,
-// assets, APIs and the admin's own browsing.
-Analytics::record($uri);
+// anonymous). Cookie-free, never throws, skips bots, assets, APIs and the
+// admin's own browsing — and now also skips anything that did not resolve to a
+// real page, so the endless scanner traffic for /wp-login.php and /.env stops
+// counting as visitors. The write happens at shutdown, once the status code is
+// known; everything else about it is unchanged.
+Analytics::recordWhenResolved($uri);
 
 route(rtrim($uri,'/'));
 ?>

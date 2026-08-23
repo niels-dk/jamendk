@@ -231,8 +231,7 @@ class dream_controller
 
         dream_model::setArchived($db, $dream['id'], true);
 
-        header('Location: /dashboard');
-        exit;
+        redirect_back('/dashboard/dream');
     }
 
     /**
@@ -245,8 +244,7 @@ class dream_controller
         $d = dream_model::findBySlug($db, $slug);
         require_owner($d);
         dream_model::setArchived($db, $d['id'], false);
-        header('Location: /dashboard/archived');
-        exit;
+        redirect_back('/dashboard/dream');
     }
 
     /**
@@ -259,8 +257,7 @@ class dream_controller
         $d = dream_model::findBySlug($db, $slug);
         require_owner($d);
         dream_model::softDelete($db, $d['id']);
-        header('Location: /dashboard');
-        exit;
+        redirect_back('/dashboard/dream');
     }
 
     /**
@@ -273,7 +270,6 @@ class dream_controller
         $d = dream_model::findBySlug($db, $slug);
         require_owner($d);
         dream_model::restore($db, $d['id']);
-        header('Location: /dashboard/trash');
-        exit;
+        redirect_back('/dashboard/dream');
     }
 }

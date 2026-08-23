@@ -93,6 +93,33 @@ function require_admin(): void
  * Guard for HTML pages: send anonymous visitors to /login and remember
  * where they were trying to go so we can bounce them back after sign-in.
  */
+/**
+ * Validate a caller-supplied redirect target.
+ *
+ * Accepts only same-site relative paths: must start with a single "/", so no
+ * scheme and no "//host". Anything else returns '' and the caller falls back
+ * to its own destination. This is the single definition — user_controller's
+ * ?next= handling on sign-in defers to it rather than keeping a second copy.
+ */
+function safe_internal_path(?string $raw): string
+{
+    $raw = trim((string)$raw);
+    if ($raw === '' || $raw === '/') return '';
+    if ($raw[0] !== '/' || (isset($raw[1]) && $raw[1] === '/')) return '';
+    return $raw;
+}
+
+/**
+ * Return to ?next= when it is a safe same-site path, otherwise to $fallback.
+ * Used by the board card actions so archiving from /dashboard/dream/trash puts
+ * you back on /dashboard/dream/trash rather than on the overview.
+ */
+function redirect_back(string $fallback): void
+{
+    $next = safe_internal_path($_GET['next'] ?? null);
+    redirect($next !== '' ? $next : $fallback);
+}
+
 function require_login(): void
 {
     if (is_logged_in()) return;

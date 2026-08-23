@@ -215,16 +215,20 @@ $currentTypeLabel = $boardLabels[$boardType] ?? t('dash.boards');
             <?php
               $jsConfirm = fn(string $key) => htmlspecialchars(
                   json_encode(t($key), JSON_UNESCAPED_UNICODE), ENT_QUOTES, 'UTF-8');
+              // Hand the current list back to the action so it can return here
+              // — board type AND filter — instead of dumping you on the
+              // dashboard overview. Validated server-side by safe_internal_path().
+              $backTo = '?next=' . urlencode($_SERVER['REQUEST_URI'] ?? '/dashboard');
             ?>
             <?php if ($filter === 'active'): ?>
-              <li><button onclick="location='/<?= $boardType ?>s/<?= $d['slug'] ?>/archive'"><?= te('dash.archive') ?></button></li>
-              <li><button onclick="if(confirm(<?= $jsConfirm('dash.confirm_delete') ?>)) location='/<?= $boardType ?>s/<?= $d['slug'] ?>/delete'"><?= te('action.delete') ?></button></li>
+              <li><button onclick="location='/<?= $boardType ?>s/<?= $d['slug'] ?>/archive<?= $backTo ?>'"><?= te('dash.archive') ?></button></li>
+              <li><button onclick="if(confirm(<?= $jsConfirm('dash.confirm_delete') ?>)) location='/<?= $boardType ?>s/<?= $d['slug'] ?>/delete<?= $backTo ?>'"><?= te('action.delete') ?></button></li>
             <?php elseif ($filter === 'archived'): ?>
-              <li><button onclick="location='/<?= $boardType ?>s/<?= $d['slug'] ?>/unarchive'"><?= te('dash.unarchive') ?></button></li>
-              <li><button onclick="if(confirm(<?= $jsConfirm('dash.confirm_delete') ?>)) location='/<?= $boardType ?>s/<?= $d['slug'] ?>/delete'"><?= te('action.delete') ?></button></li>
+              <li><button onclick="location='/<?= $boardType ?>s/<?= $d['slug'] ?>/unarchive<?= $backTo ?>'"><?= te('dash.unarchive') ?></button></li>
+              <li><button onclick="if(confirm(<?= $jsConfirm('dash.confirm_delete') ?>)) location='/<?= $boardType ?>s/<?= $d['slug'] ?>/delete<?= $backTo ?>'"><?= te('action.delete') ?></button></li>
             <?php elseif ($filter === 'trash'): ?>
-              <li><button onclick="location='/<?= $boardType ?>s/<?= $d['slug'] ?>/restore'"><?= te('dash.restore') ?></button></li>
-              <li><button onclick="if(confirm(<?= $jsConfirm('dash.confirm_delete_perm') ?>)) location='/<?= $boardType ?>s/<?= $d['slug'] ?>/delete'"><?= te('dash.delete_permanently') ?></button></li>
+              <li><button onclick="location='/<?= $boardType ?>s/<?= $d['slug'] ?>/restore<?= $backTo ?>'"><?= te('dash.restore') ?></button></li>
+              <li><button onclick="if(confirm(<?= $jsConfirm('dash.confirm_delete_perm') ?>)) location='/<?= $boardType ?>s/<?= $d['slug'] ?>/delete<?= $backTo ?>'"><?= te('dash.delete_permanently') ?></button></li>
             <?php endif; ?>
           </ul>
         </div>

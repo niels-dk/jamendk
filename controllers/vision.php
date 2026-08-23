@@ -198,7 +198,7 @@ class vision_controller
         $v = vision_model::get($db, $slug);
         require_vision($db, $v, 'manage');
         vision_model::setArchived($db, (int)$v['id'], true);
-        header('Location: /dashboard/vision'); exit;
+        redirect_back('/dashboard/vision');
     }
     public static function unarchive(string $slug): void
     {
@@ -207,7 +207,7 @@ class vision_controller
         $v = vision_model::get($db, $slug);
         require_vision($db, $v, 'manage');
         vision_model::setArchived($db, (int)$v['id'], false);
-        header('Location: /dashboard/vision/archived'); exit;
+        redirect_back('/dashboard/vision');
     }
     public static function destroy(string $slug): void
     {
@@ -216,7 +216,7 @@ class vision_controller
         $v = vision_model::get($db, $slug);
         require_vision($db, $v, 'manage');
         vision_model::softDelete($db, (int)$v['id']);
-        header('Location: /dashboard/vision'); exit;
+        redirect_back('/dashboard/vision');
     }
     public static function restore(string $slug): void
     {
@@ -225,7 +225,7 @@ class vision_controller
         $v = vision_model::get($db, $slug);
         require_vision($db, $v, 'manage');
         vision_model::restore($db, (int)$v['id']);
-        header('Location: /dashboard/vision/trash'); exit;
+        redirect_back('/dashboard/vision');
     }
 
     /** POST /api/visions/update-basics (legacy basics save) */

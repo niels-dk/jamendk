@@ -159,8 +159,7 @@ class mood_controller
         $board = mood_model::get($db, $slug);
         require_mood($db, $board, 'manage');
         mood_model::setArchived($db, (int)$board['id'], true);
-        header('Location: /dashboard/moods');
-        exit;
+        redirect_back('/dashboard/mood');
     }
 
     public static function unarchive(string $slug): void
@@ -169,8 +168,7 @@ class mood_controller
         $board = mood_model::get($db, $slug);
         require_mood($db, $board, 'manage');
         mood_model::setArchived($db, (int)$board['id'], false);
-        header('Location: /dashboard/moods/archived');
-        exit;
+        redirect_back('/dashboard/mood');
     }
 
     /** Soft delete (move to trash). */
@@ -180,8 +178,7 @@ class mood_controller
         $board = mood_model::get($db, $slug);
         require_mood($db, $board, 'manage');
         mood_model::softDelete($db, (int)$board['id']);
-        header('Location: /dashboard/moods');
-        exit;
+        redirect_back('/dashboard/mood');
     }
 
     /** Restore from trash. */
@@ -197,8 +194,7 @@ class mood_controller
             http_response_code(404); echo 'Not found'; return;
         }
         mood_model::restore($db, (int)$row['id']);
-        header('Location: /dashboard/moods/trash');
-        exit;
+        redirect_back('/dashboard/mood');
     }
 	
 	/** 

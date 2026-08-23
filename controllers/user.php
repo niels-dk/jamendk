@@ -412,10 +412,9 @@ class user_controller
      */
     private static function safeNext(string $raw): string
     {
-        $raw = trim($raw);
-        if ($raw === '' || $raw === '/') return '';
-        if ($raw[0] !== '/' || (isset($raw[1]) && $raw[1] === '/')) return '';
-        return $raw;
+        // One definition of this rule, in app/helpers.php — duplicated
+        // security checks drift apart.
+        return safe_internal_path($raw);
     }
 
     /** Internal: write a successful sign-in into the session. */

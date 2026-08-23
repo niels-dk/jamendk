@@ -130,6 +130,8 @@ BR = {
 'adm.near_paid': 'quase pago',
 'adm.near_paid_tip': 'A um colega de distância de uma faixa paga — um futuro cliente',
 'adm.founder_tip': 'Founding Creator — grátis para sempre neste tamanho',
+'adm.ref_landed': 'Onde cada origem chegou',
+'adm.ref_landed_sub': 'Buscadores removem o termo de busca da referência, então a página em que a pessoa chegou é o mais perto que dá para saber o que ela procurava.',
 
 'adm.no_maillog_table': 'A tabela mail_log ainda não existe — rode',
 'adm.mailfrom_head': 'MAIL_FROM não está definido — enviando de um endereço inventado.',

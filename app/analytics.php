@@ -196,9 +196,21 @@ class Analytics
                    FROM analytics_visits WHERE day >= $since
                   GROUP BY path ORDER BY views DESC LIMIT 15"),
             'referrers' => self::rows($db,
-                "SELECT ref_host, COUNT(DISTINCT visitor_hash) visitors
+                "SELECT ref_host, COUNT(DISTINCT visitor_hash) visitors, COUNT(*) views
                    FROM analytics_visits WHERE day >= $since AND ref_host IS NOT NULL
                   GROUP BY ref_host ORDER BY visitors DESC LIMIT 15"),
+            // Which page each referrer's traffic actually landed on. The path
+            // is already on the same row as the referrer, so this costs one
+            // extra GROUP BY and no new collection — worth having because the
+            // referrer alone cannot tell you what someone searched for
+            // (Google strips the query) but CAN tell you what they were after.
+            'ref_pages' => self::rows($db,
+                "SELECT ref_host, path,
+                        COUNT(DISTINCT visitor_hash) visitors, COUNT(*) views
+                   FROM analytics_visits
+                  WHERE day >= $since AND ref_host IS NOT NULL AND ref_host <> ''
+                  GROUP BY ref_host, path
+                  ORDER BY visitors DESC, views DESC LIMIT 120"),
             'campaigns' => self::rows($db,
                 "SELECT COALESCE(utm_source,'—') src, COALESCE(utm_campaign,'—') camp,
                         COUNT(DISTINCT visitor_hash) visitors

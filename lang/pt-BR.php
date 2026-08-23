@@ -1236,4 +1236,6 @@ return [
     'canvas.no_media'          => 'Nenhuma mídia encontrada.',
     'canvas.no_board_media'    => 'Nenhuma mídia neste board ainda — tente Todos os arquivos de mídia.',
     'auth.signed_out_return' => 'Você saiu da conta. Entre novamente para voltar direto para a página em que estava.',
+    'adm.ref_landed'     => 'Onde cada origem chegou',
+    'adm.ref_landed_sub' => 'Buscadores removem o termo de busca da referência, então a página em que a pessoa chegou é o mais perto que dá para saber o que ela procurava.',
 ];

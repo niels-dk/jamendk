@@ -115,6 +115,49 @@ $table = function (string $title, array $rows, string $labelKey, string $valueKe
         <div><?php $table(t('adm.top_pages'), $traffic['pages'], 'path', 'views',
               t('adm.no_pages'), 'views'); ?></div>
       </div>
+      <?php
+        // Group the flat ref_host+path rows into one block per referrer,
+        // keeping the referrer order the summary table already established.
+        $refPages = [];
+        foreach (($traffic['ref_pages'] ?? []) as $rp) {
+            $refPages[$rp['ref_host']][] = $rp;
+        }
+      ?>
+      <?php if ($refPages): ?>
+        <div>
+          <h2 style="font-size:1rem;color:#cfdbe8;margin:0 0 .2rem;"><?= te('adm.ref_landed') ?></h2>
+          <p style="color:#6c7d92;font-size:.82rem;margin:0 0 .7rem;"><?= te('adm.ref_landed_sub') ?></p>
+          <div style="display:grid;gap:.9rem;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));">
+            <?php foreach (($traffic['referrers'] ?? []) as $r): ?>
+              <?php $host = $r['ref_host']; if (empty($refPages[$host])) continue; ?>
+              <div style="background:rgba(255,255,255,.03);border:1px solid #2b3346;
+                          border-radius:10px;padding:.7rem .85rem;">
+                <div style="display:flex;align-items:baseline;justify-content:space-between;gap:.6rem;">
+                  <strong style="color:#eaeaea;font-size:.9rem;word-break:break-all;"><?= $a_e($host) ?></strong>
+                  <span style="color:#8593a6;font-size:.78rem;white-space:nowrap;">
+                    <?= te('adm.n_visitors', ['n' => (int)$r['visitors']]) ?>
+                    <?php if (isset($r['views'])): ?>
+                      · <?= te('adm.n_views', ['n' => (int)$r['views']]) ?>
+                    <?php endif; ?>
+                  </span>
+                </div>
+                <table style="width:100%;border-collapse:collapse;font-size:.84rem;margin-top:.4rem;">
+                  <?php foreach (array_slice($refPages[$host], 0, 6) as $rp): ?>
+                    <tr style="border-top:1px solid #2b3346;">
+                      <td style="padding:.3rem .2rem;color:#9bb0c5;word-break:break-all;">
+                        <?= $a_e($rp['path']) ?></td>
+                      <td style="padding:.3rem .2rem;text-align:right;color:#8fb1d8;
+                                 font-family:monospace;white-space:nowrap;">
+                        <?= (int)$rp['visitors'] ?></td>
+                    </tr>
+                  <?php endforeach; ?>
+                </table>
+              </div>
+            <?php endforeach; ?>
+          </div>
+        </div>
+      <?php endif; ?>
+
       <?php if (!empty($traffic['campaigns'])): ?>
         <div>
           <h2 style="font-size:1rem;color:#cfdbe8;margin:0 0 .5rem;"><?= te('adm.campaigns') ?></h2>

@@ -1224,4 +1224,6 @@ return [
     'canvas.no_media'          => 'No media found.',
     'canvas.no_board_media'    => 'No media on this board yet — try All Media Files.',
     'auth.signed_out_return' => "You're signed out. Sign in again to go straight back to the page you were on.",
+    'adm.ref_landed'     => 'What each source landed on',
+    'adm.ref_landed_sub' => 'Search engines strip the search term from the referrer, so the page someone arrived on is the closest thing to knowing what they were after.',
 ];

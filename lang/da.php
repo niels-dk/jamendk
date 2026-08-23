@@ -1235,4 +1235,6 @@ return [
     'canvas.no_media'          => 'Ingen medier fundet.',
     'canvas.no_board_media'    => 'Ingen medier på dette board endnu — prøv Alle mediefiler.',
     'auth.signed_out_return' => 'Du er logget ud. Log ind igen for at komme direkte tilbage til den side, du var på.',
+    'adm.ref_landed'     => 'Hvad hver kilde landede på',
+    'adm.ref_landed_sub' => 'Søgemaskiner fjerner søgeordet fra henvisningen, så den side folk lander på er det tætteste, man kommer på at vide, hvad de var ude efter.',
 ];

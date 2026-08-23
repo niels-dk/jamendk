@@ -19,7 +19,14 @@ RewriteRule ^(app|controllers|models|views|db|scripts|_notes|node_modules|bower_
 RewriteRule ^storage/private(/|$) - [F,L]
 
 # Stray source / dump / script artifacts, wherever they sit.
-RewriteRule \.(sql|sh|md|bak|log|lock)$ - [F,L]
+#
+# The config extensions were added after analytics showed scanners walking the
+# site for /.env, /.env.backup, /.env.dist, /.env.old and /config.yaml — the
+# usual sweep for a leaked file full of database passwords. The dotfile rule
+# above already refuses every .env variant; this closes the non-dotted ones so
+# a config.yaml or settings.ini dropped here later is refused by rule rather
+# than by luck.
+RewriteRule \.(sql|sh|md|bak|log|lock|ya?ml|ini|conf|cfg|old|orig|dist|swp|sqlite3?|pem|key|crt|p12)$ - [F,L]
 
 # Everything that isn't a real allowed file goes through the router.
 RewriteCond %{REQUEST_FILENAME} !-f

@@ -78,14 +78,28 @@ function add_notification(PDO $db, int $userId, string $type,
     } catch (\Throwable $e) { /* table missing — ignore */ }
 }
 
+/**
+ * Render the 404 page and stop.
+ *
+ * Deliberately a 404 and not a 403, here and in require_owner(): answering
+ * "forbidden" would confirm to someone without access that /admin/analytics or
+ * a particular board exists. The page says only that it is not there.
+ */
+function not_found(): void
+{
+    http_response_code(404);
+    while (ob_get_level() > 0) ob_end_clean();
+    $view = __DIR__ . '/../views/not_found.php';
+    if (is_file($view)) { include $view; } else { echo 'Not found'; }
+    exit;
+}
+
 /** Guard for admin-only pages. */
 function require_admin(): void
 {
     require_login();
     if (!is_admin()) {
-        http_response_code(404);
-        echo 'Not found';
-        exit;
+        not_found();
     }
 }
 
@@ -157,9 +171,7 @@ function require_owner(?array $row, string $key = 'user_id'): void
 {
     require_login();
     if (!$row || !is_owner($row, $key)) {
-        http_response_code(404);
-        echo 'Not found';
-        exit;
+        not_found();
     }
 }
 

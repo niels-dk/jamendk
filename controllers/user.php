@@ -57,6 +57,15 @@ class user_controller
                         // few fat-fingered attempts never count against you.
                         User::clearLoginAttempts($email);
                         self::loginUser($user);
+
+                        // ?next= survives a sign-out, so it can belong to whoever
+                        // was here BEFORE. Sign out of admin, sign back in as an
+                        // ordinary user, and it would send them to /admin/... and
+                        // straight into a 404. Re-check it against the account
+                        // that actually signed in.
+                        if ($next !== '' && !self::canVisit($next, $user)) {
+                            $next = '';
+                        }
                         redirect($next ?: 'dashboard');
                     }
                 } else {
@@ -89,7 +98,7 @@ class user_controller
                 if (!$name) {
                     $error = t('auth.err_name');
                 } else if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-                    $error = 'That email address doesn\'t look right.';
+                    $error = t('auth.err_email');
                 } else if (strlen($pass) < 6) {
                     $error = t('auth.err_short_pass');
                 } else if (User::emailExists($email)) {
@@ -137,7 +146,7 @@ class user_controller
         if (!$user) {
             // Expired or already used. Offer a fresh one rather than a dead end.
             $error = 'That confirmation link has expired or was already used.';
-            $pageTitle = 'Link expired';
+            $pageTitle = t('auth.link_expired');
             $noSidebar = true;
             ob_start();
             include __DIR__ . '/../views/verify_resend.php';
@@ -424,6 +433,22 @@ class user_controller
      * with "/" (no protocol, no //host) so attackers can't bounce sign-ins
      * off our site to phishing pages.
      */
+    /**
+     * Is this destination plausible for the account that just signed in?
+     *
+     * Not a permission system — the page's own guard remains the authority.
+     * This only stops the obvious mismatch of handing one account a
+     * destination that belonged to another, which otherwise reads as a broken
+     * login rather than as the access check it is.
+     */
+    private static function canVisit(string $path, array $user): bool
+    {
+        if (strncmp($path, '/admin', 6) === 0) {
+            return ($user['role'] ?? 'user') === 'admin';
+        }
+        return true;
+    }
+
     private static function safeNext(string $raw): string
     {
         // One definition of this rule, in app/helpers.php — duplicated

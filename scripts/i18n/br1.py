@@ -110,6 +110,9 @@ BR = {
 'status.save_failed': 'Falha ao salvar', 'status.net_error': 'Erro de rede',
 'status.delete_failed': 'Falha ao excluir',
 'common.untitled': 'Sem título', 'common.failed': 'Falhou',
+'nf.title': 'Página não encontrada',
+'nf.body': 'Essa página não existe, ou você não tem acesso a ela.',
+'nf.back_home': 'Voltar para a página inicial',
 
 # ── itinerary ──
 'itin.lead': 'O plano dia a dia. Itens marcados como "Mostrar na camada Trip" aparecem no topo da página de trip publicada.',

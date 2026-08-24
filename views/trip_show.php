@@ -96,6 +96,10 @@ $pctOf = function (int $v, int $base): string {
 
 // Plain-text place → Google Maps search link (no API key needed).
 // Offline the link needs internet to open, but the text stays readable.
+// rel: noopener stops the opened tab reaching back through window.opener;
+// noreferrer additionally withholds the Referer, which on this page is the
+// /t/{token} share URL — the thing that grants access. Without it, every
+// client who taps a map link hands that token to Google.
 $mapUrl = fn(string $place): string =>
     'https://www.google.com/maps/search/?api=1&query=' . urlencode($place);
 
@@ -575,7 +579,7 @@ $DOC_STATUS_LABEL = [
               <?php if (!empty($s['shot_type'])): ?><span><?= tr_e($SHOT_TYPE_LABEL[$s['shot_type']] ?? $s['shot_type']) ?></span><?php endif; ?>
               <?php if (!empty($s['light'])): ?><span><?= tr_e($SHOT_LIGHT_LABEL[$s['light']] ?? $s['light']) ?></span><?php endif; ?>
               <?php if (!empty($s['location'])): ?>
-                <span>📍 <a href="<?= tr_e($mapUrl($s['location'])) ?>" target="_blank" rel="noopener"><?= tr_e($s['location']) ?></a></span>
+                <span>📍 <a href="<?= tr_e($mapUrl($s['location'])) ?>" target="_blank" rel="noopener noreferrer"><?= tr_e($s['location']) ?></a></span>
               <?php endif; ?>
             </span>
             <?php if (!empty($s['how_notes'])): ?>
@@ -604,7 +608,7 @@ $DOC_STATUS_LABEL = [
           <span class="what">
             <span class="t"><?= tr_e($en['title']) ?></span>
             <?php if (!empty($en['location'])): ?>
-              <div class="loc">📍 <a href="<?= tr_e($mapUrl($en['location'])) ?>" target="_blank" rel="noopener"><?= tr_e($en['location']) ?></a></div>
+              <div class="loc">📍 <a href="<?= tr_e($mapUrl($en['location'])) ?>" target="_blank" rel="noopener noreferrer"><?= tr_e($en['location']) ?></a></div>
             <?php endif; ?>
             <?php if (!empty($en['notes'])): ?>
               <div class="n"><?= tr_e($en['notes']) ?></div>
@@ -630,7 +634,7 @@ $DOC_STATUS_LABEL = [
           <h4><?= ($anchorIcon[$key] ?? '') ?> <?= te('anchor.' . $key) ?></h4>
           <?php foreach ($anchors[$key] as $val): ?>
             <?php if ($key === 'locations'): ?>
-              <a class="chip" href="<?= tr_e($mapUrl($val)) ?>" target="_blank" rel="noopener"
+              <a class="chip" href="<?= tr_e($mapUrl($val)) ?>" target="_blank" rel="noopener noreferrer"
                  title="<?= te('trip.open_maps') ?>">📍 <?= tr_e($val) ?></a>
             <?php else: ?>
               <span class="chip"><?= tr_e($val) ?></span>

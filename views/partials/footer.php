@@ -64,7 +64,7 @@ $f_in      = function_exists('is_logged_in') && is_logged_in();
       <div class="sf-logo"><?= $f_e($siteName) ?></div>
       <p><?= te('footer.blurb') ?></p>
       <div class="sf-social">
-        <a href="<?= $f_e($siteInsta) ?>" target="_blank" rel="noopener me">
+        <a href="<?= $f_e($siteInsta) ?>" target="_blank" rel="noopener noreferrer me">
           📷 <?= te('footer.instagram') ?>
         </a>
         <a href="mailto:<?= $f_e($siteEmail) ?>">✉️ <?= te('footer.email') ?></a>

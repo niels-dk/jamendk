@@ -16,7 +16,7 @@ $siteInsta = defined('SITE_INSTAGRAM') ? SITE_INSTAGRAM : 'https://www.instagram
         <span><?= $p_e($siteEmail) ?></span>
       </span>
     </a>
-    <a class="doc-card" href="<?= $p_e($siteInsta) ?>" target="_blank" rel="noopener me">
+    <a class="doc-card" href="<?= $p_e($siteInsta) ?>" target="_blank" rel="noopener noreferrer me">
       <span class="dc-ico">📷</span>
       <span>
         <b><?= te('footer.instagram') ?></b>

@@ -89,6 +89,7 @@ BR = {
 'auth.verify_title': 'Confirme seu e-mail',
 'auth.verify_lead': 'Links de confirmação duram 24 horas e funcionam uma vez. Informe seu endereço e enviaremos um novo.',
 'auth.send_new_verify': 'Enviar um novo link',
+'auth.err_throttled': 'Tentativas de login em excesso. Espere alguns minutos e tente de novo.',
 'auth.signed_out_return': 'Você saiu da conta. Entre novamente para voltar direto para a página em que estava.',
 
 # ── email ──

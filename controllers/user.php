@@ -29,13 +29,23 @@ class user_controller
             } else {
                 $email = trim($_POST['email'] ?? '');
                 $pass  = $_POST['password'] ?? '';
+                $ip    = (string)($_SERVER['REMOTE_ADDR'] ?? '');
+
                 if (!$email || !$pass) {
                     $error = t('auth.err_both');
-                } else if ($user = User::authenticate($email, $pass)) {
+                }
+                // Checked BEFORE authenticate(), so a throttled attacker gets
+                // no password comparison and no timing signal at all. The
+                // message is the same whichever limit tripped — saying which
+                // would tell someone whether an address exists.
+                elseif (User::loginThrottled($email, $ip)) {
+                    $error = t('auth.err_throttled');
+                }
+                else if ($user = User::authenticate($email, $pass)) {
                     // Account blocked (e.g. the person left and an admin
                     // deactivated it during a handover).
                     if (!empty($user['deactivated_at'])) {
-                        $error = 'This account has been deactivated. Contact support if that\'s a mistake.';
+                        $error = t('auth.err_deactivated');
                     }
                     // Correct password, but the address was never confirmed.
                     // Refuse the session — this is what makes bot signups inert.
@@ -43,10 +53,14 @@ class user_controller
                         $unverifiedEmail = $user['email'] ?? $email;
                         $error = t('auth.err_unverified');
                     } else {
+                        // Correct password — wipe this identifier's history so a
+                        // few fat-fingered attempts never count against you.
+                        User::clearLoginAttempts($email);
                         self::loginUser($user);
                         redirect($next ?: 'dashboard');
                     }
                 } else {
+                    User::recordFailedLogin($email, $ip);
                     $error = t('auth.err_invalid');
                 }
             }

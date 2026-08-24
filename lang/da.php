@@ -1237,4 +1237,7 @@ return [
     'auth.signed_out_return' => 'Du er logget ud. Log ind igen for at komme direkte tilbage til den side, du var på.',
     'adm.ref_landed'     => 'Hvad hver kilde landede på',
     'adm.ref_landed_sub' => 'Søgemaskiner fjerner søgeordet fra henvisningen, så den side folk lander på er det tætteste, man kommer på at vide, hvad de var ude efter.',
+    'auth.err_throttled' => 'For mange loginforsøg. Vent et par minutter, og prøv igen.',
+    'pg.priv_h_logins' => 'Mislykkede logins',
+    'pg.priv_logins'   => 'Når et login mislykkes, noterer vi den adresse, der blev forsøgt, og den IP-adresse det kom fra, så gentagne gæt kan bremses. Der noteres intet, når et login lykkes, et vellykket login rydder tidligere fejl for den adresse, og rækkerne slettes efter 24 timer.',
 ];

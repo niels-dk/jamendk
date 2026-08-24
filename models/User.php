@@ -36,6 +36,79 @@ class User
         }
     }
 
+    /* ───────────────── Login throttling ─────────────────
+     *
+     * Two sliding windows, checked independently:
+     *   identifier — 5 failures in 15 min stops someone hammering one account
+     *   ip         — 25 failures in 15 min stops one host spraying a password
+     *                across many accounts, which the per-identifier limit
+     *                would never see
+     *
+     * Sliding, not a hard lock: an attacker who fails on purpose against
+     * someone else's address can otherwise lock that person out of their own
+     * account indefinitely. Fifteen quiet minutes clears it.
+     *
+     * Every method degrades to "not limited" if the table is missing, so a
+     * pending migration cannot lock anybody out of the site.
+     */
+    private const THROTTLE_WINDOW_MIN  = 15;
+    private const THROTTLE_MAX_IDENT   = 5;
+    private const THROTTLE_MAX_IP      = 25;
+
+    /** True when this identifier or this IP has failed too often lately. */
+    public static function loginThrottled(string $identifier, string $ip): bool
+    {
+        global $db;
+        try {
+            $win = (int)self::THROTTLE_WINDOW_MIN;   // literal after INTERVAL
+
+            $st = $db->prepare("SELECT COUNT(*) FROM login_attempts
+                                 WHERE identifier = ?
+                                   AND created_at > (NOW() - INTERVAL $win MINUTE)");
+            $st->execute([$identifier]);
+            if ((int)$st->fetchColumn() >= self::THROTTLE_MAX_IDENT) return true;
+
+            if ($ip !== '') {
+                $st = $db->prepare("SELECT COUNT(*) FROM login_attempts
+                                     WHERE ip = ?
+                                       AND created_at > (NOW() - INTERVAL $win MINUTE)");
+                $st->execute([$ip]);
+                if ((int)$st->fetchColumn() >= self::THROTTLE_MAX_IP) return true;
+            }
+            return false;
+        } catch (\Throwable $e) {
+            // Table not migrated yet — never lock people out over that.
+            return false;
+        }
+    }
+
+    /** Record one failed attempt, and opportunistically prune old rows. */
+    public static function recordFailedLogin(string $identifier, string $ip): void
+    {
+        global $db;
+        try {
+            $db->prepare('INSERT INTO login_attempts (identifier, ip) VALUES (?, ?)')
+               ->execute([mb_substr($identifier, 0, 190), $ip !== '' ? $ip : null]);
+
+            // Housekeeping without a cron: roughly one request in twenty clears
+            // anything older than a day. Nothing here is useful after that.
+            if (random_int(1, 20) === 1) {
+                $db->exec('DELETE FROM login_attempts
+                            WHERE created_at < (NOW() - INTERVAL 24 HOUR)');
+            }
+        } catch (\Throwable $e) { /* never block a login on bookkeeping */ }
+    }
+
+    /** A correct password clears that identifier's history. */
+    public static function clearLoginAttempts(string $identifier): void
+    {
+        global $db;
+        try {
+            $db->prepare('DELETE FROM login_attempts WHERE identifier = ?')
+               ->execute([$identifier]);
+        } catch (\Throwable $e) { /* ignore */ }
+    }
+
     public static function authenticate(string $email, string $pass): ?array
     {
         global $db;

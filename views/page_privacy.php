@@ -34,6 +34,9 @@ $updated   = '18 July 2026';
   <h3><?= te('pg.priv_h_maillog') ?></h3>
   <p><?= t('pg.priv_maillog') ?></p>
 
+  <h3><?= te('pg.priv_h_logins') ?></h3>
+  <p><?= t('pg.priv_logins') ?></p>
+
   <h3><?= te('pg.priv_h_stats') ?></h3>
   <p><?= t('pg.priv_stats_1') ?></p>
   <p><?= t('pg.priv_stats_2') ?></p>

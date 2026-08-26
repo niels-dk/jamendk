@@ -61,6 +61,34 @@ mkdir -p "$DB_DIR" "$FILES_DIR"
 # dumps once went unnoticed.
 STATUS_FILE="$BASE/last_run"
 
+# ── Self-expiring lock ───────────────────────────────────────────────────────
+# Own lock rather than DreamHost's "Use locking", which never expires: one
+# hung run there means every night afterwards is skipped, and skipped runs
+# print nothing, so no cron mail is sent and the backup dies quietly.
+#
+# Turn DreamHost's locking OFF in the panel and let this handle it.
+LOCK_DIR="$BASE/.lock"
+LOCK_MAX_AGE=3600          # a run takes seconds; an hour is not "still working"
+
+mkdir -p "$BASE"
+if ! mkdir "$LOCK_DIR" 2>/dev/null; then
+    # mkdir is atomic, so losing the race means someone holds it. Is it alive?
+    LOCK_AGE=$(( $(date +%s) - $(stat -c %Y "$LOCK_DIR" 2>/dev/null \
+                                 || stat -f %m "$LOCK_DIR" 2>/dev/null || echo 0) ))
+    if [ "$LOCK_AGE" -lt "$LOCK_MAX_AGE" ]; then
+        # A real run is probably in progress. Say nothing: this is the normal
+        # overlap case and must not generate mail.
+        exit 0
+    fi
+    # Older than any real run could be — the holder died. Take it over and be
+    # loud about it, because a hang is worth knowing about.
+    echo "NOTE: cleared a stale backup lock (${LOCK_AGE}s old) before starting" >&2
+    rm -rf "$LOCK_DIR"
+    mkdir "$LOCK_DIR" 2>/dev/null || true
+fi
+# Released however we exit — success, failure, or signal.
+trap 'rm -rf "$LOCK_DIR"' EXIT INT TERM
+
 write_status() {
     # "<epoch>\t<ok|fail>\t<message>"
     printf '%s\t%s\t%s\n' "$(date +%s)" "$1" "$2" > "$STATUS_FILE" 2>/dev/null || true

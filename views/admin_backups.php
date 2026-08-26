@@ -17,6 +17,21 @@ $fmtSize = function (int $b): string {
     <a href="/admin/mail" style="color:#8fb1d8;"><?= te('adm.mail') ?> →</a>
   </p>
 
+  <?php if (!empty($runStatus) && empty($runStatus['ok'])): ?>
+    <?php /* A failed attempt is not the same as no attempt, and the two need
+             different fixes. Show the error the script itself reported. */ ?>
+    <div style="background:rgba(208,80,80,.15);border:1px solid rgba(208,80,80,.5);
+                color:#f3b3b3;padding:1rem 1.2rem;border-radius:10px;margin-bottom:1.4rem;
+                font-size:.95rem;line-height:1.6;">
+      <strong style="font-size:1.05rem;">⚠ <?= te('adm.backup_last_failed') ?></strong><br>
+      <span style="opacity:.85;"><?= $b_e(date('Y-m-d H:i', $runStatus['when'])) ?></span>
+      <?php if ($runStatus['message'] !== ''): ?>
+        <div style="margin-top:.5rem;font-family:monospace;font-size:.85rem;
+                    word-break:break-word;"><?= $b_e($runStatus['message']) ?></div>
+      <?php endif; ?>
+    </div>
+  <?php endif; ?>
+
   <?php if ($isStale): ?>
     <div style="background:rgba(208,80,80,.15);border:1px solid rgba(208,80,80,.5);
                 color:#f3b3b3;padding:1rem 1.2rem;border-radius:10px;margin-bottom:1.4rem;

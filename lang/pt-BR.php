@@ -1244,4 +1244,5 @@ return [
     'nf.title'     => 'Página não encontrada',
     'nf.body'      => 'Essa página não existe, ou você não tem acesso a ela.',
     'nf.back_home' => 'Voltar para a página inicial',
+    'adm.backup_last_failed' => 'A última tentativa de backup falhou.',
 ];

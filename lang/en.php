@@ -1232,4 +1232,5 @@ return [
     'nf.title'     => 'Page not found',
     'nf.body'      => "That page doesn't exist, or you don't have access to it.",
     'nf.back_home' => 'Back to the front page',
+    'adm.backup_last_failed' => 'The last backup attempt failed.',
 ];

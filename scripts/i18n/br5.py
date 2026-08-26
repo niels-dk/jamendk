@@ -57,6 +57,7 @@ BR = {
 
 'adm.backups_sub': 'Dump noturno do banco, arquivo de arquivos semanal — escrito por scripts/backup.sh via cron.',
 'adm.no_backup': 'Nenhum backup recente.',
+'adm.backup_last_failed': 'A última tentativa de backup falhou.',
 'adm.backup_never': 'O script de backup ainda não rodou com sucesso. Pelo SSH:',
 'adm.last_run': 'Última execução bem-sucedida:',
 'adm.backup_ok': 'Saudável — última execução bem-sucedida',

@@ -55,7 +55,19 @@ STAMP="$(date +%F)"
 
 mkdir -p "$DB_DIR" "$FILES_DIR"
 
+# Every run leaves its outcome here, success or failure. /admin/backups reads
+# it, so a run that FAILED is distinguishable from one that never happened —
+# from mtimes alone both look identical, which is how eight nights of 378-byte
+# dumps once went unnoticed.
+STATUS_FILE="$BASE/last_run"
+
+write_status() {
+    # "<epoch>\t<ok|fail>\t<message>"
+    printf '%s\t%s\t%s\n' "$(date +%s)" "$1" "$2" > "$STATUS_FILE" 2>/dev/null || true
+}
+
 fail() {
+    write_status fail "$1"
     # Anything on stdout/stderr makes DreamHost cron send mail — that's the alarm.
     echo "BACKUP FAILED: $1" >&2
     exit 1
@@ -93,7 +105,19 @@ SIZE=$(stat -c %s "$DB_OUT" 2>/dev/null || stat -f %z "$DB_OUT")
   || fail "dump of database '$DB_NAME' suspiciously small (${SIZE} bytes, $TABLE_COUNT tables): $DB_OUT"
 
 # ── 2. Uploaded files (weekly — they're big and change slower) ───────────────
-if [ "$(date +%u)" = "7" ] || [ "${FORCE_FILES:-0}" = "1" ]; then
+# Driven by how old the newest archive is, NOT by the day of the week. A cron
+# that misses its Sunday used to skip a whole week — and one that fires
+# irregularly could miss every Sunday and never archive at all.
+NEWEST_ARCHIVE_AGE_DAYS=99
+if [ -d "$FILES_DIR" ]; then
+    NEWEST="$(ls -t "$FILES_DIR"/*.tar.gz 2>/dev/null | head -1)"
+    if [ -n "$NEWEST" ]; then
+        NEWEST_MTIME="$(stat -c %Y "$NEWEST" 2>/dev/null || stat -f %m "$NEWEST" 2>/dev/null || echo 0)"
+        NEWEST_ARCHIVE_AGE_DAYS=$(( ( $(date +%s) - NEWEST_MTIME ) / 86400 ))
+    fi
+fi
+
+if [ "$NEWEST_ARCHIVE_AGE_DAYS" -ge 7 ] || [ "${FORCE_FILES:-0}" = "1" ]; then
     FILES_OUT="$FILES_DIR/storage-${STAMP}.tar.gz"
     if [ -d "$SITE_DIR/storage" ]; then
         tar --exclude='storage/cache' --exclude='storage/logs' \
@@ -113,6 +137,8 @@ if [ -f "$HOME/.backup_remote" ]; then
     rsync -az "$BASE/" "$REMOTE" \
         || fail "offsite rsync to $REMOTE failed (local backup still OK)"
 fi
+
+write_status ok "database $DB_NAME (${SIZE} bytes, $TABLE_COUNT tables)"
 
 # ── 5. Success marker (read by /admin/backups) ───────────────────────────────
 date '+%Y-%m-%d %H:%M:%S' > "$BASE/last_success.txt"

@@ -1243,4 +1243,5 @@ return [
     'nf.title'     => 'Siden findes ikke',
     'nf.body'      => 'Den side findes ikke, eller du har ikke adgang til den.',
     'nf.back_home' => 'Tilbage til forsiden',
+    'adm.backup_last_failed' => 'Sidste backup-forsøg mislykkedes.',
 ];

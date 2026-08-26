@@ -161,6 +161,22 @@ class admin_controller
         $dbFiles  = [];
         $arFiles  = [];
 
+        // What the LAST RUN actually did. Without this the page can only see
+        // that files are old, which reads the same whether cron never fired or
+        // fired and failed — and those need different fixes.
+        $runStatus = null;   // ['ok'=>bool, 'when'=>int, 'message'=>string]
+        $statusRaw = @file_get_contents($base . '/last_run');
+        if ($statusRaw !== false && $statusRaw !== '') {
+            $parts = explode("\t", trim($statusRaw), 3);
+            if (count($parts) >= 2 && ctype_digit($parts[0])) {
+                $runStatus = [
+                    'ok'      => ($parts[1] === 'ok'),
+                    'when'    => (int)$parts[0],
+                    'message' => $parts[2] ?? '',
+                ];
+            }
+        }
+
         $list = function (string $dir, string $ext) : array {
             $out = [];
             foreach (glob($dir . '/*' . $ext) ?: [] as $f) {

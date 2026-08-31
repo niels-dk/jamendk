@@ -101,6 +101,7 @@ require_once __DIR__.'/app/auth.php';
 require_once __DIR__.'/app/permissions.php';
 require_once __DIR__.'/app/i18n.php';   // after auth: language depends on the user
 require_once __DIR__.'/app/analytics.php';
+require_once __DIR__.'/app/backup_watchdog.php';
 require_once __DIR__.'/app/routes.php';
 
 $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
@@ -112,6 +113,12 @@ $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 // counting as visitors. The write happens at shutdown, once the status code is
 // known; everything else about it is unchanged.
 Analytics::recordWhenResolved($uri);
+
+// Safety net for the nightly backup. DreamHost's cron has twice stopped firing
+// for days with no error and nothing to fix, so the site's own traffic acts as
+// a fallback scheduler: if the last SUCCESSFUL backup is over ~30h old, this
+// launches one detached after the response has been sent. Cron stays primary.
+backup_watchdog();
 
 route(rtrim($uri,'/'));
 ?>

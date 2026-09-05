@@ -35,12 +35,22 @@ const REMIND_BATCH = 20;
 /**
  * Accounts currently due a reminder.
  *
+ * Always returns [] on failure, so the web path can never break over this —
+ * but it reports WHY through $err. Without that, "the query failed" and
+ * "nobody is due" are the same empty array, which is exactly the wrong thing
+ * for a tool whose whole job is to tell you who is about to be emailed.
+ *
+ * @param string|null $err out: the reason the list is empty, if it went wrong.
  * @return array<int,array{id:int,name:string,email:string,sent_count:int}>
  */
-function verify_reminders_due(): array
+function verify_reminders_due(?string &$err = null): array
 {
     global $db;
-    if (!isset($db) || !($db instanceof PDO)) return [];
+    $err = null;
+    if (!isset($db) || !($db instanceof PDO)) {
+        $err = 'No database connection ($db is not a PDO instance).';
+        return [];
+    }
 
     $after = (int)REMIND_AFTER_HOURS;   // literals: MySQL wants them after INTERVAL
     $gap   = (int)REMIND_GAP_HOURS;
@@ -74,20 +84,53 @@ function verify_reminders_due(): array
         $st = $db->query($sql);
         return $st ? ($st->fetchAll(PDO::FETCH_ASSOC) ?: []) : [];
     } catch (\Throwable $e) {
+        $err = $e->getMessage();
         return [];
     }
+}
+
+/**
+ * Counts behind the list, so an empty result can be explained rather than
+ * guessed at. Read-only, and every figure degrades to null on error.
+ *
+ * @return array{unverified:?int,active:?int,old_enough:?int,reminded:?int}
+ */
+function verify_reminders_stats(): array
+{
+    global $db;
+    $out = ['unverified' => null, 'active' => null, 'old_enough' => null, 'reminded' => null];
+    if (!isset($db) || !($db instanceof PDO)) return $out;
+
+    $after = (int)REMIND_AFTER_HOURS;
+    $q = [
+        // Each line adds ONE condition to the one above it, so the step where
+        // the number falls to zero is the reason nobody is due.
+        'unverified' => "SELECT COUNT(*) FROM users WHERE email_verified_at IS NULL",
+        'active'     => "SELECT COUNT(*) FROM users WHERE email_verified_at IS NULL
+                           AND deactivated_at IS NULL",
+        'old_enough' => "SELECT COUNT(*) FROM users WHERE email_verified_at IS NULL
+                           AND deactivated_at IS NULL
+                           AND created_at < (NOW() - INTERVAL $after HOUR)",
+        'reminded'   => "SELECT COUNT(*) FROM mail_log
+                          WHERE type = 'verify_reminder' AND status = 'sent'",
+    ];
+    foreach ($q as $k => $sql) {
+        try { $out[$k] = (int)$db->query($sql)->fetchColumn(); }
+        catch (\Throwable $e) { $out[$k] = null; }
+    }
+    return $out;
 }
 
 /**
  * @param bool $send false = report only, nothing leaves the server.
  * @return array<int,array{email:string,name:string,sent_count:int,result:string}>
  */
-function verify_reminders_run(bool $send = false): array
+function verify_reminders_run(bool $send = false, ?string &$err = null): array
 {
     require_once __DIR__ . '/mailer.php';
     $out = [];
 
-    foreach (verify_reminders_due() as $u) {
+    foreach (verify_reminders_due($err) as $u) {
         $row = [
             'email'      => (string)$u['email'],
             'name'       => (string)($u['name'] ?? ''),

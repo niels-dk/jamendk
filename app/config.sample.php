@@ -47,6 +47,25 @@ define('MAIL_FROM_NAME', 'Niels at Merely a Dream');
 // a staging host — email is read long after the request that generated it.
 define('MAIL_SITE_HOST', 'merelyadream.com');
 
+/* ── Reminders for unconfirmed accounts ──────────────────────────────────
+ *
+ * An unconfirmed account cannot sign in, so anyone who misses the first
+ * verification email is simply lost. With this on, they get a fresh link:
+ * once after 24h, at most twice ever, 72h apart, never to a deactivated
+ * account.
+ *
+ * OFF unless this line exists. That is deliberate — this is unsolicited mail
+ * to people who have not confirmed they want anything from us, so deploying
+ * the code must never be what starts sending it. Turning it on has to be a
+ * decision someone made.
+ *
+ * Before enabling, see exactly who is due:
+ *     php scripts/verify_reminders.php        # dry run, sends nothing
+ *
+ * Those are real people. Read the list first.
+ */
+// define('VERIFY_REMINDERS_ENABLED', true);
+
 /* ── Landing page ────────────────────────────────────────────────────────
  * Token of a published Trip to show strangers as a live example. The
  * "See a real Trip page" button on the landing page stays hidden until this

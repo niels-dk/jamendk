@@ -54,35 +54,73 @@ function verify_reminders_due(?string &$err = null): array
 
     $after = (int)REMIND_AFTER_HOURS;   // literals: MySQL wants them after INTERVAL
     $gap   = (int)REMIND_GAP_HOURS;
-    $max   = (int)REMIND_MAX;
-    $batch = (int)REMIND_BATCH;
-
-    // deactivated_at may not be migrated on every install; the whole query is
-    // guarded, and a failure here simply means no reminders go out.
-    $sql = "
-        SELECT u.id, u.name, u.email,
-               (SELECT COUNT(*) FROM mail_log m
-                 WHERE m.to_email = u.email
-                   AND m.type = 'verify_reminder'
-                   AND m.status = 'sent')          AS sent_count,
-               (SELECT MAX(m2.created_at) FROM mail_log m2
-                 WHERE m2.to_email = u.email
-                   AND m2.type = 'verify_reminder'
-                   AND m2.status = 'sent')         AS last_sent
-          FROM users u
-         WHERE u.email_verified_at IS NULL
-           AND u.deactivated_at IS NULL
-           AND u.email <> ''
-           AND u.email LIKE '%@%'
-           AND u.created_at < (NOW() - INTERVAL $after HOUR)
-        HAVING sent_count < $max
-           AND (last_sent IS NULL OR last_sent < (NOW() - INTERVAL $gap HOUR))
-         ORDER BY u.created_at ASC
-         LIMIT $batch";
 
     try {
-        $st = $db->query($sql);
-        return $st ? ($st->fetchAll(PDO::FETCH_ASSOC) ?: []) : [];
+        // Two queries rather than one, because users.email and mail_log.to_email
+        // do not share a collation — the tables were created on either side of a
+        // server upgrade, so users.email is utf8mb4_0900_ai_ci and to_email is
+        // utf8mb4_general_ci. Comparing them directly is error 1267, "Illegal mix
+        // of collations". A COLLATE clause would force it through, but only by
+        // making mail_log's index on to_email unusable. Bound parameters instead
+        // take the collation of the column they are compared against, so going
+        // out through PHP sidesteps the mismatch and keeps the index.
+
+        // Step 1: candidates, from users alone.
+        // deactivated_at may not be migrated on every install; the whole thing is
+        // guarded, and a failure here simply means no reminders go out.
+        $st = $db->query(
+            "SELECT id, name, email
+               FROM users
+              WHERE email_verified_at IS NULL
+                AND deactivated_at IS NULL
+                AND email <> ''
+                AND email LIKE '%@%'
+                AND created_at < (NOW() - INTERVAL $after HOUR)
+              ORDER BY created_at ASC
+              LIMIT 200"
+        );
+        // 200, not REMIND_BATCH: the batch limit belongs AFTER the reminder
+        // history is applied, or a handful of already-reminded accounts at the
+        // front of the queue would hide everyone behind them forever.
+        $cand = $st ? ($st->fetchAll(PDO::FETCH_ASSOC) ?: []) : [];
+        if (!$cand) return [];
+
+        // Step 2: the whole reminder history for those addresses, in one trip.
+        $emails = array_column($cand, 'email');
+        $ph     = implode(',', array_fill(0, count($emails), '?'));
+        $hs = $db->prepare(
+            "SELECT to_email,
+                    COUNT(*) AS sent_count,
+                    (MAX(created_at) > (NOW() - INTERVAL $gap HOUR)) AS too_recent
+               FROM mail_log
+              WHERE type = 'verify_reminder'
+                AND status = 'sent'
+                AND to_email IN ($ph)
+              GROUP BY to_email"
+        );
+        // too_recent is computed by MySQL on purpose: comparing a DB timestamp
+        // against PHP's clock would silently drift if the two disagree on zone.
+        $hs->execute($emails);
+
+        // Keyed lowercase — MySQL matched these case-insensitively, PHP will not.
+        $hist = [];
+        foreach ($hs->fetchAll(PDO::FETCH_ASSOC) as $h) {
+            $hist[mb_strtolower((string)$h['to_email'])] = $h;
+        }
+
+        $out = [];
+        foreach ($cand as $u) {
+            $h     = $hist[mb_strtolower((string)$u['email'])] ?? null;
+            $count = $h ? (int)$h['sent_count'] : 0;
+
+            if ($count >= REMIND_MAX) continue;          // had their two, done
+            if ($h && (int)$h['too_recent'] === 1) continue;  // too soon
+
+            $u['sent_count'] = $count;
+            $out[] = $u;
+            if (count($out) >= REMIND_BATCH) break;
+        }
+        return $out;
     } catch (\Throwable $e) {
         $err = $e->getMessage();
         return [];

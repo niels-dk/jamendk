@@ -1244,4 +1244,9 @@ return [
     'nf.body'      => 'Den side findes ikke, eller du har ikke adgang til den.',
     'nf.back_home' => 'Tilbage til forsiden',
     'adm.backup_last_failed' => 'Sidste backup-forsøg mislykkedes.',
+    'email.remind.subject' => 'Din Merely a Dream-konto venter',
+    'email.remind.heading' => 'Ét skridt tilbage',
+    'email.remind.body'    => 'Du oprettede en Merely a Dream-konto, men bekræftede aldrig denne adresse, så den er ikke aktiv endnu. Bekræft den med knappen herunder, så er du inde. Hvis den første mail havnede i spam, kan denne også gøre det.',
+    'email.remind.expiry'  => 'Det her er et nyt link — det virker én gang og udløber om 24 timer. Har du ikke oprettet dig, så ignorér det, og kontoen forbliver inaktiv.',
+    'email.remind.cta'     => 'Bekræft min e-mail',
 ];

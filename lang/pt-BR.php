@@ -129,26 +129,26 @@ return [
     'email.paste_link'     => 'Ou cole este link no seu navegador:',
 
     /* ── Email: verification ─────────────────────────────────────── */
-    'email.verify.subject' => 'Confirm your Merely a Dream email',
-    'email.verify.heading' => 'Confirm your email',
-    'email.verify.body'    => 'Welcome to Merely a Dream. Confirm this address and your account is ready — then you can start capturing dreams.',
-    'email.verify.expiry'  => 'This link works once and expires in 24 hours.',
-    'email.verify.cta'     => 'Confirm my email',
+    'email.verify.subject' => 'Confirme seu e-mail do Merely a Dream',
+    'email.verify.heading' => 'Confirme seu e-mail',
+    'email.verify.body'    => 'Boas-vindas ao Merely a Dream. Confirme este endereço e sua conta está pronta — aí você pode começar a capturar dreams.',
+    'email.verify.expiry'  => 'Este link funciona uma vez e expira em 24 horas.',
+    'email.verify.cta'     => 'Confirmar meu e-mail',
 
     /* ── Email: password reset ───────────────────────────────────── */
-    'email.reset.subject'  => 'Reset your Merely a Dream password',
-    'email.reset.heading'  => 'Reset your password',
-    'email.reset.body'     => 'Use the button below to choose a new password.',
-    'email.reset.expiry'   => 'This link works once and expires in 1 hour. Your current password stays valid until you set a new one.',
-    'email.reset.cta'      => 'Choose a new password',
+    'email.reset.subject'  => 'Redefina sua senha do Merely a Dream',
+    'email.reset.heading'  => 'Redefina sua senha',
+    'email.reset.body'     => 'Use o botão abaixo para escolher uma nova senha.',
+    'email.reset.expiry'   => 'Este link funciona uma vez e expira em 1 hora. Sua senha atual continua valendo até você definir uma nova.',
+    'email.reset.cta'      => 'Escolher uma nova senha',
 
     /* ── Email: already registered ───────────────────────────────── */
-    'email.exists.subject' => 'You already have a Merely a Dream account',
-    'email.exists.heading' => 'You already have an account',
-    'email.exists.body'    => "Someone just tried to create a Merely a Dream account with this address — but you already have one, so we didn't make a second.",
-    'email.exists.body2'   => "If that was you and you've forgotten your password, you can set a new one below. Otherwise just ignore this.",
-    'email.exists.expiry'  => 'This link works once and expires in 1 hour.',
-    'email.exists.cta'     => 'Set a new password',
+    'email.exists.subject' => 'Você já tem uma conta no Merely a Dream',
+    'email.exists.heading' => 'Você já tem uma conta',
+    'email.exists.body'    => 'Alguém acabou de tentar criar uma conta no Merely a Dream com este endereço — mas você já tem uma, então não criamos uma segunda.',
+    'email.exists.body2'   => 'Se foi você e esqueceu a senha, pode definir uma nova abaixo. Caso contrário, basta ignorar.',
+    'email.exists.expiry'  => 'Este link funciona uma vez e expira em 1 hora.',
+    'email.exists.cta'     => 'Definir uma nova senha',
 
     /* ── Account page ────────────────────────────────────────────── */
     'account.title'         => 'Minha conta',
@@ -1245,4 +1245,9 @@ return [
     'nf.body'      => 'Essa página não existe, ou você não tem acesso a ela.',
     'nf.back_home' => 'Voltar para a página inicial',
     'adm.backup_last_failed' => 'A última tentativa de backup falhou.',
+    'email.remind.subject' => 'Sua conta no Merely a Dream está esperando',
+    'email.remind.heading' => 'Falta um passo',
+    'email.remind.body'    => 'Você criou uma conta no Merely a Dream mas nunca confirmou este endereço, então ela ainda não está ativa. Confirme com o botão abaixo e pronto. Se o primeiro e-mail foi para o spam, este pode ir também.',
+    'email.remind.expiry'  => 'Este é um link novo — funciona uma vez e expira em 24 horas. Se não foi você que se cadastrou, ignore e a conta continua inativa.',
+    'email.remind.cta'     => 'Confirmar meu e-mail',
 ];

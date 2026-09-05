@@ -102,6 +102,7 @@ require_once __DIR__.'/app/permissions.php';
 require_once __DIR__.'/app/i18n.php';   // after auth: language depends on the user
 require_once __DIR__.'/app/analytics.php';
 require_once __DIR__.'/app/backup_watchdog.php';
+require_once __DIR__.'/app/verify_reminders.php';
 require_once __DIR__.'/app/routes.php';
 
 $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
@@ -119,6 +120,11 @@ Analytics::recordWhenResolved($uri);
 // a fallback scheduler: if the last SUCCESSFUL backup is over ~30h old, this
 // launches one detached after the response has been sent. Cron stays primary.
 backup_watchdog();
+
+// Reminders for accounts that never confirmed their email. Does nothing
+// unless VERIFY_REMINDERS_ENABLED is defined true in app/config.php — so
+// deploying this cannot mail a real person before that is a decision.
+verify_reminders_tick();
 
 route(rtrim($uri,'/'));
 ?>

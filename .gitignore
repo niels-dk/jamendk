@@ -20,3 +20,6 @@ Thumbs.db
 *.swp
 .idea/
 .vscode/
+
+# Python bytecode from the i18n scripts
+__pycache__/

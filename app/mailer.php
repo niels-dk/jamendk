@@ -411,6 +411,29 @@ class Mailer
         return $ok;
     }
 
+    /**
+     * "You signed up but never confirmed" — a fresh link, because by the time
+     * this goes out the original has expired. Logged as its own type so the
+     * count of how many a person has had is simply a mail_log query.
+     */
+    public static function sendVerifyReminder(string $to, string $name, string $rawToken): bool
+    {
+        $was  = self::inRecipientLanguage($to);
+        $url  = self::url('/verify/' . $rawToken);
+        $e    = fn($x) => htmlspecialchars((string)$x, ENT_QUOTES, 'UTF-8');
+        $html = self::layout(
+            t('email.remind.heading'),
+            '<p style="margin:0 0 14px;">' . $e(t('email.hi', ['name' => $name])) . '</p>
+             <p style="margin:0;">' . $e(t('email.remind.body')) . '</p>
+             <p style="margin:14px 0 0;font-size:13px;color:#5a6878;">'
+             . $e(t('email.remind.expiry')) . '</p>',
+            t('email.remind.cta'), $url
+        );
+        $ok = self::send($to, t('email.remind.subject'), $html, 'verify_reminder');
+        I18n::use($was);
+        return $ok;
+    }
+
     public static function sendPasswordReset(string $to, string $name, string $rawToken): bool
     {
         $was  = self::inRecipientLanguage($to);

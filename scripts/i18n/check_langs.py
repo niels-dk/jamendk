@@ -23,7 +23,7 @@ print("quote check:", "CLEAN" if not bad else "%d PROBLEM(S)" % bad)
 # 2. parity
 vals = {}
 for l, f in FILES.items():
-    vals[l] = dict(re.findall(r"'([a-z_]+\.[a-z_0-9]+)'\s*=>\s*(.+?),?\s*$",
+    vals[l] = dict(re.findall(r"'([a-z_]+(?:\.[a-z_0-9]+)+)'\s*=>\s*(.+?),?\s*$",
                               io.open(f, encoding='utf-8').read(), re.M))
 base = set(vals['en'])
 print("\nparity:")
@@ -40,7 +40,7 @@ for f in glob.glob('views/**/*.php', recursive=True) + glob.glob('app/*.php') + 
     if any(' - Copy' in p for p in parts) or 'old' in parts:
         continue
     s = io.open(f, encoding='utf-8').read()
-    for m in re.finditer(r"\bt[e]?\(\s*'([a-z_]+\.[a-z_0-9]+)'\s*,\s*\[(.*?)\]\s*\)", s, re.S):
+    for m in re.finditer(r"\bt[e]?\(\s*'([a-z_]+(?:\.[a-z_0-9]+)+)'\s*,\s*\[(.*?)\]\s*\)", s, re.S):
         calls.setdefault(m.group(1), set()).update(re.findall(r"'([a-z_]+)'\s*=>", m.group(2)))
 prob = 0
 for key, names in sorted(calls.items()):

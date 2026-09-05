@@ -1233,4 +1233,9 @@ return [
     'nf.body'      => "That page doesn't exist, or you don't have access to it.",
     'nf.back_home' => 'Back to the front page',
     'adm.backup_last_failed' => 'The last backup attempt failed.',
+    'email.remind.subject' => 'Your Merely a Dream account is waiting',
+    'email.remind.heading' => 'One step left',
+    'email.remind.body'    => "You created a Merely a Dream account but never confirmed this address, so it isn't active yet. Confirm it with the button below and you're in. If the first email went to spam, that is where this one may be too.",
+    'email.remind.expiry'  => 'This is a fresh link — it works once and expires in 24 hours. If you did not sign up, ignore this and the account stays inactive.',
+    'email.remind.cta'     => 'Confirm my email',
 ];

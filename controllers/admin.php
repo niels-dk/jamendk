@@ -4,6 +4,7 @@
  * /admin/users — manage accounts: role, password reset, delete.
  */
 require_once __DIR__ . '/../models/User.php';
+require_once __DIR__ . '/../models/UserEvent.php';
 
 class admin_controller
 {
@@ -23,6 +24,9 @@ class admin_controller
              ORDER BY u.id ASC
         ";
         $users = $db->query($sql)->fetchAll(PDO::FETCH_ASSOC);
+
+        // One grouped query for the whole table rather than a subquery per row.
+        $eventCounts = UserEvent::counts();
 
         $pageTitle = 'User management';
         $noSidebar = true;
@@ -308,6 +312,7 @@ class admin_controller
     {
         require_admin();
         header('Content-Type: application/json');
+        if (!self::csrfOk()) return;
         require_once __DIR__ . '/../app/transfer.php';
         global $db;
 
@@ -352,6 +357,7 @@ class admin_controller
     {
         require_admin();
         header('Content-Type: application/json');
+        if (!self::csrfOk()) return;
         global $db, $currentUserId;
 
         if ((int)$userId === (int)$currentUserId) {
@@ -365,11 +371,89 @@ class admin_controller
         try {
             $db->prepare("UPDATE users SET deactivated_at = ? WHERE id = ?")
                ->execute([$on ? date('Y-m-d H:i:s') : null, (int)$userId]);
+
+            // Written whether or not a note was typed: the fact that someone
+            // was switched off, when, and by whom is the part you cannot
+            // reconstruct later. The note is the optional half.
+            UserEvent::add(
+                (int)$userId,
+                $on ? UserEvent::DEACTIVATED : UserEvent::REACTIVATED,
+                $_POST['note'] ?? null,
+                (int)$currentUserId
+            );
             echo json_encode(['success' => true, 'deactivated' => $on]);
         } catch (\Throwable $e) {
             http_response_code(500);
             echo json_encode(['error' => 'Run the account-transfer migration first']);
         }
+    }
+
+    /**
+     * POST /admin/users/{id}/note — add one entry to a user's timeline.
+     *
+     * There is no edit and no delete. An entry that can be rewritten cannot
+     * answer the question the timeline exists for.
+     */
+    public static function userNote(string $userId): void
+    {
+        require_admin();
+        header('Content-Type: application/json');
+        if (!self::csrfOk()) return;
+        global $db, $currentUserId;
+
+        if (!self::targetUser($db, $userId)) return;
+
+        $body = trim((string)($_POST['note'] ?? ''));
+        if ($body === '') {
+            http_response_code(422);
+            echo json_encode(['error' => 'The note is empty.']);
+            return;
+        }
+
+        $ok = UserEvent::add((int)$userId, UserEvent::NOTE, $body, (int)$currentUserId);
+        if (!$ok) {
+            http_response_code(500);
+            echo json_encode(['error' => 'Could not save the note.']);
+            return;
+        }
+        echo json_encode(['success' => true]);
+    }
+
+    /**
+     * GET /admin/users/{id}/history — the timeline panel, as HTML.
+     *
+     * HTML rather than JSON so date formatting and translation stay on the
+     * server where fmt_date() and t() already live, instead of being rebuilt
+     * in JavaScript.
+     */
+    public static function userHistory(string $userId): void
+    {
+        require_admin();
+        global $db;
+
+        $target = self::targetUser($db, $userId);
+        if (!$target) return;                 // targetUser already sent 404 JSON
+
+        $events = UserEvent::history((int)$userId);
+        include __DIR__ . '/../views/admin_user_history.php';
+    }
+
+    /**
+     * Reject a JSON write that arrives without this session's CSRF token.
+     *
+     * Every user-management action below changes something a stranger would
+     * love to change for you — a role, a password, a whole account — and until
+     * now none of them checked. Without this, any page an admin visits while
+     * signed in can POST here from the browser's own session.
+     *
+     * Returns false when the request should stop; the caller returns at once.
+     */
+    private static function csrfOk(): bool
+    {
+        if (csrf_check($_POST['csrf_token'] ?? null)) return true;
+        http_response_code(403);
+        echo json_encode(['error' => 'Your session expired. Reload the page and try again.']);
+        return false;
     }
 
     /** Resolve target user or emit 404 JSON. */
@@ -395,6 +479,7 @@ class admin_controller
     {
         require_admin();
         header('Content-Type: application/json');
+        if (!self::csrfOk()) return;
         global $db;
         if (!self::targetUser($db, $userId)) return;
         try {
@@ -413,6 +498,7 @@ class admin_controller
     {
         header('Content-Type: application/json');
         require_admin();
+        if (!self::csrfOk()) return;
         global $db, $currentUserId;
 
         $target = self::targetUser($db, $userId);
@@ -441,6 +527,7 @@ class admin_controller
     {
         header('Content-Type: application/json');
         require_admin();
+        if (!self::csrfOk()) return;
         global $db;
 
         $target = self::targetUser($db, $userId);
@@ -462,6 +549,7 @@ class admin_controller
     {
         header('Content-Type: application/json');
         require_admin();
+        if (!self::csrfOk()) return;
         global $db, $currentUserId;
 
         $target = self::targetUser($db, $userId);
@@ -474,6 +562,10 @@ class admin_controller
         }
 
         $db->prepare("DELETE FROM vision_roles WHERE user_id = ?")->execute([(int)$target['id']]);
+        // The timeline describes this person, so it is their data and leaves
+        // with them. Keeping notes about someone whose account is gone would
+        // be a shadow of a human being that nobody knows is there.
+        UserEvent::purge((int)$target['id']);
         $db->prepare("DELETE FROM users WHERE id = ?")->execute([(int)$target['id']]);
         echo json_encode(['success' => true]);
     }

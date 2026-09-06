@@ -58,7 +58,75 @@ global $currentUserId;
   }
   #adminUsers th.au-sort.sorted-asc::after  { content:'▲'; opacity:.9; color:#8fb1d8; }
   #adminUsers th.au-sort.sorted-desc::after { content:'▼'; opacity:.9; color:#8fb1d8; }
+
+  /* Internal history. The (i) is always present, quiet when there is nothing
+     to read — otherwise there would be no way to write the first entry on a
+     user who has none. */
+  #adminUsers .au-hist {
+    background:none; border:0; cursor:pointer; padding:0 .15rem;
+    margin-left:.3rem; font-size:.95rem; line-height:1;
+    color:#5c6b80; vertical-align:baseline;
+  }
+  #adminUsers .au-hist:hover  { color:#8fb1d8; }
+  #adminUsers .au-hist.has    { color:#8fb1d8; }
+  /* The count is drawn from data-n rather than written into the cell, because
+     the search box filters on the row's textContent — a literal "3" in there
+     would make every user with three entries match a search for "3". */
+  #adminUsers .au-hist.has::after {
+    content: attr(data-n);
+    font-size:.62rem; font-weight:700; vertical-align:super; margin-left:.05rem;
+  }
+
+  #uhOverlay {
+    position:fixed; inset:0; z-index:900; display:flex;
+    align-items:center; justify-content:center; padding:1.5rem;
+    background:rgba(6,8,12,.66);
+  }
+  #uhPanel {
+    width:100%; max-width:560px; max-height:82vh; overflow-y:auto;
+    background:#12161f; border:1px solid #2b3346; border-radius:14px;
+    padding:1.2rem 1.3rem; box-shadow:0 18px 50px rgba(0,0,0,.5);
+  }
+  #uhPanel .uh-head {
+    display:flex; align-items:flex-start; justify-content:space-between;
+    gap:1rem; margin-bottom:1rem;
+  }
+  #uhPanel .uh-who  { font-weight:700; color:#eaeaea; }
+  #uhPanel .uh-mail { font-size:.82em; opacity:.6; }
+  #uhPanel .uh-close {
+    background:none; border:0; color:#8593a6; cursor:pointer;
+    font-size:1rem; padding:.15rem .35rem;
+  }
+  #uhPanel .uh-close:hover { color:#eaeaea; }
+  #uhPanel .uh-add textarea {
+    width:100%; box-sizing:border-box; resize:vertical;
+    background:#15161A; border:1px solid #2b3346; color:#ddd;
+    border-radius:8px; padding:.55rem .7rem; font:inherit; font-size:.9rem;
+  }
+  #uhPanel .uh-add-row {
+    display:flex; align-items:center; justify-content:space-between;
+    gap:.8rem; margin:.5rem 0 1.2rem;
+  }
+  #uhPanel .uh-privacy { font-size:.72rem; opacity:.45; line-height:1.35; }
+  #uhPanel .uh-empty   { opacity:.5; font-size:.9rem; margin:0; }
+  #uhPanel .uh-list    { list-style:none; margin:0; padding:0; }
+  #uhPanel .uh-item {
+    padding:.7rem 0; border-top:1px solid #1e2230;
+  }
+  #uhPanel .uh-meta {
+    display:flex; align-items:center; gap:.5rem; flex-wrap:wrap;
+    font-size:.75rem; opacity:.75; margin-bottom:.25rem;
+  }
+  #uhPanel .uh-type {
+    padding:.05rem .45rem; border-radius:999px;
+    font-size:.7rem; font-weight:700;
+  }
+  #uhPanel .uh-body {
+    font-size:.9rem; color:#cfdbe8; white-space:pre-wrap; word-break:break-word;
+  }
 </style>
+
+<div id="uhOverlay" hidden><div id="uhPanel"></div></div>
 
 <div class="card" style="padding:0;overflow-x:auto;">
   <table id="adminUsers">
@@ -98,6 +166,9 @@ global $currentUserId;
                       background:rgba(224,106,106,.16);color:#f0a0a0;font-size:.7rem;font-weight:700;">
                   <?= te('adm.deactivated') ?></span>
               <?php endif; ?>
+              <?php $evN = (int)(($eventCounts ?? [])[(int)$u['id']] ?? 0); ?>
+              <button type="button" class="au-hist<?= $evN ? ' has' : '' ?>"
+                      data-n="<?= $evN ?>" title="<?= te('adm.hist_tip') ?>">ⓘ</button>
             </div>
             <div class="u-mail" title="<?= au_e($u['email']) ?>"><?= au_e($u['email']) ?></div>
             <?php if ($extra !== ''): ?>
@@ -182,7 +253,11 @@ global $currentUserId;
     'transfer_old'  => t('adm.transfer_old'),
     'confirm_block' => t('adm.confirm_block'),
     'confirm_del'   => t('adm.confirm_del'),
+    'hist_ask'      => t('adm.hist_ask'),
   ], JSON_UNESCAPED_UNICODE) ?>;
+  // Every write below carries this. Without it the six user-management
+  // endpoints would accept a POST from any page the admin happens to visit.
+  const CSRF = <?= json_encode(csrf_token()) ?>;
 
   // ── Column sorting ────────────────────────────────────────────────
   // Sorts on each cell's data-sort value rather than its rendered text, so
@@ -238,15 +313,19 @@ global $currentUserId;
       const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams(params).toString()
+        body: new URLSearchParams({ ...params, csrf_token: CSRF }).toString()
       });
       const j = await res.json();
-      if (j && j.success) { status.textContent = T.saved; return true; }
+      // Returns the parsed response, not a bare true. Every caller tests it
+      // for truthiness, so nothing breaks — but the two that read fields off
+      // it (transfer's "moved :n boards", deactivate's reload) were reading
+      // them off the boolean `true` and silently never firing.
+      if (j && j.success) { status.textContent = T.saved; return j; }
       status.textContent = '⚠ ' + (j?.error || T.failed);
-      return false;
+      return null;
     } catch {
       status.textContent = '⚠ ' + T.net_error;
-      return false;
+      return null;
     }
   }
 
@@ -295,8 +374,14 @@ global $currentUserId;
       const btn = e.target.closest('.au-deact');
       const turningOn = btn.dataset.on !== '1';   // on = deactivated
       const who = row.querySelector('.u-mail')?.textContent?.trim() || T.this_account;
-      if (turningOn && !confirm(T.confirm_block.replace(':who', who))) return;
-      const j = await post(`/admin/users/${id}/deactivate`, { on: turningOn ? 1 : 0 });
+      // The prompt IS the confirmation — Cancel aborts, OK goes ahead with
+      // whatever was typed. One dialog instead of two, and no ambiguity about
+      // what cancelling a second one would have meant.
+      const head = turningOn ? T.confirm_block.replace(':who', who) + '\n\n' : '';
+      const note = prompt(head + T.hist_ask, '');
+      if (note === null) return;
+      const j = await post(`/admin/users/${id}/deactivate`,
+                           { on: turningOn ? 1 : 0, note: note });
       if (j && j.success) location.reload();
       return;
     }
@@ -305,6 +390,62 @@ global $currentUserId;
       if (!confirm(T.confirm_del.replace(':who', email))) return;
       if (await post(`/admin/users/${id}/delete`, {})) row.remove();
     }
+  });
+
+  // ── Internal history ──────────────────────────────────────────────
+  // The panel's HTML is rendered by the server (views/admin_user_history.php)
+  // so dates and labels stay translated in one place. Reopening it after a
+  // write is the cheapest correct way to refresh — the list is small.
+  const ov    = document.getElementById('uhOverlay');
+  const panel = document.getElementById('uhPanel');
+
+  function closeHist() { ov.hidden = true; panel.innerHTML = ''; }
+
+  async function openHist(id) {
+    status.textContent = T.saving;
+    try {
+      const res = await fetch(`/admin/users/${id}/history`);
+      if (!res.ok) { status.textContent = '⚠ ' + T.failed; return; }
+      panel.innerHTML = await res.text();
+      ov.hidden = false;
+      status.textContent = '';
+      panel.querySelector('textarea')?.focus();
+    } catch { status.textContent = '⚠ ' + T.net_error; }
+  }
+
+  // Keep the badge honest without a page reload.
+  function bumpCount(id) {
+    const b = table.querySelector(`tr[data-id="${id}"] .au-hist`);
+    if (!b) return;
+    b.dataset.n = (parseInt(b.dataset.n, 10) || 0) + 1;
+    b.classList.add('has');
+  }
+
+  table.addEventListener('click', e => {
+    const b = e.target.closest('.au-hist');
+    if (b) openHist(b.closest('tr').dataset.id);
+  });
+
+  ov.addEventListener('click', e => {
+    if (e.target === ov || e.target.closest('.uh-close')) closeHist();
+  });
+
+  ov.addEventListener('submit', async e => {
+    const form = e.target.closest('.uh-add');
+    if (!form) return;
+    e.preventDefault();
+    const ta   = form.querySelector('textarea');
+    const note = (ta.value || '').trim();
+    if (!note) { ta.focus(); return; }
+    const id = form.dataset.id;
+    if (await post(`/admin/users/${id}/note`, { note })) {
+      bumpCount(id);
+      openHist(id);
+    }
+  });
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && !ov.hidden) closeHist();
   });
 })();
 </script>

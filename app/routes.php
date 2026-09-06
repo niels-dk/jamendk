@@ -233,6 +233,8 @@ function route(string $uri): void
         '/admin/users/([0-9]+)/verify'             => ['admin', 'verifyUser'],
         '/admin/users/([0-9]+)/transfer'           => ['admin', 'transferUser'],
         '/admin/users/([0-9]+)/deactivate'         => ['admin', 'setDeactivated'],
+        '/admin/users/([0-9]+)/note'               => ['admin', 'userNote'],
+        '/admin/users/([0-9]+)/history'            => ['admin', 'userHistory'],
         '/admin/users/([0-9]+)/password'           => ['admin', 'setPassword'],
         '/admin/users/([0-9]+)/delete'             => ['admin', 'deleteUser'],
         '/admin/users/([0-9]+)/impersonate'        => ['admin', 'impersonate'],

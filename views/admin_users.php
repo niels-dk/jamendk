@@ -82,6 +82,10 @@ global $currentUserId;
     align-items:center; justify-content:center; padding:1.5rem;
     background:rgba(6,8,12,.66);
   }
+  /* Must out-specify the line above. The browser hides [hidden] elements with
+     an attribute selector, which loses to the ID selector on display:flex —
+     so without this the overlay is open from the moment the page loads. */
+  #uhOverlay[hidden] { display:none; }
   #uhPanel {
     width:100%; max-width:560px; max-height:82vh; overflow-y:auto;
     background:#12161f; border:1px solid #2b3346; border-radius:14px;

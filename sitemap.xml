@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  The pages Merely a Dream wants found. Deliberately short: only what a
+  stranger should be able to read before deciding to sign up.
+
+  Kept as a static file rather than generated, because every URL in it is a
+  fixed marketing page. Adding one means editing this file, which is a change
+  that shows up in a diff — better than a generator quietly changing what
+  Google is told.
+
+  No <lastmod>. It is optional, and a date that does not track the actual
+  content is worse than none: Google learns to ignore the field, and we would
+  be asserting something we are not maintaining.
+
+  Everything else on the site is noindexed by index.php. Notably absent:
+  /t/{token} share links, whose token is the credential, and /login and
+  /register, which have nothing to rank for.
+-->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://merelyadream.com/</loc>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://merelyadream.com/pricing</loc>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://merelyadream.com/help</loc>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://merelyadream.com/contact</loc>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://merelyadream.com/terms</loc>
+    <priority>0.3</priority>
+  </url>
+  <url>
+    <loc>https://merelyadream.com/privacy</loc>
+    <priority>0.3</priority>
+  </url>
+</urlset>

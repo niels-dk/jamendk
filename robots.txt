@@ -1,0 +1,42 @@
+# merelyadream.com
+#
+# This file is a request, not a wall. Well-behaved crawlers honour it; the
+# scanners hammering /login and /register do not, and nothing here is expected
+# to slow them down. The real protection for private URLs is the
+# "X-Robots-Tag: noindex" header index.php sends on every route that is not a
+# public page — robots.txt cannot stop a URL from being indexed if someone
+# links to it from elsewhere.
+#
+# What this DOES do is keep Google's crawl budget on the pages meant to be
+# found, instead of spending it on app routes that only answer to a login.
+
+User-agent: *
+
+# Share links. The token in the URL IS the credential, so these must never be
+# crawled or indexed. Listed here as well as noindexed, belt and braces.
+Disallow: /t/
+Disallow: /trips/
+Disallow: /documents/
+
+# One-time token URLs from email. Nothing to index, and fetching one would
+# spend a link that belongs to a person.
+Disallow: /verify/
+Disallow: /verify-resend
+Disallow: /reset/
+Disallow: /forgot
+
+# The application itself. Everything below answers only to a signed-in user,
+# so a crawler gets a redirect and learns nothing.
+Disallow: /dashboard
+Disallow: /account
+Disallow: /admin
+Disallow: /teams
+Disallow: /capture
+Disallow: /dreams
+Disallow: /visions
+Disallow: /moods
+Disallow: /api/
+Disallow: /login
+Disallow: /register
+
+Sitemap: https://merelyadream.com/sitemap.xml

@@ -107,6 +107,26 @@ require_once __DIR__.'/app/routes.php';
 
 $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 
+/**
+ * Tell search engines what may be indexed — by allowlist, not blocklist.
+ *
+ * robots.txt asks a crawler not to FETCH a URL. It cannot stop one being
+ * INDEXED: if a /t/{token} share link ever appears in a public post or a
+ * referrer log, Google can list it without ever fetching it, and that token is
+ * the credential for the whole trip. This header is the control that actually
+ * prevents that.
+ *
+ * An allowlist because the default has to be safe. Every route added from here
+ * on is private until someone deliberately makes it public — the opposite
+ * would mean a new page leaks by being forgotten.
+ */
+if (!headers_sent()) {
+    $indexable = ['', '/', '/pricing', '/help', '/contact', '/terms', '/privacy'];
+    if (!in_array(rtrim((string)$uri, '/'), $indexable, true)) {
+        header('X-Robots-Tag: noindex, nofollow');
+    }
+}
+
 // First-party page-view record. Runs after auth (so it knows logged-in vs
 // anonymous). Cookie-free, never throws, skips bots, assets, APIs and the
 // admin's own browsing — and now also skips anything that did not resolve to a

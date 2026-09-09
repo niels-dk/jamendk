@@ -104,6 +104,7 @@ return [
     'auth.name'            => 'Seu nome',
     'auth.err_name'        => 'Diga o seu nome.',
     'auth.err_email'       => 'Esse endereço de e-mail não parece certo.',
+    'auth.err_email_domain' => 'Esse domínio de e-mail não existe. Confira o que vem depois do @.',
     'auth.err_short_pass'  => 'A senha precisa ter pelo menos 6 caracteres.',
     'auth.check_inbox'     => 'Confira sua caixa de entrada — enviamos um link para confirmar seu e-mail. Pode levar um minuto para chegar.',
 

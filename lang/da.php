@@ -103,6 +103,7 @@ return [
     'auth.name'            => 'Dit navn',
     'auth.err_name'        => 'Skriv lige dit navn.',
     'auth.err_email'       => 'Den e-mailadresse ser ikke rigtig ud.',
+    'auth.err_email_domain' => 'Det e-mail-domæne findes ikke. Tjek stavningen efter @.',
     'auth.err_short_pass'  => 'Adgangskoden skal være mindst 6 tegn.',
     'auth.check_inbox'     => 'Tjek din indbakke — vi har sendt dig et link til at bekræfte din e-mailadresse. Der kan gå et minut.',
 

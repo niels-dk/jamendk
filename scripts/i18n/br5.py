@@ -32,6 +32,7 @@ BR = {
 'adm.transfer_tip': 'Mover tudo o que esta conta possui para outro creator',
 'adm.reactivate': 'Reativar', 'adm.reactivate_tip': 'Permitir que esta conta entre novamente',
 'adm.deactivate': 'Desativar', 'adm.deactivate_tip': 'Bloquear o login desta conta',
+'auth.err_email_domain': 'Esse domínio de e-mail não existe. Confira o que vem depois do @.',
 'adm.hist_tip': 'Histórico interno',
 'adm.hist_ask': 'Observação para o histórico deste usuário (opcional):',
 'adm.hist_add': 'Adicionar observação',

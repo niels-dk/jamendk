@@ -38,6 +38,45 @@ function csrf_check(?string $token): bool
     return hash_equals((string)$_SESSION['csrf_token'], $token);
 }
 
+/**
+ * True when the address's domain can actually receive mail.
+ *
+ * filter_var(FILTER_VALIDATE_EMAIL) only checks the shape, so sample@email.tst
+ * passes it — .tst is not a real TLD, there is no server to reach, and every
+ * message bounces. One bot using exactly that address cost eight bounces in
+ * two days, one of which was our own reminder email.
+ *
+ * It catches the far more common case too: a typo. Someone who writes
+ * gmial.com is told so immediately, instead of waiting for a confirmation
+ * email that was never going to arrive.
+ *
+ * FAILS OPEN. A DNS problem must never stop real people from signing up, so
+ * anything this cannot answer confidently counts as deliverable.
+ */
+function email_domain_resolves(string $email): bool
+{
+    $at = strrpos($email, '@');
+    if ($at === false) return true;            // shape is not this function's job
+    $domain = trim(substr($email, $at + 1), " \t.");
+
+    if ($domain === '' || $domain[0] === '[') return true;  // IP literal — allow
+    if (!function_exists('checkdnsrr')) return true;
+
+    // RFC 5321: a domain with no MX may still accept mail on its address
+    // record, so either one counts as deliverable.
+    if (checkdnsrr($domain, 'MX'))   return true;
+    if (checkdnsrr($domain, 'A'))    return true;
+    if (checkdnsrr($domain, 'AAAA')) return true;
+
+    // We are about to turn someone away. checkdnsrr() returns false both for
+    // "no such record" and for "the lookup failed", which are very different
+    // things — so prove the resolver is answering at all before trusting a
+    // negative. Costs one extra lookup, and only on the reject path.
+    if (!checkdnsrr('gmail.com', 'MX')) return true;
+
+    return false;
+}
+
 /** True when the visitor is a real logged-in user (vs the anonymous fallback). */
 function is_logged_in(): bool
 {

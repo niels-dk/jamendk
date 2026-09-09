@@ -92,6 +92,7 @@ return [
     'auth.name'            => 'Your name',
     'auth.err_name'        => 'Please tell us your name.',
     'auth.err_email'       => "That email address doesn't look right.",
+    'auth.err_email_domain' => "That email domain doesn't exist. Check the spelling after the @.",
     'auth.err_short_pass'  => 'Password must be at least 6 characters.',
     'auth.check_inbox'     => 'Check your inbox — we sent you a link to confirm your email address. It may take a minute to arrive.',
 

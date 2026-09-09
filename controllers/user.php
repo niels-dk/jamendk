@@ -101,6 +101,13 @@ class user_controller
                     $error = t('auth.err_email');
                 } else if (strlen($pass) < 6) {
                     $error = t('auth.err_short_pass');
+                } else if (!email_domain_resolves($email)) {
+                    // Deliberately BEFORE emailExists(): an address whose domain
+                    // does not exist must not reach the branch below either,
+                    // which would mail "you already have an account" straight
+                    // into another bounce. Placed after the cheap checks so a
+                    // short password costs no DNS lookup.
+                    $error = t('auth.err_email_domain');
                 } else if (User::emailExists($email)) {
                     // Never confirm that an address is taken — that turns this
                     // form into an account-existence oracle. The real owner

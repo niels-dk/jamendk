@@ -5,7 +5,7 @@
 function cp_e($s){ return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
 ?>
 <!doctype html>
-<html lang="en">
+<html lang="<?= htmlspecialchars(I18n::lang(), ENT_QUOTES) ?>">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">

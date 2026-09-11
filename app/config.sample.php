@@ -66,6 +66,23 @@ define('MAIL_SITE_HOST', 'merelyadream.com');
  */
 // define('VERIFY_REMINDERS_ENABLED', true);
 
+/* ── Link preview image ──────────────────────────────────────────────────
+ *
+ * The picture shown when someone pastes a link to this site into WhatsApp,
+ * Instagram, Slack or iMessage. For a tool sold to filmmakers, a share with
+ * an empty image box is close to self-defeating — and before launch, links in
+ * messages are how this site travels, not search.
+ *
+ * 1200x630 px. Anything squarer gets cropped badly in the wide card layout.
+ *
+ * You usually do NOT need this line: dropping the file at
+ * public/img/og-default.png is detected automatically. Set it only to point
+ * somewhere else. Until one exists, the square app icon is used and the card
+ * is declared as the small "summary" layout, so the markup never promises a
+ * wide image it cannot show.
+ */
+// define('OG_IMAGE', '/public/img/og-default.png');
+
 /* ── Landing page ────────────────────────────────────────────────────────
  * Token of a published Trip to show strangers as a live example. The
  * "See a real Trip page" button on the landing page stays hidden until this

@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="<?= htmlspecialchars(I18n::lang(), ENT_QUOTES) ?>">
 <head>
   <?php include __DIR__ . '/partials/head.php'; ?>
 </head>

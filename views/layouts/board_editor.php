@@ -1,6 +1,6 @@
 <!-- views/layouts/board_editor.php -->
 <!DOCTYPE html>
-<html lang="en">
+<html lang="<?= htmlspecialchars(I18n::lang(), ENT_QUOTES) ?>">
 <head>
   <meta charset="UTF-8">
   <title><?= $pageTitle ?? 'Board Editor' ?></title>

@@ -1251,6 +1251,7 @@ return [
     'adm.ref_landed'     => 'Onde cada origem chegou',
     'adm.ref_landed_sub' => 'Buscadores removem o termo de busca da referência, então a página em que a pessoa chegou é o mais perto que dá para saber o que ela procurava.',
     'auth.err_throttled' => 'Tentativas de login em excesso. Espere alguns minutos e tente de novo.',
+    'auth.err_reg_throttled' => 'Cadastros demais desta conexão. Espere uma hora e tente de novo.',
     'pg.priv_h_logins' => 'Tentativas de login malsucedidas',
     'pg.priv_logins'   => 'Quando uma tentativa de login falha, registramos o endereço que foi tentado e o endereço IP de onde veio, para que tentativas repetidas possam ser desaceleradas. Nada é registrado quando o login dá certo, um login bem-sucedido limpa as falhas anteriores daquele endereço, e os registros são apagados depois de 24 horas.',
     'nf.title'     => 'Página não encontrada',

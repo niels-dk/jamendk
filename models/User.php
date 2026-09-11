@@ -55,6 +55,30 @@ class User
     private const THROTTLE_MAX_IDENT   = 5;
     private const THROTTLE_MAX_IP      = 25;
 
+    /**
+     * Signups from one host, per hour.
+     *
+     * Mailer::rateLimited() caps how often ONE address can be mailed, so a bot
+     * reusing a single address stops after three. A bot that rotates addresses
+     * gets three each and never meets a ceiling at all. This is that ceiling.
+     *
+     * Ten is deliberately generous for people: a workshop signing up together
+     * in one room shares an IP, and that has to keep working. A mail cannon
+     * wants hundreds, so the gap between the two is wide.
+     */
+    private const THROTTLE_MAX_REGISTER    = 10;
+    private const THROTTLE_REGISTER_WINDOW = 60;
+
+    /**
+     * What signup rows carry in login_attempts.identifier.
+     *
+     * They share the table because the shape, the indexes and the 24h pruning
+     * are identical — but they are NOT the same counter. loginThrottled()
+     * excludes them explicitly: a room of people signing up together must not
+     * also spend that office's budget for failed sign-ins.
+     */
+    private const REGISTER_MARKER = 'register';
+
     /** True when this identifier or this IP has failed too often lately. */
     public static function loginThrottled(string $identifier, string $ip): bool
     {
@@ -69,10 +93,12 @@ class User
             if ((int)$st->fetchColumn() >= self::THROTTLE_MAX_IDENT) return true;
 
             if ($ip !== '') {
+                // Signup rows live in this table too and are deliberately not
+                // counted here — see REGISTER_MARKER.
                 $st = $db->prepare("SELECT COUNT(*) FROM login_attempts
-                                     WHERE ip = ?
+                                     WHERE ip = ? AND identifier <> ?
                                        AND created_at > (NOW() - INTERVAL $win MINUTE)");
-                $st->execute([$ip]);
+                $st->execute([$ip, self::REGISTER_MARKER]);
                 if ((int)$st->fetchColumn() >= self::THROTTLE_MAX_IP) return true;
             }
             return false;
@@ -97,6 +123,44 @@ class User
                             WHERE created_at < (NOW() - INTERVAL 24 HOUR)');
             }
         } catch (\Throwable $e) { /* never block a login on bookkeeping */ }
+    }
+
+    /** True when this host has started too many signups lately. */
+    public static function registerThrottled(string $ip): bool
+    {
+        global $db;
+        if ($ip === '') return false;
+        try {
+            $win = (int)self::THROTTLE_REGISTER_WINDOW;   // literal after INTERVAL
+            $st = $db->prepare("SELECT COUNT(*) FROM login_attempts
+                                 WHERE ip = ? AND identifier = ?
+                                   AND created_at > (NOW() - INTERVAL $win MINUTE)");
+            $st->execute([$ip, self::REGISTER_MARKER]);
+            return (int)$st->fetchColumn() >= self::THROTTLE_MAX_REGISTER;
+        } catch (\Throwable $e) {
+            // Table not migrated yet — never lock people out over that.
+            return false;
+        }
+    }
+
+    /**
+     * Count one signup that actually cost something: an account created, or an
+     * email sent to an address that already had one.
+     *
+     * Recorded at those two points rather than on every POST, so somebody
+     * retyping a too-short password four times is not throttled for it —
+     * nothing left the server on those attempts, and there is nothing to
+     * protect against. Pruning is handled by recordFailedLogin()'s existing
+     * one-in-twenty sweep over the same table.
+     */
+    public static function recordRegistration(string $ip): void
+    {
+        global $db;
+        if ($ip === '') return;
+        try {
+            $db->prepare('INSERT INTO login_attempts (identifier, ip) VALUES (?, ?)')
+               ->execute([self::REGISTER_MARKER, $ip]);
+        } catch (\Throwable $e) { /* never block a signup on bookkeeping */ }
     }
 
     /** A correct password clears that identifier's history. */

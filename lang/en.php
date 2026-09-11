@@ -1239,6 +1239,7 @@ return [
     'adm.ref_landed'     => 'What each source landed on',
     'adm.ref_landed_sub' => 'Search engines strip the search term from the referrer, so the page someone arrived on is the closest thing to knowing what they were after.',
     'auth.err_throttled' => 'Too many sign-in attempts. Wait a few minutes and try again.',
+    'auth.err_reg_throttled' => 'Too many signups from this connection. Wait an hour and try again.',
     'pg.priv_h_logins' => 'Failed sign-ins',
     'pg.priv_logins'   => 'When a sign-in attempt fails we record the address that was tried and the IP address it came from, so repeated guessing can be slowed down. Nothing is recorded when a sign-in succeeds, a successful sign-in clears any earlier failures for that address, and the rows are deleted after 24 hours.',
     'nf.title'     => 'Page not found',

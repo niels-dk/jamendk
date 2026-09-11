@@ -95,7 +95,13 @@ class user_controller
                 $name  = trim($_POST['name']  ?? '');
                 $email = trim($_POST['email'] ?? '');
                 $pass  = $_POST['password'] ?? '';
-                if (!$name) {
+                $regIp = $_SERVER['REMOTE_ADDR'] ?? '';
+                // Checked before everything else: one indexed lookup, cheaper
+                // than the DNS call below, and a host that has had its fill
+                // should not get a field-by-field critique of its next attempt.
+                if (User::registerThrottled($regIp)) {
+                    $error = t('auth.err_reg_throttled');
+                } else if (!$name) {
                     $error = t('auth.err_name');
                 } else if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
                     $error = t('auth.err_email');
@@ -119,12 +125,14 @@ class user_controller
                             Mailer::sendAlreadyRegistered($email, $existing['name'] ?? '', $raw);
                         }
                     }
+                    User::recordRegistration($regIp);
                     self::flashToLogin($next);
                 } else {
                     $newId = User::create($name, $email, $pass);
                     if (!$newId) {
                         $error = 'Could not create the account. Please try again.';
                     } else {
+                        User::recordRegistration($regIp);
                         // No auto-login: the account stays inert until the
                         // address is confirmed.
                         $raw = User::issueVerifyToken($newId);

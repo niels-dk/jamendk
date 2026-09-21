@@ -36,7 +36,23 @@ Disallow: /dreams
 Disallow: /visions
 Disallow: /moods
 Disallow: /api/
-Disallow: /login
-Disallow: /register
+
+# /login and /register are deliberately NOT listed, and must not be re-added.
+#
+# Disallow and noindex work against each other. A crawler has to FETCH a page
+# to read its X-Robots-Tag, so forbidding the fetch means the noindex is never
+# seen — and a blocked URL that something links to can sit in the index as a
+# bare URL forever. Google even has a name for it: "Indexed, though blocked by
+# robots.txt".
+#
+# That is what happened here. Six /login?next=/dreams/... and
+# /register?next=/dreams/... URLs were filed as "duplicate without canonical",
+# and blocking them left Google unable to re-crawl and clear them. Letting it
+# fetch means it finds both signals we already send: a canonical pointing at
+# the bare path, and noindex.
+#
+# The rules above are the opposite case on purpose. For /t/ and /documents/ the
+# fetch IS the harm — the token in the URL is the credential — so there we
+# forbid crawling and accept that our noindex may never be read.
 
 Sitemap: https://merelyadream.com/sitemap.xml

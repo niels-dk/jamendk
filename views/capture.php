@@ -122,6 +122,7 @@ function cp_e($s){ return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
     waitingOne:  <?= json_encode(t('capture.waiting_one')) ?>,
     waitingMany: <?= json_encode(t('capture.waiting_many')) ?>,
     signIn:      <?= json_encode(t('capture.signin_to_sync')) ?>,
+    savedSignIn: <?= json_encode(t('capture.saved_signin')) ?>,
     syncedOne:   <?= json_encode(t('js.synced_one')) ?>,
     syncedMany:  <?= json_encode(t('js.synced_many')) ?>
   };
@@ -218,10 +219,12 @@ function cp_e($s){ return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
       });
     }
     if (r.reason === 'auth') {
-      // The login expired. Nothing is lost — it is all on this device and is
-      // sent as soon as this screen opens again after signing in.
+      // Not signed in (or the login expired). Nothing is lost and nothing
+      // interrupts: the idea is on this device, the line under the box says
+      // how many are waiting and offers the sign-in, and you can keep
+      // catching. It is sent as soon as this screen opens signed in.
+      showSnack('⚡ ' + T.savedSignIn, 3200);
       showPending(true);
-      location.href = '/login?next=' + encodeURIComponent('/capture');
       return;
     }
     if (r.left === 0 && r.synced > 0) showSnack(openLink(r.lastSlug));

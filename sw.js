@@ -1,8 +1,10 @@
 // sw.js — what still works with no signal.
 //
 // The promise is narrow and this file keeps to it:
+//   - the capture screen ALWAYS opens — no signal, weak signal, signed in or
+//     not — from the first visit to the site onwards, and saves ideas on the
+//     device. Catching an idea must never depend on the network or a login.
 //   - a Trip page you have opened once (/t/… or /trips/…) opens again offline
-//   - the capture screen opens offline and saves ideas on the device
 //   - their images (thumbnails) and the scripts they need are kept too
 // Everything else needs the network, and says so with a small offline page
 // instead of pretending.
@@ -45,10 +47,11 @@ self.addEventListener('install', (e) => {
         if (keepable(res)) await cache.put(url, res);
       } catch (_) { /* offline during install: the next page load fetches it */ }
     }
-    // The capture screen, if this browser is signed in. Signed out it answers
-    // with a redirect, which keepable() refuses.
+    // The capture screen, for everyone. It needs no login (see
+    // dream_controller::capture), so it can be saved the first time anyone
+    // visits any page — not only if they happen to open it while signed in.
     try {
-      const res = await fetch('/capture', { credentials: 'same-origin' });
+      const res = await fetch('/capture', { credentials: 'same-origin', cache: 'reload' });
       if (keepable(res)) await cache.put('/capture', res);
     } catch (_) {}
   })());
@@ -107,6 +110,63 @@ async function offlinePage() {
   return new Response(html, { status: 503, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
 }
 
+// How long a page load may wait on the network before a saved copy is shown
+// instead. A weak connection does not fail, it hangs — and a shot list that
+// takes a minute to appear on a roadside is as good as missing.
+const SLOW_MS = 4000;
+
+// The capture screen: saved copy first, refreshed in the background. It holds
+// nothing that changes between visits, so there is no reason to make the one
+// screen that must open instantly wait for the network.
+async function capturePage(e, req) {
+  const cache = await caches.open(CACHE);
+  const saved = await cache.match('/capture', { ignoreSearch: true });
+  const fresh = fetch(req).then((res) => {
+    if (keepable(res)) cache.put('/capture', res.clone());
+    return res;
+  });
+  if (saved && !saved.redirected) {
+    e.waitUntil(fresh.catch(() => {}));
+    return saved;
+  }
+  try { return await fresh; } catch (_) { return offlinePage(); }
+}
+
+// Every other page: network first. A Trip page that is already saved is shown
+// from the device if the network has not answered within SLOW_MS (the request
+// carries on and refreshes the saved copy for next time).
+async function page(e, req, url) {
+  const trip = isTripOrCapture(url.pathname);
+  const found = await caches.match(req, { ignoreSearch: true });
+  const saved = found && !found.redirected ? found : null;
+
+  const net = fetch(req).then(async (res) => {
+    if (trip && keepable(res)) {
+      const cache = await caches.open(CACHE);
+      await cache.put(req, res.clone());
+    }
+    return res;
+  });
+
+  if (!saved) {
+    try { return await net; } catch (_) { return offlinePage(); }
+  }
+  if (!trip) {
+    try { return await net; } catch (_) { return saved; }
+  }
+  try {
+    const first = await Promise.race([
+      net,
+      new Promise((resolve) => setTimeout(() => resolve(null), SLOW_MS)),
+    ]);
+    if (first) return first;
+    e.waitUntil(net.catch(() => {}));
+    return saved;
+  } catch (_) {
+    return saved;
+  }
+}
+
 // After storing a stylesheet or script, drop the older ?v= copies of it.
 async function pruneVersions(cache, url) {
   for (const req of await cache.keys()) {
@@ -128,23 +188,11 @@ self.addEventListener('fetch', (e) => {
     return;
   }
 
-  // 1) Pages: network first. Trip pages and the capture screen are stored on
-  //    every GOOD load, so they open in the field with no signal.
+  // 1) Pages. The capture screen comes from the device; everything else from
+  //    the network, with the saved copy (Trip pages) or the offline page as
+  //    the fallback. Trip pages are stored on every GOOD load.
   if (req.mode === 'navigate') {
-    e.respondWith((async () => {
-      try {
-        const netRes = await fetch(req);
-        if (isTripOrCapture(url.pathname) && keepable(netRes)) {
-          const cache = await caches.open(CACHE);
-          cache.put(req, netRes.clone());
-        }
-        return netRes;
-      } catch (_err) {
-        const cached = await caches.match(req, { ignoreSearch: true });
-        if (cached && !cached.redirected) return cached;
-        return offlinePage();
-      }
-    })());
+    e.respondWith(url.pathname === '/capture' ? capturePage(e, req) : page(e, req, url));
     return;
   }
 

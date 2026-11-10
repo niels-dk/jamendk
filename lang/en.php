@@ -1356,4 +1356,7 @@ return [
     'capture.waiting_many'   => ':n ideas waiting to sync',
     'capture.signin_to_sync' => 'Sign in to sync',
     'trip.signin_to_sync'    => 'sign in to sync',
+
+    /* ── Capture without a login, Nov 2026 ── */
+    'capture.saved_signin' => 'Caught — saved on this device. Sign in to sync.',
 ];

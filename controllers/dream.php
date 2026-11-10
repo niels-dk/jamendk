@@ -125,10 +125,17 @@ class dream_controller
      */
 	/** GET /capture — the capture-first screen; what the installed app opens to.
 	 *  Standalone page (no layout) so it appears instantly and caches cleanly
-	 *  for offline use. */
+	 *  for offline use.
+	 *
+	 *  Deliberately NOT behind a login. Catching an idea must always be
+	 *  possible — with no signal you cannot sign in anyway, and an expired
+	 *  login in the field should cost nothing. The page shows nothing that
+	 *  belongs to anyone: ideas are written to the device, and it is SENDING
+	 *  them (api/dreams/store.php) that needs a login. Requiring one here also
+	 *  meant the service worker could only save this page for people who
+	 *  happened to open it while signed in. */
 	public static function capture(): void
 	{
-		require_login();
 		include __DIR__ . '/../views/capture.php';
 	}
 

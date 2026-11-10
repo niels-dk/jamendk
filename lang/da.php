@@ -1367,4 +1367,7 @@ return [
     'capture.waiting_many'   => ':n idéer venter på synkronisering',
     'capture.signin_to_sync' => 'Log ind for at synkronisere',
     'trip.signin_to_sync'    => 'log ind for at synkronisere',
+
+    /* ── Capture without a login, Nov 2026 ── */
+    'capture.saved_signin' => 'Fanget — gemt på denne enhed. Log ind for at synkronisere.',
 ];

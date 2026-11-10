@@ -262,4 +262,7 @@ BR = {
 'capture.waiting_many': ':n ideias aguardando sincronização',
 'capture.signin_to_sync': 'Entre para sincronizar',
 'trip.signin_to_sync': 'entre para sincronizar',
+
+# Capture without a login, Nov 2026
+'capture.saved_signin': 'Capturado — salvo neste aparelho. Entre para sincronizar.',
 }

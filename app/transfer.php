@@ -34,10 +34,10 @@ class AccountTransfer
         if ($s['visions']) $bits[] = $plural($s['visions'], 'vision', 'visions');
         if ($s['moods'])   $bits[] = $plural($s['moods'],   'mood board', 'mood boards');
         if ($s['teams'])   $bits[] = $plural($s['teams'],   'team', 'teams');
-        if (!$bits) return 'an empty account';
+        if (!$bits) return t('transfer.sum_empty');
         if (count($bits) === 1) return $bits[0];
         $last = array_pop($bits);
-        return implode(', ', $bits) . ' and ' . $last;
+        return implode(', ', $bits) . ' ' . t('transfer.sum_and') . ' ' . $last;
     }
 
     /**

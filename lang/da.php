@@ -1340,4 +1340,21 @@ return [
     'js.connector_prompt'    => 'Tekst på forbindelsen (lad feltet stå tomt for at fjerne den):',
     'js.frame_only'          => 'Vælg en ramme først (medier kan kun sættes på rammer).',
     'js.highlight_tip'       => 'Fremhæv det valgte (Ctrl+H)',
+
+    /* ── Translation sweep, second pass: team counts, account transfer, team-size notice ── */
+    'teams.member_one'     => '1 medlem',
+    'teams.member_many'    => ':n medlemmer',
+    'transfer.requested'   => 'Overdragelse anmodet — :name kan se den på sin oversigt og acceptere den. Intet er flyttet endnu.',
+    'transfer.cancelled'   => 'Overdragelsen er annulleret.',
+    'transfer.unavailable' => 'Den overdragelse er ikke længere tilgængelig.',
+    'transfer.received'    => 'Konto modtaget — du ejer nu :summary.',
+    'transfer.failed'      => 'Overdragelsen kunne ikke gennemføres:',
+    'transfer.declined'    => 'Overdragelsen blev afvist — intet er ændret.',
+    'transfer.sum_empty'   => 'en tom konto',
+    'transfer.sum_and'     => 'og',
+    'pr.cross_add_person'  => 'Når du tilføjer denne person, bliver I :n personer — det flytter dig til :tier-planen (normalt :price/md.). Det er gratis lige nu',
+    'pr.cross_role_person' => 'Når du giver denne person en arbejdsrolle, bliver I :n personer — det flytter dig til :tier-planen (normalt :price/md.). Det er gratis lige nu',
+    'pr.cross_add_team'    => 'Når du tilføjer dette team, bliver I :n personer — det flytter dig til :tier-planen (normalt :price/md.). Det er gratis lige nu',
+    'pr.cross_end_founder' => ', og det forbliver gratis for dig som Founding Creator. Vil du fortsætte?',
+    'pr.cross_end'         => '. Vil du fortsætte?',
 ];

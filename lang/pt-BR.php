@@ -1341,4 +1341,21 @@ return [
     'js.connector_prompt'    => 'Rótulo do conector (deixe vazio para remover):',
     'js.frame_only'          => 'Selecione um frame primeiro (mídia só pode ser anexada a frames).',
     'js.highlight_tip'       => 'Destacar a seleção (Ctrl+H)',
+
+    /* ── Translation sweep, second pass: team counts, account transfer, team-size notice ── */
+    'teams.member_one'     => '1 membro',
+    'teams.member_many'    => ':n membros',
+    'transfer.requested'   => 'Transferência solicitada — :name vai ver no painel e pode aceitar. Nada foi movido ainda.',
+    'transfer.cancelled'   => 'Transferência cancelada.',
+    'transfer.unavailable' => 'Essa transferência não está mais disponível.',
+    'transfer.received'    => 'Conta recebida — agora você é dono de :summary.',
+    'transfer.failed'      => 'Não foi possível concluir a transferência:',
+    'transfer.declined'    => 'Transferência recusada — nada mudou.',
+    'transfer.sum_empty'   => 'uma conta vazia',
+    'transfer.sum_and'     => 'e',
+    'pr.cross_add_person'  => 'Adicionar esta pessoa faz o time chegar a :n pessoas — isso leva você para o plano :tier (normalmente :price/mês). É grátis agora',
+    'pr.cross_role_person' => 'Dar um papel de trabalho a esta pessoa faz o time chegar a :n pessoas — isso leva você para o plano :tier (normalmente :price/mês). É grátis agora',
+    'pr.cross_add_team'    => 'Adicionar este time faz chegar a :n pessoas — isso leva você para o plano :tier (normalmente :price/mês). É grátis agora',
+    'pr.cross_end_founder' => ', e continua grátis para você como Founding Creator. Continuar?',
+    'pr.cross_end'         => '. Continuar?',
 ];

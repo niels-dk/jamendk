@@ -206,7 +206,7 @@ class user_controller
             }
         }
 
-        $pageTitle = 'Resend confirmation';
+        $pageTitle = t('auth.resend_link');
         $noSidebar = true;
         ob_start();
         include __DIR__ . '/../views/verify_resend.php';
@@ -242,7 +242,7 @@ class user_controller
             }
         }
 
-        $pageTitle = 'Forgot password';
+        $pageTitle = t('auth.forgot_title');
         $noSidebar = true;
         ob_start();
         include __DIR__ . '/../views/forgot.php';
@@ -258,7 +258,7 @@ class user_controller
 
         if (!$user) {
             $error = t('auth.err_reset_used');
-            $pageTitle = 'Link expired';
+            $pageTitle = t('auth.link_expired');
             $noSidebar = true;
             ob_start();
             include __DIR__ . '/../views/reset_expired.php';
@@ -287,7 +287,7 @@ class user_controller
             }
         }
 
-        $pageTitle = 'Choose a new password';
+        $pageTitle = t('auth.reset_title');
         $noSidebar = true;
         ob_start();
         include __DIR__ . '/../views/reset.php';
@@ -361,7 +361,7 @@ class user_controller
         $ownSummaryText  = AccountTransfer::summaryText($ownSummary);
         $pendingTransfer = transfer_controller::pendingOutgoing($db, (int)$user['id']);
 
-        $pageTitle = 'My account';
+        $pageTitle = t('account.title');
         $noSidebar = true;
         ob_start();
         include __DIR__ . '/../views/account.php';

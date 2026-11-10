@@ -1329,4 +1329,21 @@ return [
     'js.connector_prompt'    => 'Connector label (leave empty to remove):',
     'js.frame_only'          => 'Please select a frame (media can only be attached to frames).',
     'js.highlight_tip'       => 'Highlight selection (Ctrl+H)',
+
+    /* ── Translation sweep, second pass: team counts, account transfer, team-size notice ── */
+    'teams.member_one'     => '1 member',
+    'teams.member_many'    => ':n members',
+    'transfer.requested'   => 'Transfer requested — :name will see it on their dashboard and can accept it. Nothing has moved yet.',
+    'transfer.cancelled'   => 'Transfer cancelled.',
+    'transfer.unavailable' => 'That transfer is no longer available.',
+    'transfer.received'    => 'Account received — you now own :summary.',
+    'transfer.failed'      => 'Could not complete the transfer:',
+    'transfer.declined'    => 'Transfer declined — nothing changed.',
+    'transfer.sum_empty'   => 'an empty account',
+    'transfer.sum_and'     => 'and',
+    'pr.cross_add_person'  => "Adding this person makes it :n people — that moves you to the :tier plan (normally :price/mo). It's free right now",
+    'pr.cross_role_person' => "Giving a working role to this person makes it :n people — that moves you to the :tier plan (normally :price/mo). It's free right now",
+    'pr.cross_add_team'    => "Adding this team makes it :n people — that moves you to the :tier plan (normally :price/mo). It's free right now",
+    'pr.cross_end_founder' => ', and it stays free for you as a Founding Creator. Continue?',
+    'pr.cross_end'         => '. Continue?',
 ];

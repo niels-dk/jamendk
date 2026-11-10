@@ -69,8 +69,8 @@ class transfer_controller
                         (from_user_id, to_user_id, initiated_by, note)
                         VALUES (?,?, 'owner', ?)")
                    ->execute([$me, (int)$to['id'], $note]);
-                $_SESSION['flash_account'] = 'Transfer requested — ' . htmlspecialchars($to['name'] ?: $email)
-                    . ' will see it on their dashboard and can accept it. Nothing has moved yet.';
+                $_SESSION['flash_account'] = t('transfer.requested',
+                    ['name' => htmlspecialchars($to['name'] ?: $email)]);
                 redirect('/account');
             }
         }
@@ -88,7 +88,7 @@ class transfer_controller
         $db->prepare("UPDATE account_transfers SET status='cancelled', resolved_at=NOW()
                        WHERE from_user_id=? AND status='pending'")
            ->execute([(int)$currentUserId]);
-        $_SESSION['flash_account'] = 'Transfer cancelled.';
+        $_SESSION['flash_account'] = t('transfer.cancelled');
         redirect('/account');
     }
 
@@ -110,7 +110,7 @@ class transfer_controller
         $me = (int)$currentUserId;
 
         $t = self::myIncomingOr($db, $me, $id);
-        if (!$t) { $_SESSION['flash_home'] = 'That transfer is no longer available.'; redirect('/dashboard'); }
+        if (!$t) { $_SESSION['flash_home'] = t('transfer.unavailable'); redirect('/dashboard'); }
 
         try {
             $moved = AccountTransfer::perform($db, (int)$t['from_user_id'], $me);
@@ -121,10 +121,10 @@ class transfer_controller
             $db->prepare("UPDATE account_transfers SET status='cancelled', resolved_at=NOW()
                            WHERE from_user_id=? AND status='pending'")
                ->execute([(int)$t['from_user_id']]);
-            $_SESSION['flash_home'] = 'Account received — you now own '
-                . AccountTransfer::summaryText($moved) . '.';
+            $_SESSION['flash_home'] = t('transfer.received',
+                ['summary' => AccountTransfer::summaryText($moved)]);
         } catch (\Throwable $e) {
-            $_SESSION['flash_home'] = 'Could not complete the transfer: ' . $e->getMessage();
+            $_SESSION['flash_home'] = t('transfer.failed') . ' ' . $e->getMessage();
         }
         redirect('/dashboard');
     }
@@ -140,7 +140,7 @@ class transfer_controller
         if ($t) {
             $db->prepare("UPDATE account_transfers SET status='declined', resolved_at=NOW() WHERE id=?")
                ->execute([(int)$t['id']]);
-            $_SESSION['flash_home'] = 'Transfer declined — nothing changed.';
+            $_SESSION['flash_home'] = t('transfer.declined');
         }
         redirect('/dashboard');
     }

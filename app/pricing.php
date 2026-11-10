@@ -184,12 +184,18 @@ class Pricing
                                            string $verb = 'Adding'): string
     {
         $price = self::money((int)$c['monthly_cents']);
-        $msg = "$verb $subject makes it {$c['seats_after']} people — that moves you "
-             . "to the {$c['to']['label']} plan (normally {$price}/mo). It's free right now";
-        $msg .= $isFounder
-              ? ", and it stays free for you as a Founding Creator. Continue?"
-              : ". Continue?";
-        return $msg;
+        // The sentence used to be glued together from English parts
+        // ("$verb $subject makes it …"), which no other language can follow.
+        // The callers still pass those parts; they only pick the sentence.
+        $key = $subject === 'this team'
+             ? 'pr.cross_add_team'
+             : ($verb === 'Adding' ? 'pr.cross_add_person' : 'pr.cross_role_person');
+        return t($key, [
+                   'n'     => (int)$c['seats_after'],
+                   'tier'  => $c['to']['label'],
+                   'price' => $price,
+               ])
+             . t($isFounder ? 'pr.cross_end_founder' : 'pr.cross_end');
     }
 
     /** Whole months between a datetime and now (never negative). */

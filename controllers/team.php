@@ -108,7 +108,7 @@ class team_controller
             $migrationMissing = true; // teams tables not created yet
         }
 
-        $pageTitle = 'My teams';
+        $pageTitle = t('nav.teams');
         $noSidebar = true;
         ob_start();
         include __DIR__ . '/../views/teams.php';

@@ -20,7 +20,7 @@ class mood_controller
         global $db, $user;
         $boards = mood_model::listActive($db, (int)$user['id']);
         $boardType = 'mood';
-        $pageTitle = 'My Mood Boards';
+        $pageTitle = t('board.moods');
         ob_start();
         include __DIR__ . '/../views/dashboard_moods.php';
         $content = ob_get_clean();
@@ -45,7 +45,7 @@ class mood_controller
         $board = mood_model::get($db, $slug);
         require_mood($db, $board, 'view');
         $boardType = 'mood';
-        $pageTitle = htmlspecialchars($board['title'] ?? 'Untitled Mood Board');
+        $pageTitle = htmlspecialchars($board['title'] ?? t('common.untitled'));
 
         // Linked vision (if any)
         $linkedVision = null;
@@ -79,7 +79,7 @@ class mood_controller
         $board = mood_model::get($db, $slug);
         require_mood($db, $board, 'edit');
         $boardType = 'mood';
-        $pageTitle = htmlspecialchars($board['title'] ?? 'Edit Mood Board');
+        $pageTitle = htmlspecialchars($board['title'] ?? t('mood.edit_info'));
         ob_start();
         include __DIR__ . '/../views/mood_form.php';
         $content = ob_get_clean();
@@ -119,7 +119,7 @@ class mood_controller
 		}
 
 		// Otherwise show the edit form.  Set a page title for the layout.
-		$pageTitle = 'Edit Mood Board';
+		$pageTitle = t('mood.edit_info');
 		ob_start();
 		include __DIR__ . '/../views/mood_edit.php';
 		$content = ob_get_clean();

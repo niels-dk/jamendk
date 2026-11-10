@@ -99,8 +99,9 @@ $isAdminView = function_exists('is_admin') && is_admin();
   <?php
     $isMine = (int)$team['owner_user_id'] === (int)$currentUserId;
     $count  = count($team['members'] ?? []);
-    $meta   = $count . ' member' . ($count === 1 ? '' : 's')
-            . ((!$isMine && !empty($team['owner_name'])) ? ' · Owner: ' . $team['owner_name'] : '');
+    // Whole phrases from the language file: "5 member" + "s" cannot be translated.
+    $meta   = t($count === 1 ? 'teams.member_one' : 'teams.member_many', ['n' => $count])
+            . ((!$isMine && !empty($team['owner_name'])) ? ' · ' . t('teams.owner') . ': ' . $team['owner_name'] : '');
   ?>
   <div class="card team-card" data-team-id="<?= (int)$team['id'] ?>">
     <div class="team-head">
@@ -197,8 +198,8 @@ $isAdminView = function_exists('is_admin') && is_admin();
   <?php foreach ($memberTeams as $team): ?>
     <?php
       $count = count($team['members'] ?? []);
-      $meta  = $count . ' member' . ($count === 1 ? '' : 's')
-             . (!empty($team['owner_name']) ? ' · Owner: ' . $team['owner_name'] : '');
+      $meta  = t($count === 1 ? 'teams.member_one' : 'teams.member_many', ['n' => $count])
+             . (!empty($team['owner_name']) ? ' · ' . t('teams.owner') . ': ' . $team['owner_name'] : '');
     ?>
     <div class="card team-card" data-team-id="<?= (int)$team['id'] ?>">
       <div class="team-head">

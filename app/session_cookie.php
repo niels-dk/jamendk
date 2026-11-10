@@ -137,7 +137,21 @@ if (!function_exists('mad_harden_session_cookie')) {
      */
     function mad_keep_login_alive(bool $force = false): void
     {
-        if (session_status() !== PHP_SESSION_ACTIVE || headers_sent() || session_id() === '') return;
+        if (session_status() !== PHP_SESSION_ACTIVE || session_id() === '') return;
+
+        // Mark this session as a signed-in one for the cleanup (see
+        // mad_session_gc): an empty file "auth_<id>" beside "sess_<id>",
+        // touched on every signed-in request. The cleanup first tried to
+        // recognise a login by reading the session file, which depends on how
+        // the host serialises sessions — on the live server that test matched
+        // nothing, and a login would have been cleaned away after two idle
+        // hours. A marker we write ourselves does not depend on the format.
+        $dir = $GLOBALS['__mad_session_dir'] ?? '';
+        if ($dir !== '' && preg_match('/^[A-Za-z0-9,-]+$/', session_id())) {
+            @touch($dir . '/auth_' . session_id());
+        }
+
+        if (headers_sent()) return;
         $now = time();
         if (!$force && $now - (int)($_SESSION['cookie_at'] ?? 0) < 86400) return;
         $_SESSION['cookie_at'] = $now;
@@ -151,6 +165,11 @@ if (!function_exists('mad_harden_session_cookie')) {
      *
      *   older than the login period            → delete
      *   idle for 2 h and not a signed-in user  → delete
+     *
+     * "Signed in" means the session has an auth_<id> marker that was touched
+     * within the login period (mad_keep_login_alive). The text of the session
+     * file is checked as well, so a login from before the markers existed is
+     * not thrown out if the format happens to be readable.
      */
     function mad_session_gc(string $dir, int $life, bool $force = false): int
     {
@@ -163,15 +182,28 @@ if (!function_exists('mad_harden_session_cookie')) {
         foreach ($files as $path) {
             $mtime = @filemtime($path);
             if ($mtime === false) continue;
-            $idle = $now - $mtime;
-            if ($idle > $life) { if (@unlink($path)) $deleted++; continue; }
+            $idle   = $now - $mtime;
+            $marker = $dir . '/auth_' . substr(basename($path), 5);
+            if ($idle > $life) {
+                if (@unlink($path)) $deleted++;
+                @unlink($marker);
+                continue;
+            }
             if ($idle > 7200) {
-                $data = @file_get_contents($path, false, null, 0, 65536);
-                $signedIn = $data !== false
-                    && (strpos($data, 'authenticated|b:1') !== false            // default "php" handler
-                     || strpos($data, '"authenticated";b:1') !== false);        // "php_serialize" handler
+                $marked   = @filemtime($marker);
+                $signedIn = $marked !== false && ($now - $marked) < $life;
+                if (!$signedIn) {
+                    $data = @file_get_contents($path, false, null, 0, 65536);
+                    $signedIn = $data !== false
+                        && (strpos($data, 'authenticated|b:1') !== false        // default "php" handler
+                         || strpos($data, '"authenticated";b:1') !== false);    // "php_serialize" handler
+                }
                 if (!$signedIn && @unlink($path)) $deleted++;
             }
+        }
+        // Markers whose session is gone (signed out, or cleaned above).
+        foreach (@glob($dir . '/auth_' . $slice . '*') ?: [] as $marker) {
+            if (!@is_file($dir . '/sess_' . substr(basename($marker), 5))) @unlink($marker);
         }
         return $deleted;
     }

@@ -38,7 +38,8 @@
 
       const rows = [...common, ...other];
       if (!rows.length) {
-        list.innerHTML = '<div class="dropdown-item muted">No results</div>';
+        list.innerHTML = '<div class="dropdown-item muted"></div>';
+        list.firstChild.textContent = (window.APP_T || {}).no_results || 'No results';
         list.hidden = false;
         return;
       }
@@ -88,9 +89,9 @@
     form.addEventListener('submit', (e) => {
       e.preventDefault();
       const code = curHidden.value.trim().toUpperCase();
-      if (!code) { alert('Select a currency'); return; }
+      if (!code) { alert((window.APP_T || {}).pick_currency || 'Select a currency'); return; }
       const n = parseFloat((amountInput.value || '0').replace(',', '.'));
-      if (isNaN(n) || n < 0) { alert('Invalid amount'); return; }
+      if (isNaN(n) || n < 0) { alert((window.APP_T || {}).bad_amount || 'Invalid amount'); return; }
       const cents = Math.round(n * 100);
 
       const body = new URLSearchParams();

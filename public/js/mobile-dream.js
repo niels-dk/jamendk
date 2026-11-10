@@ -108,7 +108,7 @@ document.addEventListener('DOMContentLoaded', () => {
       document.querySelectorAll('.anchor-list').forEach(el => el.innerHTML = '');
 
       // Feedback & close
-      showSnack('Dream saved locally!');
+      showSnack((window.APP_T || {}).dream_saved || 'Dream saved locally!');
       closeModal();
 
       // Trigger offline-ui to update dashboard cards

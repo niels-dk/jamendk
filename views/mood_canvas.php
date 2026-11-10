@@ -52,6 +52,10 @@ window.boardSlug = <?= json_encode($board['slug'] ?? '') ?>;
 // call t(), so the page hands them over. Each script falls back to its English
 // literal when a key is absent, so nothing breaks if this block is ever missing.
 window.CANVAS_T = <?= json_encode([
+  'connector_prompt' => t('js.connector_prompt'),
+  'frame_only'       => t('js.frame_only'),
+  'media'            => t('mood.nav_media'),
+  'highlight_tip'    => t('js.highlight_tip'),
   'tool'        => t('canvas.tool'),
   'snap'        => t('canvas.snap'),
   'tools'       => [
@@ -90,9 +94,9 @@ window.CANVAS_T = <?= json_encode([
 //console.log(window.boardSlug);
 </script>
 <!-- core js -->
-<script src="/public/js/mood-canvas.js?v=16"></script>
+<script src="/public/js/mood-canvas.js?v=20261110"></script>
 
-<script src="/public/js/mood-canvas-highlight.js"></script>
-<script src="/public/js/mood-canvas-media.js?v=3"></script>
+<script src="/public/js/mood-canvas-highlight.js?v=20261110"></script>
+<script src="/public/js/mood-canvas-media.js?v=20261110"></script>
 <script src="/public/js/mood-canvas-input.js"></script>
 

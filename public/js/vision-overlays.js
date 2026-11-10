@@ -48,7 +48,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const res = await fetch(`/visions/${slug}/overlay/${section}`, { cache: 'no-store' });
     if (!res.ok) {
-      overlayContent.innerHTML = `<p>Error loading overlay.</p>`;
+      overlayContent.textContent = (window.APP_T || {}).panel_error || 'Could not load this panel.';
       return;
     }
     const html = await res.text();

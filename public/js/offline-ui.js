@@ -53,7 +53,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const badge = document.createElement('div');
       badge.className = 'offline-label';
-      badge.textContent = 'Offline';
+      badge.textContent = (window.APP_T || {}).offline || 'Offline';
       card.appendChild(badge);
 
       grid.prepend(card);
@@ -103,8 +103,14 @@ document.addEventListener('DOMContentLoaded', () => {
     if (synced > 0) {
       console.log('[Offline-UI] successfully synced', synced);
       localStorage.removeItem(queueKey);
-      showBanner(`Back online — synced ${synced} dream${synced>1?'s':''}`, 'online');
-      showSnack(`✓ ${synced} offline dream${synced>1?'s':''} synced`);
+      // Whole sentences come from the language file (window.APP_T); the
+      // English "dream" + "s" trick cannot be translated.
+      const AT = window.APP_T || {};
+      const syncedMsg = synced > 1
+        ? (AT.synced_many || ':n offline dreams synced').replace(':n', synced)
+        : (AT.synced_one  || '1 offline dream synced');
+      showBanner(syncedMsg, 'online');
+      showSnack('✓ ' + syncedMsg);
       removeOfflineCards();
     }
   }

@@ -23,7 +23,7 @@ class page_controller
     {
         require_once __DIR__ . '/../app/pricing.php';
         $tiers = Pricing::TIERS;
-        self::render('page_pricing', 'Pricing',
+        self::render('page_pricing', t('nav.pricing'),
             'Merely a Dream is free while we\'re just getting started. One creator, '
           . 'free forever. You only pay when a team works with you — never for features.');
     }
@@ -31,7 +31,7 @@ class page_controller
     /** GET /help */
     public static function help(): void
     {
-        self::render('page_help', 'Help',
+        self::render('page_help', t('footer.help'),
             'How Merely a Dream works: catch a Dream, grow it into a Vision, publish '
           . 'a Trip page you can use offline in the field.');
     }
@@ -39,21 +39,21 @@ class page_controller
     /** GET /contact */
     public static function contact(): void
     {
-        self::render('page_contact', 'Contact',
+        self::render('page_contact', t('footer.contact'),
             'Get in touch with Merely a Dream — email or Instagram.');
     }
 
     /** GET /terms */
     public static function terms(): void
     {
-        self::render('page_terms', 'Terms of use',
+        self::render('page_terms', t('footer.terms'),
             'The terms you agree to when using Merely a Dream.');
     }
 
     /** GET /privacy */
     public static function privacy(): void
     {
-        self::render('page_privacy', 'Privacy policy',
+        self::render('page_privacy', t('footer.privacy'),
             'What data Merely a Dream stores, why, and how to get it deleted.');
     }
 }

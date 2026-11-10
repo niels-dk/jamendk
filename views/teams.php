@@ -91,8 +91,7 @@ $isAdminView = function_exists('is_admin') && is_admin();
 
 <?php if (empty($ownTeams) && empty($memberTeams) && empty($migrationMissing)): ?>
   <div class="card" style="padding:1.4rem;opacity:.7;">
-    No teams yet. Create one above, add your collaborators, and they'll be one click away
-    whenever you share a board.
+    <?= te('teams.none_yet') ?>
   </div>
 <?php endif; ?>
 
@@ -129,7 +128,7 @@ $isAdminView = function_exists('is_admin') && is_admin();
               <th><?= te('teams.member') ?></th>
               <th><?= te('teams.last_active') ?></th>
               <th><?= te('teams.default_role') ?></th>
-              <th>On <?= $isMine ? 'my' : "the owner's" ?> boards</th>
+              <th><?= te($isMine ? 'teams.on_my_boards' : 'teams.on_owner_boards') ?></th>
               <th></th>
             </tr>
           </thead>
@@ -160,8 +159,8 @@ $isAdminView = function_exists('is_admin') && is_admin();
                     <div class="m-boards">
                       <?php foreach ($boards as $b): ?>
                         <a class="board-chip" href="/visions/<?= tm_e($b['slug']) ?>"
-                           title="<?= tm_e(($b['title'] ?: 'Untitled') . ' — ' . ($ROLE_LABELS[$b['role']] ?? $b['role'])) ?>">
-                          <?= tm_e($b['title'] ?: 'Untitled') ?>
+                           title="<?= tm_e(($b['title'] ?: t('common.untitled')) . ' — ' . ($ROLE_LABELS[$b['role']] ?? $b['role'])) ?>">
+                          <?= tm_e($b['title'] ?: t('common.untitled')) ?>
                         </a>
                       <?php endforeach; ?>
                     </div>
@@ -212,14 +211,14 @@ $isAdminView = function_exists('is_admin') && is_admin();
       </div>
 
       <div class="team-body" hidden>
-        <div class="team-owner">Owner: <?= tm_e($team['owner_name'] ?: '') ?> — <?= tm_e($team['owner_email'] ?: '') ?></div>
+        <div class="team-owner"><?= te('teams.owner') ?>: <?= tm_e($team['owner_name'] ?: '') ?> — <?= tm_e($team['owner_email'] ?: '') ?></div>
 
         <?php if (!empty($team['members'])): ?>
           <div style="overflow-x:auto;">
           <table>
             <thead>
               <tr>
-                <th>Member</th>
+                <th><?= te('teams.member') ?></th>
                 <th><?= te('teams.last_active') ?></th>
                 <th><?= te('teams.role_on_team') ?></th>
               </tr>
@@ -230,9 +229,9 @@ $isAdminView = function_exists('is_admin') && is_admin();
                 <tr>
                   <td>
                     <div class="m-name">
-                      <?= tm_e($m['name'] ?: '(no name)') ?>
+                      <?= tm_e($m['name'] ?: t('roles.no_name')) ?>
                       <?php if ((int)$m['user_id'] === (int)$currentUserId): ?>
-                        <span style="opacity:.55;font-weight:400;">(you)</span>
+                        <span style="opacity:.55;font-weight:400;">(<?= te('teams.you') ?>)</span>
                       <?php endif; ?>
                     </div>
                     <div class="m-mail"><?= tm_e($m['email']) ?></div>

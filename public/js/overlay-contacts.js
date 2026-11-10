@@ -1,6 +1,8 @@
 // /public/js/overlay-contacts.js
 (() => {
   // Initialise the Contacts overlay once per insertion
+  // Translated strings from views/partials/head.php; English if absent.
+  const AT = window.APP_T || {};
   function initContacts(root) {
     if (!root || root.__contactsInit) return;
     root.__contactsInit = true;
@@ -36,7 +38,8 @@
 
     function renderList(rows){
       if (!Array.isArray(rows) || rows.length === 0) {
-        list.innerHTML = '<div class="muted">No contacts</div>';
+        list.innerHTML = '<div class="muted"></div>';
+        list.firstChild.textContent = AT.no_contacts || 'No contacts';
         return;
       }
       list.innerHTML = rows.map(r => {
@@ -65,7 +68,10 @@
       fetch(`/api/visions/${encodeURIComponent(slug)}/contacts`, {credentials:'same-origin'})
         .then(r => r.json())
         .then(renderList)
-        .catch(() => { list.innerHTML = '<div class="error">Failed to load contacts</div>'; });
+        .catch(() => {
+          list.innerHTML = '<div class="error"></div>';
+          list.firstChild.textContent = AT.contacts_failed || 'Failed to load contacts';
+        });
     }
 
     // Delegated clicks inside the overlay root (works even if elements re-render)
@@ -91,13 +97,13 @@
       if (delBtn) {
         const id = delBtn.closest('.contact-item')?.dataset.id;
         if (!id) return;
-        if (!confirm('Delete this contact?')) return;
+        if (!confirm(AT.contact_delete || 'Delete this contact?')) return;
         fetch(`/api/visions/${encodeURIComponent(slug)}/contacts/${encodeURIComponent(id)}/delete`, {
           method:'DELETE', credentials:'same-origin'
         })
         .then(r => r.json())
-        .then(j => { if (j && j.success) loadList(); else alert(j?.error || 'Delete failed'); })
-        .catch(() => alert('Delete failed'));
+        .then(j => { if (j && j.success) loadList(); else alert(j?.error || AT.delete_failed || 'Delete failed'); })
+        .catch(() => alert(AT.delete_failed || 'Delete failed'));
         return;
       }
       // Edit contact
@@ -117,7 +123,7 @@
             form.show_on_trip.checked      = (j.flags?.show_on_trip      || 0) == 1;
             toggleForm(true);
           })
-          .catch(() => alert('Failed to load contact'));
+          .catch(() => alert(AT.contact_failed || 'Failed to load contact'));
       }
     });
 
@@ -147,16 +153,16 @@
         .then(r => r.json())
         .then(j => {
           if (j && j.success) { toggleForm(false); loadList(); }
-          else alert(j?.error || 'Save failed');
+          else alert(j?.error || AT.save_failed || 'Save failed');
         })
-        .catch(() => alert('Save failed'));
+        .catch(() => alert(AT.save_failed || 'Save failed'));
     });
 
     // Field key "Custom…" → inline add
     root.addEventListener('change', (e) => {
       const sel = e.target.closest('select.field-key');
       if (!sel || sel.value !== 'Custom…') return;
-      const newKey = prompt('Enter custom key');
+      const newKey = prompt(AT.custom_prompt || 'Enter custom key');
       if (newKey) {
         const opt = document.createElement('option');
         opt.value = newKey; opt.textContent = newKey;

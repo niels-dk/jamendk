@@ -130,7 +130,7 @@ class user_controller
                 } else {
                     $newId = User::create($name, $email, $pass);
                     if (!$newId) {
-                        $error = 'Could not create the account. Please try again.';
+                        $error = t('auth.err_create');
                     } else {
                         User::recordRegistration($regIp);
                         // No auto-login: the account stays inert until the
@@ -160,7 +160,7 @@ class user_controller
         $user = User::findByVerifyToken($token);
         if (!$user) {
             // Expired or already used. Offer a fresh one rather than a dead end.
-            $error = 'That confirmation link has expired or was already used.';
+            $error = t('auth.err_confirm_used');
             $pageTitle = t('auth.link_expired');
             $noSidebar = true;
             ob_start();
@@ -189,7 +189,7 @@ class user_controller
             } else {
                 $email = trim($_POST['email'] ?? '');
                 if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-                    $error = 'That email address doesn\'t look right.';
+                    $error = t('auth.err_email');
                 } else {
                     $user = User::findByEmail($email);
                     // Only unverified accounts get a link; everyone sees the
@@ -201,7 +201,7 @@ class user_controller
                             Mailer::sendVerification($email, $user['name'] ?? '', $raw);
                         }
                     }
-                    $notice = 'If that address needs confirming, a new link is on its way.';
+                    $notice = t('auth.resend_sent');
                 }
             }
         }
@@ -227,7 +227,7 @@ class user_controller
             } else {
                 $email = trim($_POST['email'] ?? '');
                 if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-                    $error = 'That email address doesn\'t look right.';
+                    $error = t('auth.err_email');
                 } else {
                     $user = User::findByEmail($email);
                     if ($user && !Mailer::rateLimited($email, 'reset', 3, 60)) {
@@ -257,7 +257,7 @@ class user_controller
         $user  = User::findByResetToken($token);
 
         if (!$user) {
-            $error = 'That reset link has expired or was already used.';
+            $error = t('auth.err_reset_used');
             $pageTitle = 'Link expired';
             $noSidebar = true;
             ob_start();
@@ -276,7 +276,7 @@ class user_controller
                 if (strlen($new) < 6) {
                     $error = t('auth.err_short_pass');
                 } elseif ($new !== $confirm) {
-                    $error = 'Passwords don\'t match.';
+                    $error = t('auth.err_nomatch');
                 } else {
                     User::resetPassword((int)$user['id'], $new);
                     // Force a fresh sign-in with the new password rather than
@@ -318,7 +318,7 @@ class user_controller
                     $company = trim($_POST['company']      ?? '');
                     $org     = trim($_POST['organisation'] ?? '');
                     if ($name === '') {
-                        $error = 'Name cannot be empty.';
+                        $error = t('auth.err_name');
                     } else {
                         try {
                             $db->prepare('UPDATE users SET name = ?, company = ?, organisation = ? WHERE id = ?')
@@ -326,7 +326,7 @@ class user_controller
                             $_SESSION['user']['name'] = $name;
                             $user['name'] = $name;
                             $user['company'] = $company; $user['organisation'] = $org;
-                            $notice = 'Profile updated.';
+                            $notice = t('account.updated');
                         } catch (\Throwable $e) {
                             $error = 'Could not save — has the profile-fields migration been run?';
                         }
@@ -336,15 +336,15 @@ class user_controller
                     $new     = (string)($_POST['new_password'] ?? '');
                     $confirm = (string)($_POST['confirm_password'] ?? '');
                     if (!password_verify($current, $user['password_hash'] ?? '')) {
-                        $error = 'Current password is incorrect.';
+                        $error = t('account.err_current_pw');
                     } elseif (strlen($new) < 6) {
-                        $error = 'New password must be at least 6 characters.';
+                        $error = t('auth.err_short_pass');
                     } elseif ($new !== $confirm) {
-                        $error = 'New passwords don\'t match.';
+                        $error = t('auth.err_nomatch');
                     } else {
                         $db->prepare('UPDATE users SET password_hash = ? WHERE id = ?')
                            ->execute([password_hash($new, PASSWORD_DEFAULT), (int)$user['id']]);
-                        $notice = 'Password changed.';
+                        $notice = t('account.pass_changed');
                     }
                 }
             }

@@ -30,6 +30,8 @@
     'detach'        => t('lib.detach'),
     'no_files'      => t('lib.no_files'),
     'uploading'     => t('docs.uploading'),
+    'processing'    => t('js.processing'),
+    'confirm_delete'=> t('js.lib_confirm_delete'),
   ], JSON_UNESCAPED_UNICODE) ?>;
 </script>
 <!-- Library Drawer Root + Controls -->
@@ -140,4 +142,4 @@
 </div>
 
 <!-- Page script includes (ensure this file is loaded after the DOM above) -->
-<script src="/public/js/mood-board-library.js?v=2"></script>
+<script src="/public/js/mood-board-library.js?v=20261110"></script>

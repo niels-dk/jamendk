@@ -17,8 +17,8 @@
 
   <!-- Dream board modal & scripts -->
   <?php include __DIR__ . '/partials/dream-modal.php'; ?>
-  <script src="/public/js/mobile-dream.js?v=12"></script>
-  <script src="/public/js/offline-ui.js?v=3"></script>
+  <script src="/public/js/mobile-dream.js?v=20261110"></script>
+  <script src="/public/js/offline-ui.js?v=20261110"></script>
   <script src="/public/js/trix-loader.js?v=1"></script>
   <script defer src="/public/js/ui.js"></script>
 
@@ -28,7 +28,7 @@
     <?php include __DIR__ . '/partials/sidebar.php'; ?>
 
     <!-- NEW: external toggle button so it never hides with the sidebar -->
-    <button class="sidebar-toggle" type="button" aria-label="Toggle sidebar" title="Menu">
+    <button class="sidebar-toggle" type="button" aria-label="<?= te('nav.toggle_menu') ?>" title="<?= te('nav.menu') ?>">
       <span class="arrow"> ◀ </span>
     </button>
 
@@ -184,7 +184,7 @@
     const input = document.createElement('input');
     input.type = 'text';
     input.className = 'anchor-key';
-    input.placeholder = 'Custom key';
+    input.placeholder = <?= json_encode(t('vision.custom_key'), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG) ?>;
     input.style.width = select.offsetWidth + 'px';
     input.dataset.name = select.name;
     select.replaceWith(input);
@@ -194,14 +194,21 @@
       const s = document.createElement('select');
       s.className = 'anchor-key';
       s.name = input.dataset.name || '';
+      // value= is the stored key and stays English; only the label is
+      // translated. (Without value= the label itself would be saved.)
+      const AT = <?= json_encode([
+          'choose' => t('vision.choose'), 'custom' => t('contacts.custom'),
+          'locations' => t('anchor.locations'), 'brands' => t('anchor.brands'),
+          'people' => t('anchor.people'), 'seasons' => t('anchor.seasons'), 'time' => t('anchor.time'),
+      ], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP) ?>;
       s.innerHTML = `
-        <option value="">Choose…</option>
-        <option>locations</option>
-        <option>brands</option>
-        <option>people</option>
-        <option>seasons</option>
-        <option>time</option>
-        <option value="__custom">Custom…</option>`;
+        <option value="">${AT.choose}</option>
+        <option value="locations">${AT.locations}</option>
+        <option value="brands">${AT.brands}</option>
+        <option value="people">${AT.people}</option>
+        <option value="seasons">${AT.seasons}</option>
+        <option value="time">${AT.time}</option>
+        <option value="__custom">${AT.custom}</option>`;
       if (keyValue) {
         const opt = document.createElement('option');
         opt.value = keyValue; opt.textContent = keyValue;
@@ -263,12 +270,12 @@
         const json = await res.json();
         if (json.success) {
           form.closest('[id^="overlay-"]').classList.add('overlay-hidden');
-          alert('Basics saved!');
+          alert(<?= json_encode(t('status.saved'), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG) ?>);
         } else {
-          alert('Error: ' + (json.error || 'Unknown'));
+          alert(json.error || <?= json_encode(t('status.save_failed'), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG) ?>);
         }
       } catch(err) {
-        alert('Failed to save basics');
+        alert(<?= json_encode(t('status.save_failed'), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG) ?>);
       }
     });
   }
@@ -296,11 +303,11 @@
   new MutationObserver(injectTrix).observe(document.documentElement, { childList:true, subtree:true });
 })();
 </script>
-<script defer src="/public/js/overlay-contacts.js?v=1"></script>
-<script defer src="/public/js/overlay_budget.js?v=3"></script>
-<script defer src="/public/js/overlay-documents.js"></script>
+<script defer src="/public/js/overlay-contacts.js?v=20261110"></script>
+<script defer src="/public/js/overlay_budget.js?v=20261110"></script>
+<script defer src="/public/js/overlay-documents.js?v=20261110"></script>
 <!-- Include the JS -->
-<script src="/public/js/mood-board-library.js?v=2" defer></script>
+<script src="/public/js/mood-board-library.js?v=20261110" defer></script>
 
 
 <?php

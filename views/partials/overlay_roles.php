@@ -95,7 +95,7 @@ $slug = htmlspecialchars($vision['slug'] ?? '', ENT_QUOTES);
       'already_on'=>t('roles.already_on'),'failed'=>t('status.save_failed'),
       'no_name'=>t('roles.no_name'),'remove'=>t('action.remove'),
       'net_error'=>t('status.net_error'),
-      'net_error'=>t('status.net_error'),
+      'added_n'=>t('roles.added_n'),'skipped_n'=>t('roles.skipped_n'),
   ], JSON_UNESCAPED_UNICODE) ?>;
   const ROLE_LABELS = {
     owner:T.owner, co_owner:T.co_owner_s, editor:T.editor_s,
@@ -270,9 +270,9 @@ $slug = htmlspecialchars($vision['slug'] ?? '', ENT_QUOTES);
           j = await postTeamAdd(teamId, true);
         }
         if (j?.success) {
-          teamStatus.textContent = `Added ${j.added}` + (j.skipped ? ` (${j.skipped} already on the board)` : '');
+          teamStatus.textContent = T.added_n.replace(':n', j.added) + (j.skipped ? ' (' + T.skipped_n.replace(':n', j.skipped) + ')' : '');
           load();
-        } else teamStatus.textContent = '⚠ ' + (j?.error || 'Failed');
+        } else teamStatus.textContent = '⚠ ' + (j?.error || T.failed);
       } else {
         const [, ti, mi] = v.split(':');
         const m = teamsData[+ti]?.members[+mi];

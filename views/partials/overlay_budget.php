@@ -24,13 +24,13 @@ $showTrip = !empty($budget['show_on_trip']);
   <div id="budgetItems">
     <?php foreach (($budgetItems ?? []) as $bi): ?>
       <div class="bi-row">
-        <input type="text" class="bi-label" placeholder="Label…"
+        <input type="text" class="bi-label" placeholder="<?= te('budget.item_label') ?>"
                value="<?= htmlspecialchars($bi['label'], ENT_QUOTES) ?>">
         <input type="text" class="bi-amount" inputmode="decimal" placeholder="0.00"
                value="<?= number_format(((int)$bi['amount_cents']) / 100, 2, '.', '') ?>">
         <label class="bi-paid" title="<?= te('budget.paid') ?>">
           <input type="checkbox" <?= !empty($bi['paid']) ? 'checked' : '' ?>>
-          <span class="bi-paid-lbl">paid</span>
+          <span class="bi-paid-lbl"><?= te('budget.paid_short') ?></span>
         </label>
         <button type="button" class="bi-remove" aria-label="<?= te('action.remove') ?>">×</button>
       </div>
@@ -135,10 +135,10 @@ $showTrip = !empty($budget['show_on_trip']);
     const div = document.createElement('div');
     div.className = 'bi-row';
     div.innerHTML = `
-      <input type="text" class="bi-label" placeholder="Label…">
+      <input type="text" class="bi-label" placeholder="<?= te('budget.item_label') ?>">
       <input type="text" class="bi-amount" inputmode="decimal" placeholder="0.00">
       <label class="bi-paid" title="Paid?">
-        <input type="checkbox"><span class="bi-paid-lbl">paid</span>
+        <input type="checkbox"><span class="bi-paid-lbl"><?= te('budget.paid_short') ?></span>
       </label>
       <button type="button" class="bi-remove" aria-label="${T.remove}">×</button>`;
     div.querySelector('.bi-label').value = label;

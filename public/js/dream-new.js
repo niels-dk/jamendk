@@ -42,7 +42,11 @@ if (!window.DREAM_FORM_INITED) {
 
       const primary = form.querySelector('.btn.primary');
       primary.disabled = true;
-      primary.textContent = 'Saving…';
+      const AT = window.APP_T || {};
+      // The button's own (translated) label, to put back afterwards. It used
+      // to be reset to the English literal 'Update Dream'.
+      const origLabel = primary.textContent;
+      primary.textContent = AT.saving || 'Saving…';
 
       const endpoint = form.querySelector('input[name=dream_id]')
         ? '/api/dreams/update.php'
@@ -54,17 +58,17 @@ if (!window.DREAM_FORM_INITED) {
 
         if (json.ok) {
           if (next === 'stay') {
-            primary.textContent = 'Updated!';
-            setTimeout(() => primary.textContent = 'Update Dream', 1200);
+            primary.textContent = AT.saved || 'Saved';
+            setTimeout(() => primary.textContent = origLabel, 1200);
             next = 'view';
           } else if (next === 'dash') {
             window.location = '/dashboard';
           } else {
             window.location = '/dreams/' + json.slug;
           }
-        } else alert(json.error || 'Save failed');
+        } else alert(json.error || AT.save_failed || 'Save failed');
 
-      } catch (err) { alert('Network error: ' + err); }
+      } catch (err) { alert((AT.net_error || 'Network error') + ': ' + err); }
 
       primary.disabled = false;
     });

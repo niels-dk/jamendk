@@ -71,7 +71,7 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       saveBtn.disabled = true;
       const orig = saveBtn.textContent;
-      saveBtn.textContent = 'Saving…';
+      saveBtn.textContent = (window.APP_T || {}).saving || 'Saving…';
       const res = await fetch(`/api/visions/${slug}/save`, {
         method: 'POST',
         headers: {'Content-Type':'application/json'},
@@ -80,12 +80,12 @@ document.addEventListener('DOMContentLoaded', () => {
       let json;
       try { json = await res.json(); } catch(_) { throw new Error(`Server error ${res.status}`); }
       if (!json.ok) {
-        alert(json.error || 'Save failed');
+        alert(json.error || (window.APP_T || {}).save_failed || 'Save failed');
         saveBtn.textContent = orig;
       } else {
         dirty = false;
         if (nextAction === 'stay') {
-          saveBtn.textContent = 'Saved!';
+          saveBtn.textContent = (window.APP_T || {}).saved || 'Saved!';
           setTimeout(() => saveBtn.textContent = orig, 1200);
           nextAction = 'view';
         } else if (nextAction === 'dash') {
@@ -95,7 +95,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
     } catch (err) {
-      alert('Save error: '+ err);
+      alert(((window.APP_T || {}).save_failed || 'Save failed') + ': ' + err);
     } finally {
       saveBtn.disabled = false;
     }

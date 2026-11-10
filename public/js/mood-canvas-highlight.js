@@ -119,7 +119,7 @@
   function buildButton(host, mc){
     var group = makeEl('span', 'mc-group');
     var btn   = makeEl('button', 'mc-btn', 'Highlight');
-    btn.title = 'Highlight selection (Ctrl+H)';
+    btn.title = (window.CANVAS_T || {}).highlight_tip || 'Highlight selection (Ctrl+H)';
     var pop   = makeEl('div', 'mc-pop');
 
     group.appendChild(btn);

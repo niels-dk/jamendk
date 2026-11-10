@@ -61,7 +61,7 @@ function repeatInputs($name, $list) {
 </div>
 </form>
 
-<script src="/public/js/dream-new.js?v=2"></script>
+<script src="/public/js/dream-new.js?v=20261110"></script>
 
 
 <?php

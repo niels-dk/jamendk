@@ -40,7 +40,7 @@ class demo_controller
             if ($db->inTransaction()) $db->rollBack();
             // Back to the dashboard — where sign-in lands, so where the
             // button is actually clicked from.
-            $_SESSION['flash_home'] = 'Could not build the example project: '
+            $_SESSION['flash_home'] = t('home.example_failed') . ' '
                                     . $e->getMessage();
             redirect('/dashboard');
         }

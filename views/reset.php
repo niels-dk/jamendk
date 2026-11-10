@@ -2,7 +2,7 @@
 <div style="max-width:420px;margin:3rem auto;padding:0 1rem;">
   <h1 style="font-size:1.8rem;margin:0 0 .6rem;"><?= te('auth.reset_title') ?></h1>
   <p style="color:#8593a6;font-size:.9rem;margin:0 0 1.2rem;">
-    For <strong style="color:#ddd;"><?= htmlspecialchars($user['email'] ?? '') ?></strong>
+    <?= te('auth.reset_for') ?> <strong style="color:#ddd;"><?= htmlspecialchars($user['email'] ?? '') ?></strong>
   </p>
 
   <?php if (!empty($error)): ?>

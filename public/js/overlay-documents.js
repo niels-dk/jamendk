@@ -10,7 +10,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const slug = form.querySelector('input[name="slug"]').value;
     const data = new FormData(form);
 
-    statusEl.textContent = 'Uploading…';
+    const AT = window.APP_T || {};
+    statusEl.textContent = AT.uploading || 'Uploading…';
 
     try {
       const res  = await fetch(`/api/visions/${slug}/documents`, { method:'POST', body:data });
@@ -37,15 +38,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // Show partial errors (if any)
       if (json.errors && json.errors.length) {
-        statusEl.textContent = '✅ Uploaded with warnings on some files.';
+        statusEl.textContent = '✅ ' + (AT.uploaded_warn || 'Uploaded with warnings on some files.');
       } else {
-        statusEl.textContent = '✅ Uploaded';
+        statusEl.textContent = '✅ ' + (AT.uploaded || 'Uploaded');
       }
 
       form.reset(); // keep overlay open, clear file input
     } catch (e) {
       console.error(e);
-      statusEl.textContent = '❌ Upload failed';
+      statusEl.textContent = '❌ ' + (AT.upload_failed || 'Upload failed');
     }
   });
 });

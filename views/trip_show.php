@@ -959,7 +959,7 @@ if (!$export && ($shareToken ?? null) === null && !empty($vision['slug'])):
                      style="object-fit:cover;object-position:<?= $opx ?>% <?= $opy ?>%;" loading="lazy">
               <?php else: ?>
                 <div class="frame-title">
-                  <?= tr_e($ci['payload']['title'] ?? 'Frame') ?>
+                  <?= tr_e($ci['payload']['title'] ?? t('canvas.frame')) ?>
                 </div>
               <?php endif; ?>
             <?php elseif ($ci['kind'] === 'image'): ?>

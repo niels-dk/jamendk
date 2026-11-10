@@ -211,7 +211,7 @@
 		var el = document.querySelector('.canvas-item[data-id="'+ids[i]+'"]');
 		if (el && el.dataset.kind === 'frame'){ targetId = Number(ids[i]); break; }
 	  }
-	  if (!targetId) return void alert('Please select a frame (media can only be attached to frames).');
+	  if (!targetId) return void alert((window.CANVAS_T || {}).frame_only || 'Please select a frame (media can only be attached to frames).');
 
 	  // pass full media object for optimistic render + server PATCH
 	  var ok = mc.setItemMedia(targetId, {
@@ -274,7 +274,7 @@
     var btn = document.createElement('button');
     btn.type = siblingBtn && siblingBtn.type ? siblingBtn.type : 'button';
     btn.className = siblingBtn ? siblingBtn.className : '';
-    btn.textContent = 'Media';
+    btn.textContent = (window.CANVAS_T || {}).media || 'Media';
     btn.addEventListener('click', function(){
       // Ensure a frame is selected before opening, UX sugar
       var mc = window.moodCanvas;

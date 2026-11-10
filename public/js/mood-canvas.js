@@ -1575,7 +1575,7 @@
     else if (cmd === 'reverse') await reverseConnector(id);
     else if (cmd === 'label') {
       const current = itemsById[id]?.data?.payload?.label || '';
-      const next = prompt('Connector label (leave empty to remove):', current);
+      const next = prompt(CT.connector_prompt || 'Connector label (leave empty to remove):', current);
       if (next !== null) await setConnectorLabel(id, next.trim());
     }
     else if (cmd === 'delete') {
@@ -1700,7 +1700,7 @@
           case 'style-dashed': return setConnectorDashed(targetId, true);
           case 'label': {
             const current = d?.payload?.label || '';
-            const next = prompt('Connector label (leave empty to remove):', current);
+            const next = prompt(CT.connector_prompt || 'Connector label (leave empty to remove):', current);
             if (next === null) return;
             return setConnectorLabel(targetId, next.trim());
           }

@@ -847,7 +847,7 @@
 	  rec.el.classList.add('done');
 	  updateUploadPlaceholder(tempId, 100);
 	  const tf = rec.el.querySelector('.thumb .thumb-fallback');
-	  if (tf) tf.textContent = 'Processing…';
+	  if (tf) tf.textContent = LT.processing || 'Processing…';
 	}
 
 	function removeUploadPlaceholder(tempId) {
@@ -868,7 +868,7 @@
 	  if (!rec) return;
 	  updateUploadPlaceholder(tempId, 100);
 	  const tf = rec.el.querySelector('.thumb-fallback');
-	  if (tf) tf.textContent = 'Processing…';
+	  if (tf) tf.textContent = LT.processing || 'Processing…';
 	  rec.el.classList.add('done');
 	}
 	
@@ -1172,7 +1172,7 @@
   }
 
   function delItem(mediaId) {
-    if (!confirm('Delete this file/link from the library? This cannot be undone.')) return;
+    if (!confirm(LT.confirm_delete || 'Delete this file/link from the library? This cannot be undone.')) return;
     const fd = new FormData();
     fd.append('media_id', String(mediaId));
     fetch(`/api/visions/${encodeURIComponent(apiBaseSlug())}/media:delete`, { method:'POST', body:fd, credentials:'same-origin' })

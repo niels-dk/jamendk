@@ -116,6 +116,33 @@ if (defined('SITE_INSTAGRAM') && SITE_INSTAGRAM !== '') {
 ) ?></script>
 
 <script>
+// Strings for the static scripts in /public/js, which cannot call t(). Every
+// read there falls back to its English literal, so a missing key is never a
+// blank. Same idea as window.LIB_T (mood library) and window.CANVAS_T.
+window.APP_T = <?= json_encode([
+    'saving'          => t('status.saving'),
+    'saved'           => t('status.saved'),
+    'save_failed'     => t('status.save_failed'),
+    'net_error'       => t('status.net_error'),
+    'delete_failed'   => t('status.delete_failed'),
+    'dream_saved'     => t('js.dream_saved_local'),
+    'offline'         => t('js.offline'),
+    'synced_one'      => t('js.synced_one'),
+    'synced_many'     => t('js.synced_many'),
+    'panel_error'     => t('js.panel_error'),
+    'no_contacts'     => t('contacts.none_yet'),
+    'contacts_failed' => t('contacts.load_failed'),
+    'contact_failed'  => t('contacts.load_one_failed'),
+    'contact_delete'  => t('contacts.confirm_delete'),
+    'custom_prompt'   => t('contacts.custom_prompt'),
+    'no_results'      => t('js.no_results'),
+    'pick_currency'   => t('js.pick_currency'),
+    'bad_amount'      => t('js.bad_amount'),
+    'uploading'       => t('docs.uploading'),
+    'uploaded'        => t('docs.uploaded'),
+    'uploaded_warn'   => t('js.uploaded_warn'),
+    'upload_failed'   => t('docs.upload_failed'),
+], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP) ?>;
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/sw.js');
 }

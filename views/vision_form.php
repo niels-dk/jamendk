@@ -98,7 +98,7 @@ $titleText = $isEdit ? t('vision.edit') : t('vision.create_title');
 <div id="overlay-shell" class="overlay-hidden">
   <div class="overlay-backdrop"></div>
   <div class="overlay-panel">
-    <button class="close-overlay" aria-label="Close">✕</button>
+    <button class="close-overlay" aria-label="<?= te('action.close') ?>">✕</button>
     <div id="overlay-content"></div>
   </div>
 </div>
@@ -251,14 +251,21 @@ $titleText = $isEdit ? t('vision.edit') : t('vision.create_title');
         const key    = input.value.trim();
         const newSel = document.createElement('select');
         newSel.className = 'anchor-key';
+        // value= is the stored key and stays English; only the label is
+        // translated. (Without value= the label itself would be saved.)
+        const AT = <?= json_encode([
+            'choose' => t('vision.choose'), 'custom' => t('contacts.custom'),
+            'locations' => t('anchor.locations'), 'brands' => t('anchor.brands'),
+            'people' => t('anchor.people'), 'seasons' => t('anchor.seasons'), 'time' => t('anchor.time'),
+        ], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP) ?>;
         newSel.innerHTML = `
-          <option value="">Choose…</option>
-          <option>locations</option>
-          <option>brands</option>
-          <option>people</option>
-          <option>seasons</option>
-          <option>time</option>
-          <option value="__custom">Custom…</option>`;
+          <option value="">${AT.choose}</option>
+          <option value="locations">${AT.locations}</option>
+          <option value="brands">${AT.brands}</option>
+          <option value="people">${AT.people}</option>
+          <option value="seasons">${AT.seasons}</option>
+          <option value="time">${AT.time}</option>
+          <option value="__custom">${AT.custom}</option>`;
         if (key) {
           const opt = document.createElement('option');
           opt.value = key; opt.textContent = key;
@@ -280,5 +287,5 @@ $titleText = $isEdit ? t('vision.edit') : t('vision.create_title');
 
 
 <!-- main and overlay scripts -->
-<script src="/public/js/vision-edit.js?v=1"></script>
-<script src="/public/js/vision-overlays.js?v=1"></script>
+<script src="/public/js/vision-edit.js?v=20261110"></script>
+<script src="/public/js/vision-overlays.js?v=20261110"></script>

@@ -255,7 +255,7 @@ $anchors = $anchors ?? [];
         📤 <?= te('vision.send_back') ?>
       </button>
     <?php endif; ?>
-    <a class="btn" href="/dashboard/vision"><?= te('vision.back_dash') ?></a>
+    <a class="btn btn-quiet" href="/dashboard/vision"><?= te('vision.back_dash') ?></a>
   </div>
 
   <?php if ($isCollab): ?>

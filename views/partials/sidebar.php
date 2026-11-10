@@ -8,21 +8,21 @@ $active = fn(string $pattern) => preg_match($pattern, $uri) ? 'active' : '';
   <div class="nav-top">
   <nav class="nav">
     <div class="new-board">
-      <button type="button" class="menu-toggle btn">Boards ▾</button>
+      <button type="button" class="menu-toggle btn"><?= te('dash.boards') ?> ▾</button>
       <div class="card-menu">
-        <a href="/dashboard">Dashboard</a>
-        <a href="/dashboard/dream">Dreams</a>
-        <a href="/dashboard/vision">Visions</a>
-        <a href="/dashboard/mood">Moods</a>
-        <a href="/dashboard/trip">Trip</a>
+        <a href="/dashboard"><?= te('nav.dashboard') ?></a>
+        <a href="/dashboard/dream"><?= te('board.dreams') ?></a>
+        <a href="/dashboard/vision"><?= te('board.visions') ?></a>
+        <a href="/dashboard/mood"><?= te('board.moods') ?></a>
+        <a href="/dashboard/trip"><?= te('board.trips') ?></a>
       </div>
     </div>
     <div class="new-board" style="margin-top: 8px;">
-      <button type="button" class="menu-toggle btn">＋ New board ▾</button>
+      <button type="button" class="menu-toggle btn">＋ <?= te('nav.new_board') ?> ▾</button>
       <div class="card-menu">
-        <a href="/dreams/new">＋ Dream</a>
-        <a href="/visions/new">＋ Vision</a>
-        <a href="/moods/new">＋ Mood</a>
+        <a href="/capture">＋ <?= te('board.dream') ?></a>
+        <a href="/visions/new">＋ <?= te('board.vision') ?></a>
+        <a href="/moods/new">＋ <?= te('board.mood') ?></a>
       </div>
     </div>
   </nav>

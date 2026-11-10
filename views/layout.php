@@ -13,11 +13,11 @@
     <main><?= $content ?? '' ?></main>
   </div>
 
-  <link rel="stylesheet" href="/public/css/dashboard.css">
+  <link rel="stylesheet" href="/public/css/dashboard.css?v=2">
 
   <!-- Dream board modal & scripts -->
   <?php include __DIR__ . '/partials/dream-modal.php'; ?>
-  <script src="/public/js/mobile-dream.js?v=11"></script>
+  <script src="/public/js/mobile-dream.js?v=12"></script>
   <script src="/public/js/offline-ui.js?v=3"></script>
   <script src="/public/js/trix-loader.js?v=1"></script>
   <script defer src="/public/js/ui.js"></script>
@@ -73,9 +73,12 @@
 
   const key = 'sidebarCollapsed';
 
-  // Collapse by default on narrow screens (<=768px) unless user has a saved pref
+  // Narrow screens always start closed: there the menu is a drawer over the
+  // page, and a preference saved on a wide screen ("keep it open") would hide
+  // most of a phone. Wide screens follow the saved preference.
+  const narrow = () => window.innerWidth <= 768;
   const saved = localStorage.getItem(key);
-  if (saved === '1' || (saved === null && window.innerWidth <= 768)) {
+  if (narrow() || saved === '1') {
     sidebar.classList.add('collapsed');
   }
 
@@ -88,18 +91,29 @@
 
   const setPosition = () => {
     // Place the button near the visible edge of the sidebar
+    // Open: straddle the menu's edge, so the button never covers the page
+    // (the page starts 24px to the right of that edge).
     const left = sidebar.classList.contains('collapsed')
       ? 8 // near screen edge when closed
-      : Math.min(sidebar.offsetWidth + 8, 360); // just outside sidebar when open
+      : Math.min(sidebar.offsetWidth - 22, 338);
     externalBtn.style.left = left + 'px';
   };
 
   // Toggle handler
   const toggle = () => {
     sidebar.classList.toggle('collapsed');
-    localStorage.setItem(key, sidebar.classList.contains('collapsed') ? '1' : '0');
+    // Only a wide-screen choice is worth remembering (see above).
+    if (!narrow()) {
+      localStorage.setItem(key, sidebar.classList.contains('collapsed') ? '1' : '0');
+    }
     setIcon();
   };
+
+  // On a phone, picking a section should get the drawer out of the way of
+  // the panel it just opened.
+  sidebar.addEventListener('click', (e) => {
+    if (narrow() && e.target.closest('a') && !sidebar.classList.contains('collapsed')) toggle();
+  });
 
   // Wire up
   externalBtn.addEventListener('click', toggle);

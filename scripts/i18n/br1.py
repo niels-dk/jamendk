@@ -64,7 +64,7 @@ BR = {
 'auth.err_unverified': 'Confirme seu endereço de e-mail antes de entrar.',
 'auth.resend_link': 'Reenviar o link de confirmação',
 'auth.register_title': 'Crie sua conta',
-'auth.register_sub': 'Comece a sonhar, planejar e publicar trips em poucos segundos.',
+'auth.register_sub': 'Leva poucos segundos. Sua primeira ideia pode ser uma linha só.',
 'auth.name': 'Seu nome',
 'auth.err_name': 'Diga o seu nome.',
 'auth.err_email': 'Esse endereço de e-mail não parece certo.',

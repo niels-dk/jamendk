@@ -6,5 +6,5 @@ $slug = htmlspecialchars($board['slug'] ?? '');
   <a href="/moods/<?= $slug ?>"><?= te('mood.nav_info') ?></a>
   <a href="/moods/<?= $slug ?>/media"><?= te('mood.nav_media') ?></a>
   <a href="/moods/<?= $slug ?>/canvas"><?= te('mood.nav_canvas') ?></a>
-  <a href="/moods/<?= $slug ?>/settings" class="js-open-settings">Settings</a>
+  <a href="/moods/<?= $slug ?>/settings" class="js-open-settings"><?= te('mood.nav_settings') ?></a>
 </nav>

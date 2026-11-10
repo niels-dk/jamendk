@@ -1,8 +1,9 @@
 <?php
 function e($s){ return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
 
-$created = !empty($board['created_at']) ? date('Y-m-d H:i:s', strtotime($board['created_at'])) : '';
-$updated = !empty($board['updated_at']) ? date('Y-m-d H:i:s', strtotime($board['updated_at'])) : '';
+// Localised medium dates ("29. apr. 2026"), not a raw database timestamp.
+$created = !empty($board['created_at']) ? fmt_date($board['created_at']) : '';
+$updated = !empty($board['updated_at']) ? fmt_date($board['updated_at']) : '';
 
 $itemCounts = $itemCounts ?? [];
 $totalItems = array_sum($itemCounts);
@@ -64,8 +65,8 @@ $kindLabel = function (string $kind, int $n) : string {
 
   <div class="btn-group" style="display:flex;flex-wrap:wrap;gap:.5rem;">
     <a class="btn primary" href="/moods/<?= e($board['slug']) ?>/canvas"><?= te('mood.open_canvas') ?></a>
-    <a class="btn" href="/moods/<?= e($board['slug']) ?>/media"><?= te('mood.media_library') ?></a>
-    <a class="btn" href="/moods/<?= e($board['slug']) ?>/edit"><?= te('mood.edit_info') ?></a>
-    <a class="btn" href="/dashboard/mood"><?= te('vision.back_dash') ?></a>
+    <a class="btn btn-quiet" href="/moods/<?= e($board['slug']) ?>/media"><?= te('mood.media_library') ?></a>
+    <a class="btn btn-quiet" href="/moods/<?= e($board['slug']) ?>/edit"><?= te('mood.edit_info') ?></a>
+    <a class="btn btn-quiet" href="/dashboard/mood"><?= te('vision.back_dash') ?></a>
   </div>
 </div>

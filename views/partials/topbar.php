@@ -3,8 +3,12 @@ $me = function_exists('current_user') ? current_user() : null;
 $loggedIn = (bool)$me;
 // One place decides the product name everywhere (see SITE_NAME in config).
 $brandName = defined('SITE_NAME') ? SITE_NAME : 'Merely a Dream';
+$tbAdmin   = $loggedIn && function_exists('is_admin') && is_admin();
+// Which bottom-bar tab is "here". Path only — the query string never matters.
+$tbPath    = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
+$tbTab     = fn(string $prefix) => strncmp($tbPath, $prefix, strlen($prefix)) === 0 ? ' is-active' : '';
 ?>
-<header class="home-header">
+<header class="home-header<?= $tbAdmin ? ' is-admin' : '' ?>">
   <div class="home-brand">
     <a href="/" class="brand-link" title="<?= htmlspecialchars($brandName, ENT_QUOTES) ?>">
       <div class="logo-mark">
@@ -25,7 +29,7 @@ $brandName = defined('SITE_NAME') ? SITE_NAME : 'Merely a Dream';
           👁 <?= te('nav.viewing_as', ['name' => $me['name'] ?: $me['email']]) ?>
         </a>
       <?php endif; ?>
-      <a class="topbar-user" href="/account" title="<?= te('nav.my_account') ?>"
+      <a class="topbar-user nav-desktop" href="/account" title="<?= te('nav.my_account') ?>"
          style="display:inline-flex;align-items:center;gap:.4rem;text-decoration:none;
                 color:#cfdbe8;font-size:.95em;margin-right:.4rem;">
         <span style="display:inline-flex;align-items:center;justify-content:center;
@@ -35,8 +39,8 @@ $brandName = defined('SITE_NAME') ? SITE_NAME : 'Merely a Dream';
         </span>
         <?= htmlspecialchars($me['name'] ?: $me['email']) ?>
       </a>
-      <a class="btn btn-ghost" href="/capture" title="<?= te('nav.capture_tip') ?>">⚡ <?= te('nav.capture') ?></a>
-      <a class="btn btn-ghost" href="/teams" title="<?= te('teams.im_on') ?>">👥 <?= te('nav.teams') ?></a>
+      <a class="btn btn-ghost nav-desktop" href="/capture" title="<?= te('nav.capture_tip') ?>">⚡ <?= te('nav.capture') ?></a>
+      <a class="btn btn-ghost nav-desktop" href="/teams" title="<?= te('teams.im_on') ?>">👥 <?= te('nav.teams') ?></a>
       <?php if (function_exists('is_admin') && is_admin()): ?>
         <a class="btn btn-ghost" href="/admin/users" title="<?= te('adm.users_sub') ?>">⚙️ <?= te('nav.users') ?></a>
         <a class="btn btn-ghost" href="/admin/analytics" title="<?= te('adm.analytics_sub') ?>">📊 <?= te('nav.analytics') ?></a>
@@ -52,13 +56,37 @@ $brandName = defined('SITE_NAME') ? SITE_NAME : 'Merely a Dream';
       ?>
       <a class="btn btn-ghost" href="<?= htmlspecialchars($logoutHref, ENT_QUOTES) ?>"><?= te('nav.logout') ?></a>
     <?php else: ?>
-      <a class="btn btn-ghost" href="/pricing"><?= te('nav.pricing') ?></a>
+      <a class="btn btn-ghost nav-desktop" href="/pricing"><?= te('nav.pricing') ?></a>
       <?php include __DIR__ . '/lang-picker.php'; ?>
       <a class="btn btn-ghost" href="/login"><?= te('nav.signin') ?></a>
-      <a class="btn btn-primary" href="/register"><?= te('nav.create_account') ?></a>
+      <a class="btn btn-primary nav-cta" href="/register"><?= te('nav.create_account') ?></a>
     <?php endif; ?>
   </nav>
 </header>
+
+<?php if ($loggedIn): ?>
+<!-- Phone only (see app.css): the four places you go, within thumb reach.
+     Capture sits here instead of a floating button, so it opens the one-line
+     capture screen rather than a form. -->
+<nav class="tabbar" aria-label="<?= te('nav.main') ?>">
+  <a href="/dashboard" class="<?= trim($tbTab('/dashboard')) ?>">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20h14V9.5"/></svg>
+    <span><?= te('nav.dashboard') ?></span>
+  </a>
+  <a href="/capture" class="tab-capture">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>
+    <span><?= te('nav.capture') ?></span>
+  </a>
+  <a href="/teams" class="<?= trim($tbTab('/teams')) ?>">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M16 5.2a3.2 3.2 0 0 1 0 5.6M17.5 14.3c2 .8 3.5 2.9 3.5 5.7"/></svg>
+    <span><?= te('nav.teams') ?></span>
+  </a>
+  <a href="/account" class="<?= trim($tbTab('/account')) ?>">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.6"/><path d="M4.5 20c0-4.1 3.4-7 7.5-7s7.5 2.9 7.5 7"/></svg>
+    <span><?= te('nav.account') ?></span>
+  </a>
+</nav>
+<?php endif; ?>
 
 <style>
   /* .home-actions is a flex row with the default align-items:stretch, so this

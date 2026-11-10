@@ -19,89 +19,33 @@ class home_controller
 {
     public static function index()
     {
-        global $db, $currentUserId, $isAuthenticated;
-        $uid = $isAuthenticated ? (int)$currentUserId : 0;
+        global $isAuthenticated;
 
-        // Counts (active only, with the same dream-promotion exclusion as the dashboard)
-        $stats = [
-            'dreams'  => 0, 'visions' => 0, 'moods' => 0, 'trips' => 0,
-        ];
-        if (!$uid) {
-            // Anonymous: skip the queries entirely
-            $recentBoards = [];
-            $hasActivity  = false;
-            $title = 'Merely a Dream — plan the shoot, remember the shot';
-            ob_start();
-            include __DIR__ . '/../views/home.php';
-            $content = ob_get_clean();
-            $noSidebar = true;
-            include __DIR__ . '/../views/layout.php';
-            return;
+        // Signed in: the dashboard is the one start page. There used to be a
+        // second "welcome back" page here that looked like a different app
+        // and was not where sign-in landed; its useful parts (create buttons,
+        // upcoming dates) now live on the dashboard itself.
+        if ($isAuthenticated) {
+            redirect('dashboard');
         }
-        try {
-            $st = $db->prepare("
-                SELECT
-                  (SELECT COUNT(*) FROM dream_boards d
-                    WHERE d.user_id=? AND d.archived=0 AND d.deleted_at IS NULL
-                      AND NOT EXISTS (SELECT 1 FROM visions v
-                                       WHERE v.dream_id = d.id AND v.deleted_at IS NULL)
-                  ) AS dreams,
-                  (SELECT COUNT(*) FROM visions v
-                    WHERE v.user_id=? AND v.archived=0 AND v.deleted_at IS NULL
-                  ) AS visions,
-                  (SELECT COUNT(*) FROM mood_boards m
-                    WHERE m.user_id=? AND m.archived=0 AND m.deleted_at IS NULL
-                  ) AS moods,
-                  (SELECT COUNT(*) FROM visions v
-                    WHERE v.user_id=? AND v.archived=0 AND v.deleted_at IS NULL
-                      AND v.trip_enabled = 1
-                  ) AS trips
-            ");
-            $st->execute([$uid, $uid, $uid, $uid]);
-            $r = $st->fetch(PDO::FETCH_ASSOC) ?: [];
-            $stats = [
-                'dreams'  => (int)($r['dreams']  ?? 0),
-                'visions' => (int)($r['visions'] ?? 0),
-                'moods'   => (int)($r['moods']   ?? 0),
-                'trips'   => (int)($r['trips']   ?? 0),
-            ];
-        } catch (\Throwable $e) { /* keep zeros */ }
 
-        // Recent boards (top 5 across dream/vision/mood, latest touched first).
-        // Explicit COLLATE on every text column + the type literal — the three
-        // tables use different collations, and a bare UNION ALL across them
-        // throws "Illegal mix of collations" (which previously got swallowed,
-        // leaving the section empty). COALESCE(updated_at, created_at) so rows
-        // with a null updated_at still sort sensibly.
-        $C = 'COLLATE utf8mb4_general_ci';
-        $recentBoards = [];
-        try {
-            $rb = $db->prepare("
-                SELECT * FROM (
-                    SELECT 'dream'  $C AS type,
-                           slug  $C AS slug,
-                           title $C AS title,
-                           COALESCE(updated_at, created_at) AS ts
-                      FROM dream_boards
-                     WHERE user_id=? AND archived=0 AND deleted_at IS NULL
-                       AND NOT EXISTS (SELECT 1 FROM visions v
-                                        WHERE v.dream_id = dream_boards.id AND v.deleted_at IS NULL)
-                    UNION ALL
-                    SELECT 'vision' $C, slug $C, title $C, COALESCE(updated_at, created_at)
-                      FROM visions
-                     WHERE user_id=? AND archived=0 AND deleted_at IS NULL
-                    UNION ALL
-                    SELECT 'mood'   $C, slug $C, title $C, COALESCE(updated_at, created_at)
-                      FROM mood_boards
-                     WHERE user_id=? AND archived=0 AND deleted_at IS NULL
-                ) AS recents
-                ORDER BY ts DESC
-                LIMIT 5
-            ");
-            $rb->execute([$uid, $uid, $uid]);
-            $recentBoards = $rb->fetchAll(PDO::FETCH_ASSOC) ?: [];
-        } catch (\Throwable $e) { /* keep empty */ }
+        $title = 'Merely a Dream — plan the shoot, remember the shot';
+        ob_start();
+        include __DIR__ . '/../views/home.php';
+        $content = ob_get_clean();
+        $noSidebar = true;
+        include __DIR__ . '/../views/layout.php';
+    }
 
+    /**
+     * Dates that need attention soon, for the dashboard's "Upcoming dates":
+     * Vision start/end dates within ~10 days (or overdue and not complete),
+     * and goal/milestone deadlines on boards I own or items assigned to me.
+     *
+     * @return array{0: array, 1: array}  [$upcoming, $taskDeadlines]
+     */
+    private static function upcomingDates(PDO $db, int $uid): array
+    {
         // Upcoming / overdue Vision dates — anything starting or ending within
         // the next ~10 days, plus end dates already overdue (not yet complete).
         $upcoming = [];
@@ -155,18 +99,7 @@ class home_controller
             $taskDeadlines = $gq->fetchAll(PDO::FETCH_ASSOC) ?: [];
         } catch (\Throwable $e) { /* columns not migrated yet */ }
 
-        $hasActivity = ($stats['dreams'] + $stats['visions'] + $stats['moods']) > 0;
-        $userName = (is_array($currentUser ?? null) && !empty($currentUser['name']))
-            ? $currentUser['name'] : '';
-
-        $title = 'Welcome to Jamen';
-        ob_start();
-        include __DIR__ . '/../views/home.php';
-        $content = ob_get_clean();
-
-        // dashboard/top pages don't use the left board sidebar
-        $noSidebar = true;
-        include __DIR__ . '/../views/layout.php';
+        return [$upcoming, $taskDeadlines];
     }
 
     // Routes preserved
@@ -215,7 +148,10 @@ class home_controller
         }
 
         // View vars
-        $title     = ucfirst($type) . 's � ' . ucfirst($filter);
+        // Was built from the raw URL words with a byte that was not valid
+        // UTF-8 between them, so the tab read "Dreams � Active" in every language.
+        $title     = t('board.' . $type . 's') . ' — '
+                   . t('filter.' . str_replace('-', '_', $filter));
         $boardType = $type;
 
         // ---- render view into $content, then include layout ----
@@ -502,6 +438,7 @@ class home_controller
 
 		$types  = ['dream','vision','mood','trip'];
 		$boards = [];
+		$boardCounts = [];
 
 		// Site admins see every user's boards (uid 0 = no user filter)
 		$uid = is_admin() ? 0 : (int)$currentUserId;
@@ -526,6 +463,9 @@ class home_controller
 			} else {
 				usort($list, fn($a,$b) => strcmp($b['updated_at'] ?? '', $a['updated_at'] ?? ''));
 			}
+
+			// Total per type, before the list is cut down for display.
+			$boardCounts[$type] = count($list);
 
 			// Apply limit only if not null
 			if ($limitEach !== null) {
@@ -608,8 +548,14 @@ class home_controller
 		}
 		unset($__it);
 
+		// What used to be the separate "welcome back" page: who this is and
+		// which dates are coming up.
+		[$upcoming, $taskDeadlines] = self::upcomingDates($db, (int)$currentUserId);
+		$me       = current_user();
+		$userName = is_array($me) ? (string)($me['name'] ?? '') : '';
+
 		// View vars
-		$pageTitle  = 'Dashboard';
+		$pageTitle  = t('nav.dashboard');
 		$boardSets  = $boards;
 		$noSidebar  = true;
 		$sortValue  = $sort;

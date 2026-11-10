@@ -156,7 +156,7 @@ class dream_controller
    public static function create(): void
 	{
 		require_login();
-		$title = 'New Dream';
+		$title = t('home.new_dream');
 
 		ob_start();
 		include __DIR__ . '/../views/dream_form.php';

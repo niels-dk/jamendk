@@ -506,10 +506,69 @@ $DOC_STATUS_LABEL = [
       .budget { flex-direction: column; align-items: flex-start; gap: .25rem; padding: 1rem 1.2rem; }
       .docs-list li { flex-wrap: wrap; }
     }
+
+    /* Owner bar — preview only. Never on the public link, in the offline
+       copy, or on paper. */
+    .owner-bar {
+      display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+      gap: .5rem 1rem; margin: 0 0 .9rem; padding: .55rem .85rem;
+      background: #eaf1fb; border: 1px solid #c9dbf3; border-radius: 10px;
+      color: #18467a; font-size: .85rem;
+    }
+    .owner-bar__actions { display: flex; flex-wrap: wrap; gap: .4rem; }
+    .owner-bar a, .owner-bar button {
+      font: inherit; font-weight: 700; color: #18467a; text-decoration: none;
+      background: #fff; border: 1px solid #c9dbf3; border-radius: 999px;
+      padding: .3rem .75rem; cursor: pointer;
+    }
+    .owner-bar a:hover, .owner-bar button:hover { background: #f4f8fe; }
+    @media print { .owner-bar { display: none !important; } }
   </style>
 </head>
 <body>
 <div class="wrap">
+
+<?php
+// /trips/{slug} is the signed-in preview ($shareToken is null there); the page
+// the world sees is /t/{token}. The preview used to be a dead end: no way
+// back to the board, and no sign of the link you are meant to send.
+if (!$export && ($shareToken ?? null) === null && !empty($vision['slug'])):
+  $ownerShare = '';
+  $ownerTok   = (string)($vision['trip_token'] ?? '');
+  $ownerExp   = $vision['trip_token_expires_at'] ?? null;
+  if ($ownerTok !== '' && (empty($ownerExp) || strtotime((string)$ownerExp) > time())) {
+      $ownerHost   = defined('MAIL_SITE_HOST') ? MAIL_SITE_HOST : ($_SERVER['HTTP_HOST'] ?? 'merelyadream.com');
+      $ownerScheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+      $ownerShare  = $ownerScheme . '://' . $ownerHost . '/t/' . $ownerTok;
+  }
+?>
+  <div class="owner-bar">
+    <span>👁 <?= te('trip.preview_note') ?></span>
+    <span class="owner-bar__actions">
+      <a href="/visions/<?= tr_e($vision['slug']) ?>">← <?= te('trip.back_to_vision') ?></a>
+      <?php if ($ownerShare !== ''): ?>
+        <button type="button" id="ownerCopy"
+                data-url="<?= tr_e($ownerShare) ?>"
+                data-done="<?= te('trip.link_copied') ?>">🔗 <?= te('trip.copy_link') ?></button>
+      <?php endif; ?>
+    </span>
+  </div>
+  <script>
+  (function () {
+    var b = document.getElementById('ownerCopy');
+    if (!b) return;
+    b.addEventListener('click', function () {
+      var url = b.getAttribute('data-url');
+      var done = function () { b.textContent = '✓ ' + b.getAttribute('data-done'); };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).then(done, function () { window.prompt('', url); });
+      } else {
+        window.prompt('', url);
+      }
+    });
+  })();
+  </script>
+<?php endif; ?>
 
   <header class="hero <?= $coverUrl ? 'has-cover' : 'no-cover' ?>">
     <div class="hero-actions">

@@ -64,7 +64,7 @@ ob_start();
     </div><!-- /grid -->
   <?php endif; ?>
 
-  <p style="margin-top:1.4rem"><small><?= te('vision.created') ?> <?= $dream['created_at'] ?></small></p>
+  <p style="margin-top:1.4rem"><small><?= te('vision.created') ?> <?= htmlspecialchars(fmt_date($dream['created_at'])) ?></small></p>
 
   <?php if (!empty($linkedVision)): ?>
     <div style="margin:.9rem 0; padding:.7rem .9rem; border-radius:8px;
@@ -85,8 +85,11 @@ ob_start();
     </form>
   <?php endif; ?>
 
-  <a class="btn" href="/dreams/<?= $dream['slug'] ?>/edit"><?= te('dream.edit') ?></a>
-  <a class="btn" href="/dashboard/dream" style="margin-left:.6rem"><?= te('vision.back_dash') ?></a>
+  <?php /* One primary action on the page (promote / open the Vision).
+           These two are quiet so it stands out; all three used to be the
+           same solid blue. */ ?>
+  <a class="btn btn-quiet" href="/dreams/<?= $dream['slug'] ?>/edit"><?= te('dream.edit') ?></a>
+  <a class="btn btn-quiet" href="/dashboard/dream" style="margin-left:.6rem"><?= te('vision.back_dash') ?></a>
 </div>
 
 <?php

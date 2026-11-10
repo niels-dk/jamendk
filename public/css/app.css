@@ -726,3 +726,114 @@ line.connector-selected { stroke: #4a90e2; stroke-width: 3; }
   background: #3a76d2; color: #fff; font-weight: 600; text-decoration: none;
 }
 .doc-btn:hover { background: #2c5aa0; text-decoration: none; }
+
+
+/* ══════════════════════════════════════════════════════════════════════
+   UX pass, Nov 2026. Kept together at the end of the last stylesheet so
+   these rules win over the older, overlapping ones in style.css without
+   having to untangle them.
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* ── Board editors: the menu sits beside the page, not on top of it ──────
+   .sidebar is position:fixed, so nothing ever made room for it and it hid
+   the left 260px of every editor (heading, labels, the canvas toolbar). */
+@media (min-width: 961px) {
+  .layout > .content {
+    margin-left: 260px; min-width: 0;
+    transition: margin-left .18s ease;
+  }
+  .layout > .sidebar.collapsed ~ .content { margin-left: 44px; }
+
+  /* The header is centred at 960px, which put the logo under the menu too. */
+  body:has(.layout > .sidebar) .home-header {
+    max-width: none; margin-left: 260px; margin-right: 0;
+    padding-left: 24px; padding-right: 24px;
+    transition: margin-left .18s ease;
+  }
+  body:has(.layout > .sidebar.collapsed) .home-header { margin-left: 44px; }
+}
+@media (min-width: 541px) and (max-width: 960px) {
+  /* Closed menu: leave room for the round toggle beside the heading. */
+  .layout > .sidebar.collapsed ~ .content { margin-left: 44px; }
+}
+@media (max-width: 960px) {
+  /* The 140px gap belonged to an older menu that stacked above the page. */
+  .layout > .content { padding-top: 24px; }
+}
+
+/* ── Header on a phone: one row, with the name ───────────────────────────
+   It used to wrap into three rows (a quarter of the screen) and hide the
+   wordmark, leaving an anonymous grid icon. */
+.tabbar { display: none; }
+@media (max-width: 640px) {
+  .home-header { flex-wrap: nowrap; gap: 8px; padding: .55rem .8rem; margin-top: 0; }
+  .home-brand { min-width: 0; }
+  .brand-title { display: inline; font-size: .92rem; }
+  .logo-mark { width: 24px; height: 24px; gap: 3px; padding: 3px; flex-shrink: 0; }
+  .home-actions { flex-wrap: nowrap; gap: 6px; margin-left: auto; }
+  .home-actions .btn {
+    padding: 8px 10px; font-size: .84rem; border-radius: 10px;
+    white-space: nowrap; flex-shrink: 0;
+  }
+  /* Reachable elsewhere on a phone: the bottom bar when signed in, the
+     footer and the page's own buttons when not. */
+  .home-actions .nav-desktop { display: none !important; }
+  .lang-code { display: none; }
+  /* Site admins keep their extra links; for them the header may wrap. */
+  .home-header.is-admin,
+  .home-header.is-admin .home-actions { flex-wrap: wrap; }
+
+  /* ── Bottom bar (signed in) ── */
+  .tabbar {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 90;
+    background: rgba(13,18,28,.97); border-top: 1px solid #222b3c;
+    padding: 6px 6px calc(6px + env(safe-area-inset-bottom));
+  }
+  .tabbar a {
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    padding: 6px 2px; border-radius: 10px;
+    color: #8fa1b8; font-size: .68rem; font-weight: 600; text-decoration: none;
+  }
+  .tabbar svg {
+    width: 22px; height: 22px; fill: none; stroke: currentColor;
+    stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;
+  }
+  .tabbar a.is-active { color: #eaf0f7; }
+  .tabbar a.tab-capture { color: #e8b04a; }
+  body:has(.tabbar) { padding-bottom: calc(66px + env(safe-area-inset-bottom)); }
+  /* Things pinned to the bottom edge move up clear of the bar. */
+  body:has(.tabbar) .sidebar-toggle { bottom: calc(76px + env(safe-area-inset-bottom)); }
+  body:has(.tabbar) .snackbar { bottom: calc(78px + env(safe-area-inset-bottom)); }
+}
+@media (max-width: 430px) {
+  /* Not enough width for both buttons beside the name; every public page
+     carries its own sign-up button. */
+  .home-actions .nav-cta { display: none; }
+}
+
+
+/* ── Quiet buttons ──────────────────────────────────────────────────────
+   Board pages showed three identical solid-blue buttons in a row. The one
+   that moves the work forward stays solid; the rest step back. */
+.btn.btn-quiet {
+  background: transparent; color: #cfdbe8; border: 1px solid #2b3346;
+}
+.btn.btn-quiet:hover { background: rgba(255,255,255,.07); color: #fff; }
+.btn.btn-ghost:hover { background: rgba(255,255,255,.07); }
+
+/* ── Sign-up / sign-in forms ────────────────────────────────────────────
+   Every field the same width. The name field used to be wider than the
+   e-mail and password fields under it. */
+.auth-form input:not([type=hidden]) { width: 100%; box-sizing: border-box; }
+
+/* "Check your inbox" after signing up */
+.auth-inbox {
+  text-align: center; margin: 0 0 1.4rem; padding: 1.3rem 1.2rem;
+  background: rgba(58,118,210,.12); border: 1px solid rgba(58,118,210,.4);
+  border-radius: 14px; color: #c3d7f2;
+}
+.auth-inbox__icon { font-size: 1.8rem; line-height: 1; margin-bottom: .4rem; }
+.auth-inbox h2 { margin: 0 0 .4rem; font-size: 1.15rem; color: #eaf0f7; }
+.auth-inbox p { margin: 0 0 .7rem; font-size: .93rem; line-height: 1.55; }
+.auth-inbox a { color: #8fb1d8; font-size: .88rem; text-decoration: underline; }

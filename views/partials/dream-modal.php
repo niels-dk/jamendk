@@ -1,5 +1,6 @@
-<button id="fabNewDream" class="fab" aria-label="<?= te('home.new_dream') ?>">＋</button>
-
+<?php /* The floating "+" is gone: signed-out visitors were sent to the login
+         form by it, and signed-in phones now have Capture in the bottom bar.
+         The modal stays — it is what "New Dream" opens when offline. */ ?>
 <div id="dreamModal" class="modal-hidden">
   <div class="modal-content">
     <button id="closeModal" class="modal-close" aria-label="<?= te('action.close') ?>">✕</button>

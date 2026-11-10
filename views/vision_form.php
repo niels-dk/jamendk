@@ -1,7 +1,7 @@
 <?php
 // views/vision_form.php
 $isEdit    = isset($vision);
-$titleText = $isEdit ? 'Edit Vision' : 'Create a Vision';
+$titleText = $isEdit ? t('vision.edit') : t('vision.create_title');
 ?>
 <link rel="stylesheet" href="/public/css/overlay.css?v=1">
 <link rel="stylesheet" type="text/css" href="https://unpkg.com/trix@2.0.8/dist/trix.css">
@@ -73,12 +73,12 @@ $titleText = $isEdit ? 'Edit Vision' : 'Create a Vision';
 				   placeholder="<?= te('vision.anchor_placeholder') ?>">
 			<button type="button"
 					class="btn btn-icon remove-anchor"
-					aria-label="Remove"
+					aria-label="<?= te('action.remove') ?>"
 					style="padding:0 .5rem;">✕</button>
 		  </div>
 		<?php $i++; endforeach; ?>
 		<!-- Keep the Add button at the end of the flex column -->
-		<button type="button" class="btn add-anchor">＋ Add</button>
+		<button type="button" class="btn add-anchor">＋ <?= te('action.add') ?></button>
 	  </div>
 	</div>
 

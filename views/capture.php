@@ -158,7 +158,7 @@ function cp_e($s){ return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
     if (!navigator.onLine) {
       queueLocal(p);
       ta.value = ''; bump();
-      showSnack('⚡ Caught — saved on this phone, syncs when you\'re back');
+      showSnack('⚡ ' + T.offline);
       ta.focus();
       return;
     }
@@ -188,7 +188,7 @@ function cp_e($s){ return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
     }).catch(function () {
       saving = false; btn.disabled = false;
       queueLocal(p); ta.value = ''; bump();
-      showSnack('⚡ Caught — saved on this phone, syncs when you\'re back');
+      showSnack('⚡ ' + T.offline);
       ta.focus();
     });
   }

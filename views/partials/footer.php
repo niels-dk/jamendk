@@ -74,11 +74,13 @@ $f_in      = function_exists('is_logged_in') && is_logged_in();
     <div class="sf-col">
       <h4><?= te('footer.product') ?></h4>
       <ul>
-        <li><a href="/"><?= te('footer.how_it_works') ?></a></li>
+        <?php /* Signed in, "/" is the dashboard, so the explanation of how the
+                 product works is the help page instead. */ ?>
+        <li><a href="<?= $f_in ? '/help' : '/' ?>"><?= te('footer.how_it_works') ?></a></li>
         <li><a href="/pricing"><?= te('nav.pricing') ?></a></li>
         <?php if ($f_in): ?>
           <li><a href="/dashboard"><?= te('nav.dashboard') ?></a></li>
-          <li><a href="/dreams/new"><?= te('home.new_dream') ?></a></li>
+          <li><a href="/capture"><?= te('home.new_dream') ?></a></li>
           <li><a href="/account"><?= te('nav.my_account') ?></a></li>
         <?php else: ?>
           <li><a href="/register"><?= te('nav.create_account') ?></a></li>

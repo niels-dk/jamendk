@@ -32,7 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // FAB behavior: online → navigate, offline → open modal
-  fab.addEventListener('click', () => {
+  if (fab) fab.addEventListener('click', () => {
     if (navigator.onLine) {
       location.href = '/dreams/new';
     } else {

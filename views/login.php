@@ -1,11 +1,25 @@
 <?php
-$title = 'Sign in';
+$title = t('auth.signin');
 ob_start();
 ?>
 <div style="max-width:420px;margin:3rem auto;padding:0 1rem;">
   <h1 style="font-size:1.8rem;margin:0 0 1.2rem;"><?= te('auth.welcome_back') ?></h1>
 
-  <?php if (!empty($notice)): ?>
+  <?php
+    // Straight after signing up you land here with "check your inbox". As a
+    // thin blue strip above a sign-in form you cannot use yet, it read like
+    // the sign-up had failed. That one message gets a panel of its own, with
+    // the way out if the mail never arrives.
+    $inboxNotice = !empty($notice) && $notice === t('auth.check_inbox');
+  ?>
+  <?php if ($inboxNotice): ?>
+    <div class="auth-inbox">
+      <div class="auth-inbox__icon">✉️</div>
+      <h2><?= te('email.remind.heading') ?></h2>
+      <p><?= htmlspecialchars($notice) ?></p>
+      <a href="/verify-resend"><?= te('auth.resend_link') ?></a>
+    </div>
+  <?php elseif (!empty($notice)): ?>
     <div style="background:rgba(58,118,210,.15);border:1px solid rgba(58,118,210,.4);
                 color:#a8c8ee;padding:.65rem .9rem;border-radius:8px;margin-bottom:1rem;
                 font-size:.9rem;">
@@ -35,7 +49,7 @@ ob_start();
     </div>
   <?php endif; ?>
 
-  <form method="post" style="display:flex;flex-direction:column;gap:.8rem;">
+  <form method="post" class="auth-form" style="display:flex;flex-direction:column;gap:.8rem;">
     <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
     <?php if (!empty($next)): ?>
       <input type="hidden" name="next" value="<?= htmlspecialchars($next) ?>">

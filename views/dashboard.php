@@ -88,6 +88,18 @@ $currentTypeLabel = $boardLabels[$boardType] ?? t('dash.boards');
 
 </style>
 
+<?php
+  // Where "new" goes for this list. A Dream starts on the one-line capture
+  // screen; Trips are published from a Vision, so that list has no button.
+  $newHref = ['dream' => '/capture', 'vision' => '/visions/new', 'mood' => '/moods/new'][$boardType] ?? '';
+?>
+<div class="list-head">
+  <a class="list-back" href="/dashboard">← <?= te('nav.dashboard') ?></a>
+  <?php if ($newHref && $filter === 'active'): ?>
+    <a class="dash-btn-primary" href="<?= $newHref ?>">+ <?= te('home.new_' . $boardType) ?></a>
+  <?php endif; ?>
+</div>
+
 <input id="search" type="search" placeholder="<?= te('dash.search') ?>" style="width:100%;margin-bottom:1rem;padding:.6rem;border:1px solid var(--border);border-radius:4px;">
 
 <!-- Big bold title with two dropdowns -->
@@ -131,7 +143,7 @@ $currentTypeLabel = $boardLabels[$boardType] ?? t('dash.boards');
   <div class="empty-state">
     <p><?= te('dash.none_under', ['label' => $activeLabel]) ?></p>
     <?php if ($filter === 'active' && $boardType !== 'trip'): ?>
-      <a class="btn" href="/<?= $boardType ?>s/new">➕ <?= te('dash.create_first', ['type' => t('board.' . $boardType)]) ?></a>
+      <a class="btn" href="<?= $newHref ?: '/' . $boardType . 's/new' ?>">➕ <?= te('dash.create_first', ['type' => t('board.' . $boardType)]) ?></a>
     <?php elseif ($boardType === 'trip'): ?>
       <span class="hint" style="opacity:.75;"><?= te('dash.trips_hint') ?></span>
     <?php endif; ?>
@@ -190,7 +202,9 @@ $currentTypeLabel = $boardLabels[$boardType] ?? t('dash.boards');
 
         <?php if (!empty($d['description'])): ?>
           <div class="card-excerpt">
-            <?= htmlspecialchars(strip_tags($d['description'])) ?>
+            <?php /* html_entity_decode: the rich-text editor stores &nbsp; etc.,
+                     and escaping those again printed "&nbsp;" on the card. */ ?>
+            <?= htmlspecialchars(trim(html_entity_decode(strip_tags($d['description']), ENT_QUOTES | ENT_HTML5, 'UTF-8'))) ?>
           </div>
         <?php endif; ?>
 
@@ -204,8 +218,8 @@ $currentTypeLabel = $boardLabels[$boardType] ?? t('dash.boards');
 
         <small class="text-muted">
           <?= $filter === 'trash'
-            ? te('dash.deleted') . ' ' . date('Y-m-d', strtotime($d['deleted_at']))
-            : te('vision.created') . ' ' . date('Y-m-d', strtotime($d['created_at'])) ?>
+            ? te('dash.deleted') . ' ' . htmlspecialchars(fmt_date($d['deleted_at']))
+            : te('vision.created') . ' ' . htmlspecialchars(fmt_date($d['created_at'])) ?>
         </small>
 
 		  <?php if ($boardType !== 'trip'): ?>

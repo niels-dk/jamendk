@@ -13,7 +13,7 @@
     </div>
   <?php endif; ?>
 
-  <form method="post" style="display:flex;flex-direction:column;gap:.8rem;">
+  <form method="post" class="auth-form" style="display:flex;flex-direction:column;gap:.8rem;">
     <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
 
     <label style="display:flex;flex-direction:column;gap:.3rem;">

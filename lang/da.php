@@ -1357,4 +1357,14 @@ return [
     'pr.cross_add_team'    => 'Når du tilføjer dette team, bliver I :n personer — det flytter dig til :tier-planen (normalt :price/md.). Det er gratis lige nu',
     'pr.cross_end_founder' => ', og det forbliver gratis for dig som Founding Creator. Vil du fortsætte?',
     'pr.cross_end'         => '. Vil du fortsætte?',
+
+    /* ── Offline sync, Nov 2026: what is waiting on the device, and why ── */
+    'js.you_offline'         => 'Du er offline',
+    'js.back_online'         => 'Du er online igen',
+    'js.signin_sync_one'     => '1 idé er gemt på denne enhed — log ind for at synkronisere den',
+    'js.signin_sync_many'    => ':n idéer er gemt på denne enhed — log ind for at synkronisere dem',
+    'capture.waiting_one'    => '1 idé venter på synkronisering',
+    'capture.waiting_many'   => ':n idéer venter på synkronisering',
+    'capture.signin_to_sync' => 'Log ind for at synkronisere',
+    'trip.signin_to_sync'    => 'log ind for at synkronisere',
 ];

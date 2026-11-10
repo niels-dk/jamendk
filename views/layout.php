@@ -17,8 +17,9 @@
 
   <!-- Dream board modal & scripts -->
   <?php include __DIR__ . '/partials/dream-modal.php'; ?>
-  <script src="/public/js/mobile-dream.js?v=20261110"></script>
-  <script src="/public/js/offline-ui.js?v=20261110"></script>
+  <script src="/public/js/dream-sync.js?v=1"></script>
+  <script src="/public/js/mobile-dream.js?v=20261110b"></script>
+  <script src="/public/js/offline-ui.js?v=20261110b"></script>
   <script src="/public/js/trix-loader.js?v=1"></script>
   <script defer src="/public/js/ui.js"></script>
 

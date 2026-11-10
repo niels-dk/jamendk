@@ -1027,6 +1027,7 @@ window.TRIP_T = <?= json_encode([
   'musts'          => t('trip.musts'),
   'saved_here'     => t('trip.saved_here'),
   'waiting_sync'   => t('trip.waiting_sync'),
+  'signin_to_sync' => t('trip.signin_to_sync'),
   'pencil_tip'     => t('trip.pencil_tip'),
 ], JSON_UNESCAPED_UNICODE) ?>;
 </script>
@@ -1076,37 +1077,76 @@ if ('serviceWorker' in navigator) {
   function loadQ() {
     try { return JSON.parse(localStorage.getItem(QKEY)) || {}; } catch (e) { return {}; }
   }
+  var needSignIn = false;   // the last sync was refused for want of a login
   function saveQ(q) {
     var n = Object.keys(q).length;
     if (n) localStorage.setItem(QKEY, JSON.stringify(q));
     else localStorage.removeItem(QKEY);
-    if (pill) pill.textContent = pillBase + (n ? ' · ' + T.waiting_sync.replace(':n', n) : '');
+    if (!n) needSignIn = false;
+    if (pill) {
+      pill.textContent = pillBase + (n ? ' · ' + T.waiting_sync.replace(':n', n) : '');
+      // Say why they are still waiting, and make it the way out.
+      if (n && needSignIn) {
+        var a = document.createElement('a');
+        a.href = '/login?next=' + encodeURIComponent(location.pathname);
+        a.textContent = T.signin_to_sync;
+        pill.appendChild(document.createTextNode(' — '));
+        pill.appendChild(a);
+      }
+    }
   }
 
+  // Resolves with one of:
+  //   'ok'       saved
+  //   'auth'     not signed in (401) — the tick is still wanted, keep it
+  //   'rejected' the server understood and said no (rights revoked, shot
+  //              deleted, bad value) — retrying can never succeed
+  //   'retry'    the server is having a bad moment (5xx, not JSON) — keep it
+  // and REJECTS when the request never got through (no signal).
   function send(id, status) {
     return fetch('/api/visions/' + slug + '/shots/' + id + '/status', {
       method: 'POST',
+      credentials: 'same-origin',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({ status: status }).toString()
-    }).then(function (r) { return r.json(); });
+    }).then(function (r) {
+      return r.text().then(function (txt) {
+        var j = null;
+        try { j = JSON.parse(txt); } catch (e) {}
+        if (r.status === 401) return 'auth';
+        if (r.ok && j && j.success) return 'ok';
+        if (r.status >= 400 && r.status < 500) return 'rejected';
+        return 'retry';
+      });
+    });
   }
 
   var flushing = false;
   function flush() {
     if (flushing) return;
-    var q = loadQ();
-    var ids = Object.keys(q);
+    var ids = Object.keys(loadQ());
     if (!ids.length) return;
     flushing = true;
+    var stop = false;
     var chain = Promise.resolve();
     ids.forEach(function (id) {
       chain = chain.then(function () {
-        return send(id, q[id]).then(function (j) {
-          if (j && j.success) { delete q[id]; saveQ(q); }
-          // Server said no (e.g. rights revoked) → drop it rather than retry forever
-          else { delete q[id]; saveQ(q); }
+        if (stop) return;
+        var q = loadQ();                 // re-read: more may have been ticked
+        if (!(id in q)) return;
+        return send(id, q[id]).then(function (outcome) {
+          var now = loadQ();
+          if (outcome === 'ok' || outcome === 'rejected') {
+            delete now[id]; saveQ(now);
+          } else if (outcome === 'auth') {
+            // An expired login used to count as "the server said no" and
+            // every tick made offline was thrown away. Keep them all.
+            needSignIn = true; stop = true; saveQ(now);
+          } else {
+            stop = true;                 // server trouble: try again later
+          }
         });
-        // Network still down → keep in queue, a later flush retries
+        // No signal → the promise rejects, the queue stays as it is
       });
     });
     chain.catch(function () {}).then(function () { flushing = false; });
@@ -1135,17 +1175,25 @@ if ('serviceWorker' in navigator) {
     var id = entry.dataset.shotId;
     var status = cb.checked ? 'captured' : 'planned';
     entry.classList.toggle('done', status === 'captured'); // optimistic — like a pencil
-    send(id, status).then(function (j) {
-      if (j && !j.success) {
+    function keep(signIn) {
+      var q = loadQ();
+      q[id] = status;
+      if (signIn) needSignIn = true;
+      saveQ(q);
+    }
+    send(id, status).then(function (outcome) {
+      if (outcome === 'rejected') {
         // Real server rejection → revert
         cb.checked = !cb.checked;
         entry.classList.toggle('done', cb.checked);
+      } else if (outcome === 'auth') {
+        keep(true);     // login expired: the tick stands, and waits
+      } else if (outcome === 'retry') {
+        keep(false);    // server trouble: same as no signal
       }
     }).catch(function () {
       // Offline → keep the tick, queue it, sync later
-      var q = loadQ();
-      q[id] = status;
-      saveQ(q);
+      keep(false);
     });
   });
 

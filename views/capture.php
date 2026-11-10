@@ -61,6 +61,13 @@ function cp_e($s){ return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
       border-radius: 999px; padding: .2rem .6rem;
     }
     body.is-offline .offline-pill { display: inline-block; }
+    /* Ideas saved on this device that the server does not have yet. */
+    .pending {
+      display: none; text-align: center; font-size: .8rem; color: #e8c267;
+      padding: 8px 2px 0;
+    }
+    .pending.show { display: block; }
+    .pending a { color: #8fb1d8; }
     #snack {
       position: fixed; left: 50%; bottom: calc(max(env(safe-area-inset-bottom), 14px) + 84px);
       transform: translateX(-50%) translateY(20px);
@@ -87,6 +94,7 @@ function cp_e($s){ return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
     <div class="bar">
       <button class="catch" id="btnCatch" type="button">⚡ <?= te('capture.button') ?></button>
     </div>
+    <div class="pending" id="pending"></div>
     <div class="links">
       <a href="/dashboard"><?= te('nav.dashboard') ?></a>
       <a href="/dashboard/dream"><?= te('capture.my_dreams') ?></a>
@@ -95,19 +103,30 @@ function cp_e($s){ return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
 
   <div id="snack"></div>
 
+<!-- The offline queue and the one place that sends it. If this file cannot be
+     loaded (first ever visit with no signal), the code below falls back to
+     writing the same storage format, and the dashboard will send it later. -->
+<script src="/public/js/dream-sync.js?v=1"></script>
 <script>
 (function () {
   var ta    = document.getElementById('idea');
   var btn   = document.getElementById('btnCatch');
   var snack = document.getElementById('snack');
   var count = document.getElementById('count');
-  var QKEY  = 'dreamQueue';          // same queue offline-ui.js already syncs
+  var QKEY  = 'dreamQueue';          // the queue dream-sync.js owns and sends
   var T = {
     caught:      <?= json_encode(t('capture.caught')) ?>,
     caughtOpen:  <?= json_encode(t('capture.caught_open')) ?>,
     offline:     <?= json_encode(t('capture.offline')) ?>,
-    counter:     <?= json_encode(t('capture.counter')) ?>
+    counter:     <?= json_encode(t('capture.counter')) ?>,
+    waitingOne:  <?= json_encode(t('capture.waiting_one')) ?>,
+    waitingMany: <?= json_encode(t('capture.waiting_many')) ?>,
+    signIn:      <?= json_encode(t('capture.signin_to_sync')) ?>,
+    syncedOne:   <?= json_encode(t('js.synced_one')) ?>,
+    syncedMany:  <?= json_encode(t('js.synced_many')) ?>
   };
+  var pending = document.getElementById('pending');
+  var DS = window.DreamSync;
   var caught = 0;
   var snackTimer;
 
@@ -117,7 +136,7 @@ function cp_e($s){ return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
     document.body.classList.toggle('is-offline', !navigator.onLine);
   }
   setNet();
-  window.addEventListener('online', setNet);
+  window.addEventListener('online', function () { setNet(); syncQueue(); });
   window.addEventListener('offline', setNet);
 
   function showSnack(html, ms) {
@@ -139,61 +158,103 @@ function cp_e($s){ return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
   }
 
   function queueLocal(p) {
-    var q;
-    try { q = JSON.parse(localStorage.getItem(QKEY)) || []; } catch (e) { q = []; }
-    q.push({ title: p.title, description: p.description });
-    localStorage.setItem(QKEY, JSON.stringify(q));
+    if (DS) { DS.add({ title: p.title, description: p.description }); }
+    else {
+      var q;
+      try { q = JSON.parse(localStorage.getItem(QKEY)) || []; } catch (e) { q = []; }
+      q.push({ title: p.title, description: p.description });
+      localStorage.setItem(QKEY, JSON.stringify(q));
+    }
+    showPending();
   }
 
-  var saving = false;
+  function queued() {
+    if (DS) return DS.count();
+    try { return (JSON.parse(localStorage.getItem(QKEY)) || []).length; } catch (e) { return 0; }
+  }
+
+  // "2 waiting to sync" — and, when the reason is an expired login, the way
+  // out. Without this the screen said "syncs when you're back" and then never
+  // mentioned those ideas again.
+  function showPending(needSignIn) {
+    var n = queued();
+    if (!n) { pending.className = 'pending'; pending.textContent = ''; return; }
+    pending.textContent = n === 1 ? T.waitingOne : T.waitingMany.replace(':n', n);
+    if (needSignIn) {
+      var a = document.createElement('a');
+      a.href = '/login?next=' + encodeURIComponent('/capture');
+      a.textContent = T.signIn;
+      pending.appendChild(document.createTextNode(' · '));
+      pending.appendChild(a);
+    }
+    pending.className = 'pending show';
+  }
+
+  // Send what is waiting. This screen is what the installed app opens to, so
+  // it cannot rely on the dashboard being visited to get ideas off the phone.
+  function syncQueue() {
+    if (!DS || !navigator.onLine || !queued()) { showPending(); return; }
+    DS.flush().then(function (r) {
+      if (r.synced > 0) {
+        showSnack('✓ ' + (r.synced === 1 ? T.syncedOne : T.syncedMany.replace(':n', r.synced)));
+      }
+      showPending(r.reason === 'auth');
+    });
+  }
+
+  function openLink(slug) {
+    return slug
+      ? '⚡ <a href="/dreams/' + encodeURIComponent(slug) + '">' + T.caughtOpen + '</a>'
+      : '⚡ ' + T.caught;
+  }
+
+  // What to tell the person once a send attempt has finished.
+  function afterSend(r, rounds) {
+    // Ideas caught while that run was in flight are still waiting: go again.
+    if (r.reason === 'done' && r.left > 0 && (rounds || 0) < 5) {
+      return DS.flush().then(function (r2) {
+        r2.synced += r.synced; r2.lastSlug = r2.lastSlug || r.lastSlug;
+        return afterSend(r2, (rounds || 0) + 1);
+      });
+    }
+    if (r.reason === 'auth') {
+      // The login expired. Nothing is lost — it is all on this device and is
+      // sent as soon as this screen opens again after signing in.
+      showPending(true);
+      location.href = '/login?next=' + encodeURIComponent('/capture');
+      return;
+    }
+    if (r.left === 0 && r.synced > 0) showSnack(openLink(r.lastSlug));
+    else if (r.left > 0)              showSnack('⚡ ' + T.offline);
+    showPending(false);
+  }
+
+  // The contract of this screen: the idea is SAFE the moment you hit the
+  // button. So it is written to the device first and sent second — the box
+  // clears at once and the button never waits on the network. (It used to
+  // send first and only fall back to the device when the request FAILED; on a
+  // weak connection a request does not fail, it hangs, with the idea still
+  // sitting unsaved in the box.)
   function catchIt() {
-    if (saving) return;
     var text = ta.value.trim();
     if (!text) { ta.focus(); return; }
     var p = split(text);
 
-    // The contract of this screen: the idea is SAFE the moment you hit the
-    // button. Offline (or any network failure) → the local queue that
-    // offline-ui.js already syncs when you're back.
-    if (!navigator.onLine) {
-      queueLocal(p);
-      ta.value = ''; bump();
+    queueLocal(p);
+    ta.value = ''; bump(); ta.focus();
+
+    if (!DS || !navigator.onLine) {
       showSnack('⚡ ' + T.offline);
-      ta.focus();
       return;
     }
-
-    saving = true; btn.disabled = true;
-    var body = new URLSearchParams();
-    body.set('title', p.title);
-    body.set('description', p.description);
-    fetch('/api/capture', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: body.toString()
-    }).then(function (r) { return r.json(); }).then(function (j) {
-      saving = false; btn.disabled = false;
-      if (j && j.ok) {
-        ta.value = ''; bump();
-        showSnack(j.slug
-          ? '⚡ <a href="/dreams/' + j.slug + '">' + T.caughtOpen + '</a>'
-          : '⚡ ' + T.caught);
-      } else if (j && j.error === 'auth') {
-        location.href = '/login?next=' + encodeURIComponent('/capture');
-      } else {
-        queueLocal(p); ta.value = ''; bump();
-        showSnack('⚡ ' + T.caught);
-      }
-      ta.focus();
-    }).catch(function () {
-      saving = false; btn.disabled = false;
-      queueLocal(p); ta.value = ''; bump();
-      showSnack('⚡ ' + T.offline);
-      ta.focus();
-    });
+    DS.flush().then(function (r) { return afterSend(r, 0); });
   }
 
   btn.addEventListener('click', catchIt);
+  syncQueue();   // anything left over from the last time there was no signal
+  // A weak connection fails requests without the browser ever firing
+  // "online" (it never thought it was offline), so also try once a minute.
+  setInterval(function () { if (queued()) syncQueue(); }, 60000);
   ta.addEventListener('keydown', function (e) {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); catchIt(); }
   });

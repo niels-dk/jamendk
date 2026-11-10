@@ -1346,4 +1346,14 @@ return [
     'pr.cross_add_team'    => "Adding this team makes it :n people — that moves you to the :tier plan (normally :price/mo). It's free right now",
     'pr.cross_end_founder' => ', and it stays free for you as a Founding Creator. Continue?',
     'pr.cross_end'         => '. Continue?',
+
+    /* ── Offline sync, Nov 2026: what is waiting on the device, and why ── */
+    'js.you_offline'         => 'You are offline',
+    'js.back_online'         => 'You are back online',
+    'js.signin_sync_one'     => '1 idea is saved on this device — sign in to sync it',
+    'js.signin_sync_many'    => ':n ideas are saved on this device — sign in to sync them',
+    'capture.waiting_one'    => '1 idea waiting to sync',
+    'capture.waiting_many'   => ':n ideas waiting to sync',
+    'capture.signin_to_sync' => 'Sign in to sync',
+    'trip.signin_to_sync'    => 'sign in to sync',
 ];

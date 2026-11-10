@@ -98,10 +98,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       });
 
-      // Queue it
-      const q = JSON.parse(localStorage.getItem(queueKey) || '[]');
-      q.push(payload);
-      localStorage.setItem(queueKey, JSON.stringify(q));
+      // Queue it (dream-sync.js owns the queue; the fallback is the same
+      // storage format, in case that script could not be loaded offline)
+      if (window.DreamSync) {
+        window.DreamSync.add(payload);
+      } else {
+        const q = JSON.parse(localStorage.getItem(queueKey) || '[]');
+        q.push(payload);
+        localStorage.setItem(queueKey, JSON.stringify(q));
+      }
 
       // Reset form & anchors
       form.reset();

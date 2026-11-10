@@ -1358,4 +1358,14 @@ return [
     'pr.cross_add_team'    => 'Adicionar este time faz chegar a :n pessoas — isso leva você para o plano :tier (normalmente :price/mês). É grátis agora',
     'pr.cross_end_founder' => ', e continua grátis para você como Founding Creator. Continuar?',
     'pr.cross_end'         => '. Continuar?',
+
+    /* ── Offline sync, Nov 2026: what is waiting on the device, and why ── */
+    'js.you_offline'         => 'Você está offline',
+    'js.back_online'         => 'Você está online de novo',
+    'js.signin_sync_one'     => '1 ideia está salva neste aparelho — entre para sincronizar',
+    'js.signin_sync_many'    => ':n ideias estão salvas neste aparelho — entre para sincronizar',
+    'capture.waiting_one'    => '1 ideia aguardando sincronização',
+    'capture.waiting_many'   => ':n ideias aguardando sincronização',
+    'capture.signin_to_sync' => 'Entre para sincronizar',
+    'trip.signin_to_sync'    => 'entre para sincronizar',
 ];

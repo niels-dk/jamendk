@@ -40,6 +40,7 @@ $updated   = '18 July 2026';
   <h3><?= te('pg.priv_h_stats') ?></h3>
   <p><?= t('pg.priv_stats_1') ?></p>
   <p><?= t('pg.priv_stats_2') ?></p>
+  <p><?= t('pg.priv_stats_3') ?></p>
 
   <h3><?= te('pg.priv_h_cookies') ?></h3>
   <p><?= t('pg.priv_cookies_1') ?></p>

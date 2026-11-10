@@ -320,6 +320,13 @@ if (!empty($noSidebar) && empty($noFooter)) {
 }
 ?>
 
+<?php
+// The before-sign-up funnel counts a few moments on the public pages
+// (public/js/track.js). Signed-in people are not part of that question.
+if (!(function_exists('is_logged_in') && is_logged_in())): ?>
+<script defer src="/public/js/track.js?v=1"></script>
+<?php endif; ?>
+
 <div id="connectivity-banner"></div>
 <div id="snackbar" class="snackbar"></div>
 

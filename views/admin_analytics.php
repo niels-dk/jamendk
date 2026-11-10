@@ -176,6 +176,93 @@ $table = function (string $title, array $rows, string $labelKey, string $valueKe
     </div>
   <?php endif; ?>
 
+  <!-- ─────────── Where do the ones who leave, leave? ─────────── -->
+  <h2 style="font-size:1.05rem;color:#eaf0f7;margin:2.4rem 0 .3rem;"><?= te('adm.acq_title') ?></h2>
+  <?php if (empty($acq['has_table'])): ?>
+    <p style="color:#e8c889;font-size:.88rem;margin:0 0 .7rem;">
+      <?= te('adm.acq_no_table') ?> <code>db/migrations/2026-11-10_analytics_events.sql</code>
+    </p>
+  <?php else: ?>
+    <p style="color:#6c7d92;font-size:.84rem;margin:0 0 .7rem;max-width:52rem;">
+      <?= te('adm.acq_sub', ['since' => !empty($acq['since']) ? fmt_date($acq['since']) : fmt_date(time())]) ?>
+    </p>
+
+    <?php if (empty($acq['has_data'])): ?>
+      <p style="color:#9bb0c5;font-size:.9rem;margin:0 0 1rem;"><?= te('adm.acq_empty') ?></p>
+    <?php else: ?>
+      <?php
+        $aSteps = [
+          [t('adm.acq_s_landed'),   $acq['steps']['landed'],   '#8fb1d8'],
+          [t('adm.acq_s_scrolled'), $acq['steps']['scrolled'], '#8fb1d8'],
+          [t('adm.acq_s_clicked'),  $acq['steps']['clicked'],  '#a8c8ee'],
+          [t('adm.acq_s_form'),     $acq['steps']['form'],     '#a8c8ee'],
+          [t('adm.acq_s_typing'),   $acq['steps']['typing'],   '#e8c889'],
+          [t('adm.acq_s_sent'),     $acq['steps']['sent'],     '#e8c889'],
+          [t('adm.step_signed_up'), $acq['steps']['signed'],   '#7fc98d'],
+          [t('adm.step_confirmed'), $acq['confirmed'],         '#7fc98d'],
+        ];
+        // Bars are relative to the biggest step, not the first: people can
+        // arrive straight on the sign-up form without seeing the front page.
+        $aTop  = max(1, max(array_map(fn($s) => (int)$s[1], $aSteps)));
+        $aPrev = null;
+      ?>
+      <div style="display:flex;flex-direction:column;gap:.35rem;">
+        <?php foreach ($aSteps as [$label, $n, $col]):
+              $n = (int)$n; $w = max(2, $pct($n, $aTop));
+              $lost = ($aPrev !== null && $aPrev > $n) ? $aPrev - $n : 0; ?>
+          <div style="display:flex;align-items:center;gap:.7rem;">
+            <span style="width:210px;flex-shrink:0;color:#9bb0c5;font-size:.88rem;"><?= $a_e($label) ?></span>
+            <div style="flex:1;background:rgba(255,255,255,.04);border-radius:6px;height:26px;position:relative;">
+              <div style="width:<?= $w ?>%;height:100%;background:<?= $col ?>;opacity:.35;border-radius:6px;"></div>
+              <span style="position:absolute;left:.6rem;top:0;line-height:26px;font-size:.85rem;
+                           color:#eaf0f7;font-weight:700;"><?= $n ?></span>
+            </div>
+            <span style="width:120px;text-align:right;color:<?= $lost ? '#f0a0a0' : '#6c7d92' ?>;font-size:.78rem;white-space:nowrap;">
+              <?= $lost ? te('adm.acq_lost', ['n' => $lost]) : '' ?></span>
+          </div>
+        <?php $aPrev = $n; endforeach; ?>
+      </div>
+
+      <?php
+        $ctaNames = ['header' => t('adm.acq_cta_header'), 'hero' => t('adm.acq_cta_hero'),
+                     'bottom' => t('adm.acq_cta_bottom'), 'footer' => t('adm.acq_cta_footer'),
+                     'other'  => t('adm.acq_cta_other')];
+        $failNames = ['throttled' => t('adm.acq_f_throttled'), 'name' => t('adm.acq_f_name'),
+                      'email' => t('adm.acq_f_email'), 'short_pass' => t('adm.acq_f_short_pass'),
+                      'email_domain' => t('adm.acq_f_email_domain'), 'expired' => t('adm.acq_f_expired'),
+                      'existing' => t('adm.acq_f_existing'), 'error' => t('adm.acq_f_error')];
+        $ctaRows = array_map(fn($r) => ['f' => $ctaNames[$r['place']] ?? $r['place'], 'n' => (int)$r['n']], $acq['cta']);
+        if (!empty($acq['demo_trip'])) $ctaRows[] = ['f' => t('lp.see_trip'), 'n' => (int)$acq['demo_trip']];
+        $failRows = array_map(fn($r) => ['f' => $failNames[$r['reason']] ?? $r['reason'], 'n' => (int)$r['n']], $acq['fails']);
+        $scrollRows = [
+          ['f' => t('adm.acq_s_scrolled'),   'n' => (int)$acq['scroll']['fold']],
+          ['f' => t('adm.acq_scroll_half'),  'n' => (int)$acq['scroll']['half']],
+          ['f' => t('adm.acq_scroll_end'),   'n' => (int)$acq['scroll']['end']],
+        ];
+        $leftRows = array_map(fn($r) => ['f' => $r['path'], 'n' => (int)$r['n']], $acq['left']);
+      ?>
+      <div style="display:grid;gap:0 2rem;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));">
+        <div><?php $table(t('adm.acq_left_title'),   $leftRows,   'f', 'n', t('adm.acq_none')); ?></div>
+        <div><?php $table(t('adm.acq_fail_title'),   $failRows,   'f', 'n', t('adm.acq_none')); ?></div>
+        <div><?php $table(t('adm.acq_cta_title'),    $ctaRows,    'f', 'n', t('adm.acq_none')); ?></div>
+        <div><?php $table(t('adm.acq_scroll_title'), $scrollRows, 'f', 'n', t('adm.acq_none')); ?></div>
+      </div>
+    <?php endif; ?>
+
+    <!-- From page views alone: reaches back before the counting above began,
+         and includes every scanner. Kept apart and labelled, so the two are
+         never read as the same thing. -->
+    <h2 style="font-size:1rem;color:#cfdbe8;margin:1.6rem 0 .5rem;"><?= te('adm.acq_rough_title') ?></h2>
+    <div style="display:grid;gap:.7rem;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));">
+      <?php
+        $roughSub = t('adm.last_n_days', ['n' => $days]);
+        $card(t('adm.acq_rough_landing'),  number_format($acq['rough']['landing']),  $roughSub, '#6c7d92');
+        $card(t('adm.acq_rough_register'), number_format($acq['rough']['register']), $roughSub, '#6c7d92');
+        $card(t('adm.new_signups'),        number_format($acq['rough']['signups']),  $roughSub, '#6c7d92');
+      ?>
+    </div>
+  <?php endif; ?>
+
   <!-- ─────────── Are they actually using it? ─────────── -->
   <h2 style="font-size:1.05rem;color:#eaf0f7;margin:2.4rem 0 .3rem;"><?= te('adm.funnel') ?></h2>
   <p style="color:#6c7d92;font-size:.84rem;margin:0 0 .7rem;"><?= te('adm.funnel_sub') ?></p>

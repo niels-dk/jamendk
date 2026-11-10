@@ -14,6 +14,13 @@
  *            Derived live from users/dreams/visions/shots/etc. Nothing to
  *            instrument, and it works retroactively over all history.
  *
+ *   BEFORE SIGN-UP  (analytics_events) — "where do the ones who leave, leave?"
+ *            A handful of counted moments on the public pages, sent by
+ *            public/js/track.js or written by the sign-up handler. Same
+ *            one-day fingerprint, same promises. It exists because most page
+ *            views are scanners: a row here means a real browser ran the
+ *            page's script.
+ *
  * Never throws: analytics must not be able to take a page down.
  */
 class Analytics
@@ -188,6 +195,88 @@ class Analytics
         }
     }
 
+    /* ───────────────────── Before sign-up: recording ───────────────────── */
+
+    /** The only event names that are ever stored. */
+    public const EVENTS = [
+        'human',          // a real browser ran the page (first interaction or 2.5 s)
+        'scroll',         // front page: detail fold | half | end
+        'cta',            // a sign-up button: detail header | hero | bottom | footer | other
+        'demo_trip',      // the example Trip link
+        'form_start',     // first keystroke in the sign-up form
+        'form_submit',    // the sign-up form was sent
+        'signup_ok',      // server: account created
+        'signup_fail',    // server: refused; detail is the reason code
+    ];
+
+    /** How many rows one visitor can write in a day. The funnel needs a dozen. */
+    private const EVENTS_PER_VISITOR = 60;
+
+    /**
+     * Record one moment. Called by POST /api/a (from track.js) and by the
+     * sign-up handler. Like record(): never throws, and does nothing if the
+     * migration has not been run.
+     */
+    public static function event(string $name, ?string $detail = null, ?string $path = null): void
+    {
+        global $db;
+        if (!isset($db) || !($db instanceof PDO)) return;
+
+        try {
+            if (!in_array($name, self::EVENTS, true)) return;
+
+            $ua = (string)($_SERVER['HTTP_USER_AGENT'] ?? '');
+            if (self::isBot($ua)) return;
+            if (function_exists('is_admin') && is_admin()) return;
+
+            $salt = self::salt($db);
+            if ($salt === '') return;
+
+            // A short code, never free text: nothing a person typed can land here.
+            $detail = $detail === null ? '' : substr(preg_replace('~[^a-z0-9_]~', '', strtolower($detail)), 0, 40);
+            $detail = $detail === '' ? null : $detail;
+
+            // The path only — no query string — and collapsed the same way
+            // page views are, so tokens never reach this table either.
+            $path = (string)(parse_url((string)($path ?? ($_SERVER['REQUEST_URI'] ?? '/')), PHP_URL_PATH) ?: '/');
+            if ($path === '' || $path[0] !== '/') $path = '/';
+            $path = mb_substr(self::normalisePath($path), 0, 190);
+
+            $ip   = (string)($_SERVER['REMOTE_ADDR'] ?? '');
+            $day  = date('Y-m-d');
+            $hash = hash('sha256', $salt . '|' . $day . '|' . $ip . '|' . $ua);
+
+            // Bound what one visitor (or one script pretending to be one) can write.
+            $n = $db->prepare("SELECT COUNT(*) FROM analytics_events WHERE day = ? AND visitor_hash = ?");
+            $n->execute([$day, $hash]);
+            if ((int)$n->fetchColumn() >= self::EVENTS_PER_VISITOR) return;
+
+            // The funnel counts visitors, not repetitions: one row per moment,
+            // page and visitor per day. A refused sign-up is the exception —
+            // every attempt is worth knowing about.
+            if ($name !== 'signup_fail') {
+                $dup = $db->prepare(
+                    "SELECT 1 FROM analytics_events
+                      WHERE day = ? AND visitor_hash = ? AND name = ? AND path = ?
+                        AND COALESCE(detail, '') = ? LIMIT 1");
+                $dup->execute([$day, $hash, $name, $path, (string)$detail]);
+                if ($dup->fetchColumn()) return;
+            }
+
+            $db->prepare(
+                "INSERT INTO analytics_events (day, visitor_hash, name, detail, path, device)
+                 VALUES (?,?,?,?,?,?)"
+            )->execute([$day, $hash, $name, $detail, $path, self::device($ua)]);
+
+            if (random_int(1, 400) === 1) {
+                $db->exec("DELETE FROM analytics_events
+                            WHERE day < (CURDATE() - INTERVAL 400 DAY)");
+            }
+        } catch (\Throwable $e) {
+            // Table not created yet, or anything else: counting never breaks a page.
+        }
+    }
+
     /* ───────────────────────── Reading: traffic ───────────────────────── */
 
     private static function rows(PDO $db, string $sql, array $args = []): array
@@ -244,6 +333,88 @@ class Analytics
             'devices' => self::rows($db,
                 "SELECT device, COUNT(DISTINCT visitor_hash) visitors
                    FROM analytics_visits WHERE day >= $since GROUP BY device ORDER BY visitors DESC"),
+        ];
+    }
+
+    /* ───────────────────── Reading: before sign-up ────────────────────── */
+
+    /**
+     * Where the visitors who do not sign up drop off.
+     *
+     * Every number is "distinct one-day fingerprints": the hash already
+     * contains the date, so a visitor is a person on a day. Someone who reads
+     * the page today and signs up next week is two visitors — that is the
+     * price of not being able to follow anyone, and it is stated on the page.
+     */
+    public static function acquisition(PDO $db, int $days = 30): array
+    {
+        $days  = max(1, min(365, $days));
+        $since = "(CURDATE() - INTERVAL $days DAY)";
+
+        // -1 when the table does not exist (one() returns the default on error).
+        $total = (int)self::one($db, "SELECT COUNT(*) FROM analytics_events", [], -1);
+        if ($total < 0) return ['has_table' => false];
+
+        $who = fn(string $where, array $args = []) => (int)self::one($db,
+            "SELECT COUNT(DISTINCT visitor_hash) FROM analytics_events WHERE day >= $since AND $where", $args);
+
+        $steps = [
+            'landed'   => $who("name = 'human' AND path = '/'"),
+            'scrolled' => $who("name = 'scroll' AND detail = 'fold'"),
+            'clicked'  => $who("name = 'cta'"),
+            'form'     => $who("name = 'human' AND path = '/register'"),
+            'typing'   => $who("name = 'form_start'"),
+            'sent'     => $who("name = 'form_submit'"),
+            'signed'   => $who("name = 'signup_ok'"),
+        ];
+
+        return [
+            'has_table' => true,
+            'has_data'  => $total > 0,
+            'since'     => (string)self::one($db, "SELECT MIN(day) FROM analytics_events", [], ''),
+            'steps'     => $steps,
+            // Not tied to a fingerprint (it happens later, from an email), so a plain count.
+            'confirmed' => (int)self::one($db,
+                "SELECT COUNT(*) FROM users WHERE created_at >= $since AND email_verified_at IS NOT NULL"),
+            'scroll' => [
+                'fold' => $steps['scrolled'],
+                'half' => $who("name = 'scroll' AND detail = 'half'"),
+                'end'  => $who("name = 'scroll' AND detail = 'end'"),
+            ],
+            'cta' => self::rows($db,
+                "SELECT COALESCE(detail, 'other') place, COUNT(DISTINCT visitor_hash) n
+                   FROM analytics_events WHERE day >= $since AND name = 'cta'
+                  GROUP BY place ORDER BY n DESC"),
+            'demo_trip' => $who("name = 'demo_trip'"),
+            'fails' => self::rows($db,
+                "SELECT COALESCE(detail, 'error') reason, COUNT(*) n
+                   FROM analytics_events WHERE day >= $since AND name = 'signup_fail'
+                  GROUP BY reason ORDER BY n DESC"),
+            // The last page seen by a real visitor who was never signed in and
+            // did not sign up that day.
+            'left' => self::rows($db,
+                "SELECT v.path, COUNT(*) n
+                   FROM analytics_visits v
+                   JOIN (SELECT visitor_hash, MAX(id) mid
+                           FROM analytics_visits
+                          WHERE day >= $since
+                          GROUP BY visitor_hash
+                         HAVING MAX(is_auth) = 0) last ON last.mid = v.id
+                  WHERE v.visitor_hash IN (SELECT visitor_hash FROM analytics_events
+                                            WHERE day >= $since AND name = 'human')
+                    AND v.visitor_hash NOT IN (SELECT visitor_hash FROM analytics_events
+                                                WHERE day >= $since AND name = 'signup_ok')
+                  GROUP BY v.path ORDER BY n DESC LIMIT 10"),
+            // From page views alone, so it reaches back before the events
+            // existed — and includes every scanner. Shown as "rough".
+            'rough' => [
+                'landing'  => (int)self::one($db,
+                    "SELECT COUNT(DISTINCT visitor_hash) FROM analytics_visits WHERE day >= $since AND path = '/'"),
+                'register' => (int)self::one($db,
+                    "SELECT COUNT(DISTINCT visitor_hash) FROM analytics_visits WHERE day >= $since AND path = '/register'"),
+                'signups'  => (int)self::one($db,
+                    "SELECT COUNT(*) FROM users WHERE created_at >= $since"),
+            ],
         ];
     }
 

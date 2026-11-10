@@ -72,6 +72,7 @@ class admin_controller
         $days    = isset($_GET['days']) ? max(1, min(365, (int)$_GET['days'])) : 30;
         $traffic = Analytics::traffic($db, $days);
         $product = Analytics::product($db, $days);
+        $acq     = Analytics::acquisition($db, $days);
 
         $pageTitle = 'Analytics';
         $noSidebar = true;

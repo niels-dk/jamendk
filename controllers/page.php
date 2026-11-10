@@ -18,6 +18,42 @@ class page_controller
         include __DIR__ . '/../views/layout.php';
     }
 
+    /**
+     * POST /api/a — one counted moment from public/js/track.js.
+     * Always answers 204 with no body, whatever happened: the page that sent
+     * it is not waiting, and a caller learns nothing by probing it.
+     */
+    public static function track(): void
+    {
+        if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST'
+            && !(function_exists('is_logged_in') && is_logged_in())) {
+            // Only the moments a browser can report. signup_ok / signup_fail
+            // are written by the sign-up handler and cannot be sent from here.
+            // The detail is one of a fixed set per moment; anything else is
+            // dropped rather than stored, so the table only ever holds codes
+            // this site defined.
+            $allowed = [
+                'human'       => [''],
+                'scroll'      => ['fold', 'half', 'end'],
+                'cta'         => ['header', 'hero', 'bottom', 'footer', 'other'],
+                'demo_trip'   => [''],
+                'form_start'  => [''],
+                'form_submit' => [''],
+            ];
+            $name   = (string)($_POST['n'] ?? '');
+            $detail = (string)($_POST['d'] ?? '');
+            if (isset($allowed[$name])) {
+                if (!in_array($detail, $allowed[$name], true)) {
+                    $detail = $name === 'cta' ? 'other' : null;
+                }
+                if ($detail !== null) {
+                    Analytics::event($name, $detail, (string)($_POST['p'] ?? '/'));
+                }
+            }
+        }
+        http_response_code(204);
+    }
+
     /** GET /pricing — public. Shows real tiers, all free during beta. */
     public static function pricing(): void
     {

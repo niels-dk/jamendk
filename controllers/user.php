@@ -85,8 +85,14 @@ class user_controller
         $email = '';
         $next  = self::safeNext($_REQUEST['next'] ?? '');
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            // Why a sign-up was refused, for the funnel in /admin/analytics.
+            // A reason code only — never the name, address or password.
+            $refused = static function (string $reason): void {
+                if (class_exists('Analytics')) Analytics::event('signup_fail', $reason, '/register');
+            };
             if (!csrf_check($_POST['csrf_token'] ?? null)) {
                 $error = t('auth.err_expired');
+                $refused('expired');
             } elseif (trim($_POST['website'] ?? '') !== '') {
                 // Honeypot: real users never see or fill this field.
                 // Pretend success so bots don't learn they were caught.
@@ -101,12 +107,16 @@ class user_controller
                 // should not get a field-by-field critique of its next attempt.
                 if (User::registerThrottled($regIp)) {
                     $error = t('auth.err_reg_throttled');
+                    $refused('throttled');
                 } else if (!$name) {
                     $error = t('auth.err_name');
+                    $refused('name');
                 } else if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
                     $error = t('auth.err_email');
+                    $refused('email');
                 } else if (strlen($pass) < 6) {
                     $error = t('auth.err_short_pass');
+                    $refused('short_pass');
                 } else if (!email_domain_resolves($email)) {
                     // Deliberately BEFORE emailExists(): an address whose domain
                     // does not exist must not reach the branch below either,
@@ -114,6 +124,7 @@ class user_controller
                     // into another bounce. Placed after the cheap checks so a
                     // short password costs no DNS lookup.
                     $error = t('auth.err_email_domain');
+                    $refused('email_domain');
                 } else if (User::emailExists($email)) {
                     // Never confirm that an address is taken — that turns this
                     // form into an account-existence oracle. The real owner
@@ -126,12 +137,15 @@ class user_controller
                         }
                     }
                     User::recordRegistration($regIp);
+                    $refused('existing');
                     self::flashToLogin($next);
                 } else {
                     $newId = User::create($name, $email, $pass);
                     if (!$newId) {
                         $error = t('auth.err_create');
+                        $refused('error');
                     } else {
+                        if (class_exists('Analytics')) Analytics::event('signup_ok', null, '/register');
                         User::recordRegistration($regIp);
                         // No auto-login: the account stays inert until the
                         // address is confirmed.

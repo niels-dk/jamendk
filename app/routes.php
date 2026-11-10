@@ -24,6 +24,7 @@ function route(string $uri): void
         // Capture-first: what the installed app opens to
         '/capture'                => ['dream', 'capture'],
         '/api/capture'            => ['dream', 'captureStore'],
+        '/api/a'                  => ['page', 'track'],          // counted moments (track.js)
 
         // Seeds a complete worked example into an empty account
         '/demo/load'              => ['demo', 'load'],

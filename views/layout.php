@@ -13,7 +13,7 @@
     <main><?= $content ?? '' ?></main>
   </div>
 
-  <link rel="stylesheet" href="/public/css/dashboard.css?v=2">
+  <link rel="stylesheet" href="/public/css/dashboard.css?v=3">
 
   <!-- Dream board modal & scripts -->
   <?php include __DIR__ . '/partials/dream-modal.php'; ?>

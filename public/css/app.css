@@ -806,6 +806,11 @@ line.connector-selected { stroke: #4a90e2; stroke-width: 3; }
   body:has(.tabbar) .sidebar-toggle { bottom: calc(76px + env(safe-area-inset-bottom)); }
   body:has(.tabbar) .snackbar { bottom: calc(78px + env(safe-area-inset-bottom)); }
 }
+@media (max-width: 540px) {
+  /* The round menu button floats bottom-left on a phone. Room to scroll the
+     last control (Save) clear of it. */
+  .layout > .content { padding-bottom: 88px; }
+}
 @media (max-width: 430px) {
   /* Not enough width for both buttons beside the name; every public page
      carries its own sign-up button. */

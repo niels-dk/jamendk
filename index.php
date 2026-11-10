@@ -50,6 +50,10 @@ if (preg_match('#^/(public|storage)/#', $reqPath) && is_file($full)) {
     exit;
 }
 
+// Session cookie flags — BEFORE config.php or anything else that could start
+// a session. See app/session_cookie.php for why the order matters.
+require_once __DIR__.'/app/session_cookie.php';
+
 require_once __DIR__.'/app/config.php';
 
 // Now that config.php has had its say, allow an explicit local override.
@@ -61,24 +65,8 @@ if (defined('APP_DEBUG') && APP_DEBUG) {
 $https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
       || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
 
-// Session cookie hardening. Must be set BEFORE anything calls session_start(),
-// which app/auth.php does on its very first line.
-//   httponly  — JavaScript cannot read the session id, so an injected script
-//               cannot walk off with a login
-//   secure    — never sent over plain http
-//   samesite  — Lax stops another site POSTing to us with your cookie attached,
-//               which is what stands in for the CSRF tokens the overlay APIs
-//               do not yet carry. Lax rather than Strict so links INTO the app
-//               (a shared trip page, a link in an email) still arrive signed in.
-if (session_status() !== PHP_SESSION_ACTIVE) {
-    session_set_cookie_params([
-        'lifetime' => 0,
-        'path'     => '/',
-        'httponly' => true,
-        'secure'   => $https,
-        'samesite' => 'Lax',
-    ]);
-}
+// (Session cookie flags are set at the top, in app/session_cookie.php. They
+// used to be set here, which on the live server was already too late.)
 
 // Response headers for everything this app renders.
 if (!headers_sent()) {

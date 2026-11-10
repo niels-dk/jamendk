@@ -3,7 +3,7 @@
 $isEdit    = isset($vision);
 $titleText = $isEdit ? t('vision.edit') : t('vision.create_title');
 ?>
-<link rel="stylesheet" href="/public/css/overlay.css?v=1">
+<link rel="stylesheet" href="/public/css/overlay.css?v=2">
 <link rel="stylesheet" type="text/css" href="https://unpkg.com/trix@2.0.8/dist/trix.css">
 <script type="text/javascript" src="https://unpkg.com/trix@2.0.8/dist/trix.umd.min.js"></script>
 

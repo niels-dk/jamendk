@@ -44,3 +44,9 @@ if ($isAuthenticated && (!is_array($currentUser)
         }
     }
 }
+
+// A signed-in session's cookie is pushed out again once a day, so the login
+// only runs out after MAD_LOGIN_DAYS of not using the app (session_cookie.php).
+if ($isAuthenticated && function_exists('mad_keep_login_alive')) {
+    mad_keep_login_alive();
+}

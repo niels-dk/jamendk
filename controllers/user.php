@@ -475,9 +475,10 @@ class user_controller
     private static function loginUser(array $user): void
     {
         session_regenerate_id(true); // prevent session fixation
-        // The new id's cookie must carry the same flags (see session_cookie.php:
-        // on a host with session.auto_start the parameters cannot be preset).
-        if (function_exists('mad_harden_session_cookie')) mad_harden_session_cookie();
+        // The new id's cookie must carry the same flags and the full lifetime
+        // (see session_cookie.php; on a host with session.auto_start the
+        // parameters cannot be preset, so it is re-issued explicitly).
+        if (function_exists('mad_keep_login_alive')) mad_keep_login_alive(true);
         $_SESSION['user_id']       = (int)$user['id'];
         $_SESSION['authenticated'] = true;
         $_SESSION['user']          = [
